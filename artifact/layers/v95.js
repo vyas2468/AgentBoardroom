@@ -28,7 +28,7 @@ var PURPLE="#a78bfa", GREEN="#4ade80", RED="#f87171";
 /* ================= 2. AF Approach on the Subsector Web ================= */
 var AF=false; try{ AF=localStorage.getItem("alexaligned.sbw.af")==="1"; }catch(e){}
 function afApply(){
-  var svg=$("#sbwChart svg"); if(!svg||!AF||svg.getAttribute("data-af")) return; svg.setAttribute("data-af","1");
+  var svg=$("#sbwChart svg"); if(!svg||!(AF||window.__afForce)||svg.getAttribute("data-af")) return; svg.setAttribute("data-af","1");
   var C=ctxNow(), by={}; if(C) C.rows.forEach(function(r){ by[r.sym]=r; });
   var dots=[].slice.call(svg.querySelectorAll("circle.sbwdot")), lines=[].slice.call(svg.querySelectorAll("line")), pos={};
   dots.forEach(function(d){ pos[d.getAttribute("data-s")]={el:d,x:+d.getAttribute("cx"),y:+d.getAttribute("cy"),r:+d.getAttribute("r")}; });

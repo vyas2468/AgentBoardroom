@@ -233,3 +233,28 @@ Nothing is outstanding. A few things are worth knowing or could be done later if
    if they do not line up).
 4. Optional housekeeping: the work is on its own branch; a pull request into the main branch can be opened whenever
    you want it merged (not done, as it was not asked for).
+
+
+PART 7. THE SMARTER ASK (added at the end of the session)
+---------------------------------------------------------
+- Spelling: more terms are corrected (hierarchical, sentiment, convergence, diversified, connected, subsector names such as
+  "credit servics"); the answer says how a word was read. Ordinary words are never "corrected" into subsector names.
+- New tile "Smart portfolio builder (adaptive)": your words set the weights (momentum, signal convergence, improving,
+  rising subsectors, low volatility, SEW score for ETFs); names are then picked one at a time, penalising correlation to the
+  names already picked, with limits per sector, subsector, Hidden Group and price cluster. Each pick shows why, and a
+  "How your question was read" table shows the weights and limits. Works for ETFs ("a long only portfolio of ETFs that are
+  improving", "inverse volatility weighted"). "Best stock in each rising subsector / hidden group / theme".
+- New tile "Connections": two names (evidence table plus the strongest correlation path, e.g. NVDA -> VRT -> FIX -> VST),
+  two subsectors, sectors or themes (basket correlation, tightest cross pairs, bridge names, shared Hidden Groups).
+  "Hedge for my portfolio of NVDA, AVGO, MU" now works.
+- New tile "Themes and rotation": 14 cross-sector themes (fixed subsector baskets, e.g. AI power = power producers,
+  regulated electric, electrical equipment, industrial machinery, engineering, data-centre REITs); strength table, theme
+  members, "is money rotating from growth into defensives?", "where is money rotating", leading and lagging subsectors,
+  strongest names in the weakest groups, theme portfolios.
+- New tile "Subsector Web, AF Approach": "...with AF approach" draws Alex's correlation chains in the answer only.
+- ETF tickers in answers now open their tear sheets.
+- "Hide tabs" button at the end of the theme row folds the tab strip down to the open tab (remembered).
+- Checks: the 49 original questions and all 207 earlier tile questions answer word for word as before; the 34 new tile
+  questions all answer; no page errors.
+Honest limits: themes are fixed lists of subsectors (not learned); the adaptive score is a transparent blend, not a
+forecast; connection paths show co-movement, not cause.
