@@ -231,7 +231,7 @@ var HX_WORDS=/\b(ytd|year[- ]to[- ]date|months?|monthly|quarter\w*|1[- ]year|one
 function hxOp(s){ return qmOpOf(s); }
 function hxParseHist(q,t){
   var low=String(q||"").toLowerCase(), blanks=[], F=[], sort=null;
-  var OP="(below|under|less than|lower than|smaller than|at most|no more than|up to|above|over|greater than|more than|higher than|larger than|at least|exceeding|of at least|<=|>=|<|>)";
+  var OP="(no worse than|no deeper than|better than|worse than|shallower than|deeper than|below|under|less than|lower than|smaller than|at most|no more than|up to|above|over|greater than|more than|higher than|larger than|at least|exceeding|of at least|<=|>=|<|>)";
   var SUP=/\b(most|highest|best|top|biggest|largest|strongest|greatest|least|lowest|smallest|worst|weakest|bottom|deepest|shallowest|furthest|closest)\b/g;
   function blankLow(a,b){ a=Math.max(0,a); low=low.slice(0,a)+new Array(b-a+1).join(" ")+low.slice(b); blanks.push([a,b]); }
   HXP.forEach(function(p){
@@ -243,7 +243,11 @@ function hxParseHist(q,t){
       var lead=low.slice(Math.max(0,s-34),s), wi=lead.match(/within (\d+(?:\.\d+)?) ?(?:%|percent) of (?:its |the |their )?$/);
       if(p[0]==="hi52"&&wi){ F.push({f:"hi52",op:">=",v:-parseFloat(wi[1]),txt:"within "+wi[1]+"% of its 52-week high"}); blankLow(s-wi[0].length,e); continue; }
       if(mm){
-        var v=parseFloat(mm[2]), op=hxOp(mm[1]), neg=/(?:-|minus )\s*\$?\s*\d/.test(mm[0]), txt;
+        var v=parseFloat(mm[2]), op=hxOp(mm[1]), isDD=(p[0]==="ddy"||p[0]==="dd12"), wd=mm[1];
+        /* "better than" / "worse than": for a drawdown, better means shallower; for anything else, better means higher */
+        if(/^(?:better than|shallower than|no deeper than|no worse than)$/.test(wd)) op=isDD?"<":">";
+        else if(/^(?:worse than|deeper than)$/.test(wd)) op=isDD?">":"<";
+        var neg=/(?:-|minus )\s*\$?\s*\d/.test(mm[0]), txt;
         if(p[0]==="ddy"||p[0]==="dd12"){ /* "drawdown under 15%" means a drawdown no deeper than 15% */ var shallow=(op==="<"||op==="<="); v=-Math.abs(v); op=shallow?">=":"<=";
           txt=(p[0]==="ddy"?"YTD":"12M")+" max drawdown "+(shallow?"no deeper than ":"at least ")+Math.abs(v)+"%"; }
         else if(p[0]==="hi52"){ var near=(op==="<"||op==="<="); v=-Math.abs(v); op=near?">=":"<="; txt=(near?"within ":"at least ")+Math.abs(v)+"% "+(near?"of":"below")+" its 52-week high"; }
