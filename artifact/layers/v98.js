@@ -71,6 +71,7 @@ qmCell=function(head,c){ if(head==="Symbol"&&!qmIsTk(String(c))&&etfSet()[String
 
 /* ---------------- shared extra portfolio conditions (used by the smart builder and the block / cluster portfolios) ---------------- */
 var PC=[
+ ["breakout",/\bbreak(?:ing|s)? ?out\b|\bbreakouts?\b/,"breaking out (uptrend of 5 sessions or less, above its trend line)",function(r){ return r.trend==="up"&&num(r.tb)&&r.tb<=5&&num(r.atr)&&r.atr>0; }],
  ["fresh",/\b(?:fresh|new|young|recent|just turned)(?: trend)? (?:up ?trend|uptrend|trend up)s?\b/,"in a fresh uptrend (10 sessions or less)",function(r){ return r.trend==="up"&&num(r.tb)&&r.tb<=10; }],
  ["estab",/\b(?:established|mature|long[- ]running|steady) (?:up ?trend|uptrend)s?\b/,"in an established uptrend (30 sessions or more)",function(r){ return r.trend==="up"&&num(r.tb)&&r.tb>=30; }],
  ["up",/\buptrends?\b|\btrending up\b|\btrend up\b/,"in an uptrend",function(r){ return r.trend==="up"; }],
@@ -281,7 +282,7 @@ function runSmart(spec,ctx,res){
   else if(!etf&&/\buptrends?\b|\btrending up\b|\btrend up\b/.test(t)){ rows=rows.filter(function(r){ return r.trend==="up"; }); hard.push("in an uptrend"); }
   if(/\banomal\w*\b|\bunusual\b/.test(t)){ rows=rows.filter(function(r){ return num(r.ga)&&r.ga>=0.3; }); hard.push("anomalous (graph anomaly 0.30 or more)"); }
   if(!etf&&/\brising sub ?sectors?\b|\bsub ?sectors? (?:is |are |that are )?rising\b|\bimproving sub ?sectors?\b/.test(t)){ rows=rows.filter(function(r){ var g=ctx.indStats[r.ind]; return g&&g.bias==="improving"; }); hard.push("in a rising subsector (most members improving)"); }
-  pcParse(t,["fresh","up","improving","strength","anom","conv","estab"].concat(etf?["notext","neartl","notob","oversold","liquid","hi52","beat","lowdd","lowbeta","estab"]:[])).forEach(function(k){ var n0=rows.length; rows=rows.filter(function(r){ return pcTest(k,r); }); hard.push(pcLab(k)); });
+  pcParse(t,["fresh","up","improving","strength","anom","conv","estab"].concat(etf?["notext","neartl","notob","oversold","liquid","hi52","beat","lowdd","lowbeta","estab","breakout"]:[])).forEach(function(k){ var n0=rows.length; rows=rows.filter(function(r){ return pcTest(k,r); }); hard.push(pcLab(k)); });
   if(!etf&&/\b(?:established|mature|long[- ]running) (?:up ?trend|uptrend)s?\b/.test(t)){ rows=rows.filter(function(r){ return pcTest("estab",r); }); hard.push(pcLab("estab")); }
   var convHard=!etf&&/\b(?:where |with |whose )?signals? (?:converge|are converging)\b|\bsignal convergence\b|\bconverging signals?\b/.test(t);
   if(convHard){ var cc=rows.filter(function(r){ return num(r.conv)&&r.conv>=3; }); if(cc.length>=Math.max(4,(spec.n||10))){ rows=cc; hard.push("signals converge (3 or more of the six lenses)"); } else { cc=rows.filter(function(r){ return num(r.conv)&&r.conv>=2; }); rows=cc; hard.push("signal convergence of 2 or more lenses (3 or more left too few names)"); } }
