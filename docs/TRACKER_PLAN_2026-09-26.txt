@@ -159,6 +159,8 @@ Phase 2 - next session or remaining budget:
   7. Settings editor (entry convention, costs, buffer, min hold, stop, time exit, rebalance timing, weights).
   8. Compare and Combined views (allocations, combined curve and metrics, combined holdings and overlap).
   9. Ask phrasings + a tracker tile group.
+ 10. Rebalance-frequency comparison: the same portfolio viewed at daily / weekly / monthly / quarterly / yearly
+     rebalancing from the same daily records (see the final handoff for the design).
 Phase 3 - later: RealTest export for true backtests (as in HANDOFF.md, Future task 2 part B).
 
 What this is and is not: forward tracking from the day you start, at real daily prices, with realistic
