@@ -12,17 +12,48 @@ function lsSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
 
 /* ---------- dl: file saves through the viewer's download prompt ----------
    Inside the Claude artifact viewer a plain download link does nothing; files must go through the downloads capability, which asks
-   the viewer to confirm. Only some extensions are allowed there, so a script (.rts, .ps1) is offered as name + ".txt". Outside the
+   the viewer to confirm. Only some extensions are allowed there, so a script (.rts, .ps1, .bat) is offered inside a .zip that keeps its real name. Outside the
    viewer (no capability) the page's original link download runs unchanged. */
 var DLNS=null;
 try{ if(window.claude&&typeof window.claude.use==="function") window.claude.use("downloads").then(function(ns){ DLNS=ns||null; },function(){}); }catch(e){}
 var DL_OK=/\.(gif|png|jpe?g|webp|mp4|webm|txt|json|md|docx|pptx|epub|csv|ttf|html|svg|pdf|xlsx|zip)$/i;
+/* a minimal ZIP (stored, no compression): the viewer cannot save .rts, .ps1 or .bat, but it can save a .zip, and the
+   files inside keep their real names. Windows opens it with Extract All. */
+var DL_CRC=(function(){ var t=[]; for(var n=0;n<256;n++){ var c=n; for(var k=0;k<8;k++) c=(c&1)?(0xEDB88320^(c>>>1)):(c>>>1); t[n]=c>>>0; } return t; })();
+function dlCrc(b){ var c=0xFFFFFFFF; for(var i=0;i<b.length;i++) c=DL_CRC[(c^b[i])&255]^(c>>>8); return (c^0xFFFFFFFF)>>>0; }
+function dlZipBlob(files){
+  var enc=new TextEncoder(), now=new Date(), parts=[], cen=[], off=0;
+  var dt=((now.getHours()<<11)|(now.getMinutes()<<5)|(now.getSeconds()>>1))&0xFFFF, dd=(((now.getFullYear()-1980)<<9)|((now.getMonth()+1)<<5)|now.getDate())&0xFFFF;
+  function hdr(n){ return new DataView(new ArrayBuffer(n)); }
+  files.forEach(function(f){
+    var nm=enc.encode(f[0]), data=(typeof f[1]==="string")?enc.encode(f[1]):f[1], crc=dlCrc(data), h=hdr(30);
+    h.setUint32(0,0x04034b50,true); h.setUint16(4,20,true); h.setUint16(6,0,true); h.setUint16(8,0,true); h.setUint16(10,dt,true); h.setUint16(12,dd,true);
+    h.setUint32(14,crc,true); h.setUint32(18,data.length,true); h.setUint32(22,data.length,true); h.setUint16(26,nm.length,true); h.setUint16(28,0,true);
+    parts.push(h.buffer,nm,data);
+    var c=hdr(46); c.setUint32(0,0x02014b50,true); c.setUint16(4,20,true); c.setUint16(6,20,true); c.setUint16(8,0,true); c.setUint16(10,0,true); c.setUint16(12,dt,true); c.setUint16(14,dd,true);
+    c.setUint32(16,crc,true); c.setUint32(20,data.length,true); c.setUint32(24,data.length,true); c.setUint16(28,nm.length,true); c.setUint16(30,0,true); c.setUint16(32,0,true);
+    c.setUint16(34,0,true); c.setUint16(36,0,true); c.setUint32(38,0,true); c.setUint32(42,off,true);
+    cen.push(c.buffer,nm); off+=30+nm.length+data.length;
+  });
+  var csz=0; cen.forEach(function(x){ csz+=(x.byteLength!==undefined?x.byteLength:x.length); });
+  var e=hdr(22); e.setUint32(0,0x06054b50,true); e.setUint16(8,files.length,true); e.setUint16(10,files.length,true); e.setUint32(12,csz,true); e.setUint32(16,off,true);
+  return new Blob(parts.concat(cen,[e.buffer]),{type:"application/zip"});
+}
+function dlLink(name,blob,btn){ var old=btn?btn.textContent:""; try{ var u=URL.createObjectURL(blob), a=document.createElement("a"); a.href=u; a.download=name; document.body.appendChild(a); a.click(); document.body.removeChild(a); setTimeout(function(){ URL.revokeObjectURL(u); },4000); if(btn){ btn.textContent="Download started"; setTimeout(function(){ btn.textContent=old; },1800); } }catch(e){ if(btn){ btn.textContent="Blocked by the browser"; setTimeout(function(){ btn.textContent=old; },2600); } } }
+/* several files in one zip: through the viewer's save prompt when there is one, otherwise a normal link download */
+window.__dlZip=function(zipName,files,btn){
+  var blob=dlZipBlob(files), old=btn?btn.textContent:"";
+  function say(t,ms){ if(!btn) return; btn.textContent=t; setTimeout(function(){ btn.textContent=old; },ms||2200); }
+  if(!DLNS){ dlLink(zipName,blob,btn); return; }
+  try{ DLNS.save({filename:zipName,data:blob}).then(function(){ say("Saved "+zipName+": unzip it into the Scripts folder",6000); },function(e){ say(dlErr(e),3200); }); }catch(e){ say(dlErr(e),3200); }
+};
 function dlErr(e){ var c=e&&e.code; return c==="declined"?"Cancelled":(c==="rate_limited"?"A save prompt is already open":"Could not save here: use Copy or Show text"); }
 function dlSave(name,data,btn,fallback){
   if(!DLNS){ fallback(); return; }
-  var fn=DL_OK.test(name)?name:name+".txt", ren=fn!==name, old=btn?btn.textContent:"";
+  var ren=!DL_OK.test(name), fn=ren?name.replace(/\.[^.]+$/,"")+".zip":name, old=btn?btn.textContent:"";
   function say(t,ms){ if(!btn) return; btn.textContent=t; setTimeout(function(){ btn.textContent=old; },ms||2200); }
-  try{ DLNS.save({filename:fn,data:data}).then(function(){ say(ren?"Saved as "+fn+": delete the .txt ending":"Saved",ren?6000:1800); },function(e){ say(dlErr(e),3200); }); }
+  var payload=ren?dlZipBlob([[name,data]]):data;
+  try{ DLNS.save({filename:fn,data:payload}).then(function(){ say(ren?"Saved "+fn+": unzip it for "+name:"Saved",ren?6000:1800); },function(e){ say(dlErr(e),3200); }); }
   catch(e){ say(dlErr(e),3200); }
 }
 var _wfDownload=wfDownload;

@@ -697,6 +697,7 @@ function hxUiInit(){
 var HX_RTS_NAME="AlexAligned_Unified_v7_E_History_26.09.2026.rts", HX_PS1_NAME="run_v7_history.ps1";
 var HX_RTS=__HX_RTS__;
 var HX_PS1=__HX_PS1__;
+var HX_BAT_NAME="Run_AlexAligned_v7_History.bat", HX_BAT=__HX_BAT__;
 function hxWfInit(){
   var pane=document.getElementById("pane-wf"); if(!pane||document.getElementById("hxWf")) return;
   var blocks=pane.querySelectorAll(":scope > .block"), before=null;
@@ -705,9 +706,9 @@ function hxWfInit(){
   var d=document.createElement("div"); d.className="block"; d.id="hxWf";
   d.innerHTML='<div class="block-head"><h2>Part E: price history for Ask the terminal (optional)</h2><span class="count">separate, never merged</span></div>'+
     '<p class="lede">An extra RealTest part that only feeds the <b>Ask the terminal</b> tab\u2019s long-horizon questions (year-to-date, 12 months, drawdown, correlation to RSP, the diagnostic of a list). It reads the same shared data file as parts B and A, with <b>-apply -scan</b> and no import, and writes its <b>own</b> file, <span class="num">AlexAligned_Unified_v7E_history.csv</span>. Parts C, B and A, the merge, the ingest check and the Update button are unchanged and do not need it. Run it after the main launcher has finished, never at the same time as another RealTest job.</p>'+
-    '<div class="controls"><button class="btn ghost" id="hxDlRts" type="button">Download the part E script (.rts)</button><button class="btn ghost" id="hxDlPs1" type="button">Download the part E launcher (.ps1)</button><button class="btn ghost" id="hxCpCmd" type="button">Copy the part E command</button><button class="btn ghost" id="hxCpRts" type="button">Copy the part E script text</button></div>'+
-    '<div class="note-grid"><div class="note-card"><h3>1 \u00B7 Once</h3><p>Save both downloads into <span class="num">C:\\RealTest21_newerv2\\Scripts</span>. Inside the Claude viewer only certain file types can be saved, so they arrive as <span class="num">.rts.txt</span> and <span class="num">.ps1.txt</span>: delete the <span class="num">.txt</span> ending when you save or rename them. Both files are also in the GitHub repository under <span class="num">realtest/</span>.</p></div>'+
-    '<div class="note-card"><h3>2 \u00B7 After each daily run</h3><p>Run <span class="num">powershell -ExecutionPolicy Bypass -File C:\\RealTest21_newerv2\\Scripts\\run_v7_history.ps1 -Ask</span>, or paste the copied command. About a minute. Good result: <b>PART E PASSED</b>, about 575 \u00D7 280 rows.</p></div>'+
+    '<div class="controls"><button class="btn" id="hxDlZip" type="button">Download all three part E files (.zip)</button><button class="btn ghost" id="hxDlRts" type="button">Script only (.rts)</button><button class="btn ghost" id="hxDlPs1" type="button">Launcher only (.ps1)</button><button class="btn ghost" id="hxDlBat" type="button">Double-click file only (.bat)</button><button class="btn ghost" id="hxCpCmd" type="button">Copy the part E command</button><button class="btn ghost" id="hxCpRts" type="button">Copy the part E script text</button></div>'+
+    '<div class="note-grid"><div class="note-card"><h3>1 \u00B7 Once</h3><p>Click <b>Download all three part E files</b>. The Claude viewer cannot save .rts, .ps1 or .bat files directly, so they come inside <span class="num">AlexAligned_v7_partE_files.zip</span> with their real names. Right-click the zip \u2192 Properties \u2192 tick <b>Unblock</b> \u2192 OK, then Extract All into <span class="num">C:\\RealTest21_newerv2\\Scripts</span>. You get <span class="num">AlexAligned_Unified_v7_E_History_26.09.2026.rts</span>, <span class="num">run_v7_history.ps1</span> and <span class="num">Run_AlexAligned_v7_History.bat</span>. Put a shortcut to the .bat next to your daily one if you like.</p></div>'+
+    '<div class="note-card"><h3>2 \u00B7 After each daily run</h3><p>When your daily <span class="num">Run_AlexAligned_v7_Workflow.bat</span> window says ALL GATES PASSED and is closed, double-click <span class="num">Run_AlexAligned_v7_History.bat</span> and type <b>Y</b>. About a minute. Good result: <b>PART E PASSED</b>, about 575 \u00D7 280 rows.</p></div>'+
     '<div class="note-card"><h3>3 \u00B7 Load it</h3><p>Ask the terminal tab \u2192 <b>Load price history</b> \u2192 pick <span class="num">AlexAligned_Unified_v7E_history.csv</span>. Other tabs do not read it.</p></div></div>'+
     '<details><summary class="mini" style="cursor:pointer">Show the part E script text</summary><pre id="hxRtsPre" style="max-height:300px;overflow:auto;font-family:var(--mono);font-size:11px;background:var(--sunken);border:1px solid var(--line);border-radius:8px;padding:10px 12px;white-space:pre-wrap"></pre></details>';
   if(before) pane.insertBefore(d,before); else pane.appendChild(d);
@@ -716,6 +717,8 @@ function hxWfInit(){
   b1.addEventListener("click",function(){ wfDownload(HX_RTS_NAME,HX_RTS,b1); });
   b2.addEventListener("click",function(){ wfDownload(HX_PS1_NAME,HX_PS1,b2); });
   b3.addEventListener("click",function(){ wfCopy(cmd,b3); });
+  var b5=document.getElementById("hxDlZip"); if(b5) b5.addEventListener("click",function(){ if(window.__dlZip) window.__dlZip("AlexAligned_v7_partE_files.zip",[[HX_RTS_NAME,HX_RTS],[HX_PS1_NAME,HX_PS1],[HX_BAT_NAME,HX_BAT]],b5); });
+  var b6=document.getElementById("hxDlBat"); if(b6) b6.addEventListener("click",function(){ wfDownload(HX_BAT_NAME,HX_BAT,b6); });
   var b4=document.getElementById("hxCpRts"); if(b4) b4.addEventListener("click",function(){ wfCopy(HX_RTS,b4); });
 }
 try{ hxUiInit(); }catch(e){}
