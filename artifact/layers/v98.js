@@ -52,6 +52,9 @@ function readAs(q){ var s=String(q||"").toLowerCase(), out=[]; (s.match(/[a-z']+
 var _qmAsk98=qmAsk;
 qmAsk=function(question,done){
   try{ addDyn(qmBuildCtx()); }catch(e){}
+  /* a bare "IT" in a question about sectors or subsectors means the IT Sector, not the ticker IT (Gartner) */
+  try{ var qs0=String(question||""); if(/\bIT\b(?! [Ss]ector)/.test(qs0)&&(/sub ?-?sectors?|\bsectors?\b|\bindustr/i.test(qs0.replace(/\bIT [Ss]ector\b/g,""))||(/\b(?:links?|connect\w*|between|bridg\w*|in common)\b/i.test(qs0)&&!(qs0.replace(/\bIT\b/g,"").match(/\b[A-Z]{2,5}\b/g)||[]).length))&&!/\bIT (?:stock|shares|ticker)\b|gartner/i.test(qs0)) question=qs0.replace(/\bIT\b(?! [Ss]ector)/g,"information technology sector");
+    if(/\bIT [Ss]ector\b/.test(String(question))&&!/\bIT (?:stock|shares|ticker)\b|gartner/i.test(String(question))) question=String(question).replace(/\bIT [Ss]ector\b/g,"information technology sector"); }catch(e){}
   var ra=[]; try{ ra=readAs(question); }catch(e){}
   return _qmAsk98(question,function(r){ READAS=(ra.length&&r&&r.spec)?ra:null; done(r); });
 };

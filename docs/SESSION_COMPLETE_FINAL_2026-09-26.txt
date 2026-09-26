@@ -262,7 +262,7 @@ forecast; connection paths show co-movement, not cause.
 
 PART 8. FINAL STATUS (end of session, 26 Sep 2026)
 --------------------------------------------------
-Live page: https://claude.ai/artifact/JBivgL88qHWeaCSsepr7cN (version 105)
+Live page: https://claude.ai/artifact/JBivgL88qHWeaCSsepr7cN (version 106)
 Code:      branch claude/artifact-access-question-f3s8rs (layers v81 to v99 in artifact/layers, splice81.py builds the page)
 
 Your last checks, reviewed: all seven answers you pasted (smart 10-stock portfolio, themes strengthening, Credit Services
@@ -308,7 +308,7 @@ Note: saved tiles live in this browser only. Clearing site data, or a private wi
 "Copy all" backup of tiles you care about.
 
 
-PART 10. LAST CHANGES (version 105)
+PART 10. LAST CHANGES (version 106)
 -----------------------------------
 A. My tiles now persist properly
    - Every change is saved in this browser AND in your account's store for this page, so your tiles follow you to any
@@ -353,3 +353,13 @@ OUTSTANDING (for another session)
    - A navy colour theme next to dark and light. It needs every colour token and every chart, map and table checked in
      the new theme so no text becomes unreadable; not started, so nothing is at risk.
    - Large subsectors in AF view (20+ names) are all visible but busy; a tidier layout for big trees could be added.
+
+
+PART 11. VERSION 106
+--------------------
+- "IT" in a question about sectors, subsectors or links now means the IT Sector, not the ticker IT (Gartner); "IT Sector"
+  typed with capitals is read the same way. "How is IT connected to TRI?" and "Tell me about IT" still mean Gartner.
+  Now working: "Show me links / connections from different sub sectors to IT", "What links Semiconductors and IT?",
+  "Which IT Sector stocks are connected to other sectors and improving / anomalous / falling?".
+- Outstanding: "in rising subsectors" inside a connections question is not yet applied (the answer covers the whole
+  sector); the navy theme (next session).
