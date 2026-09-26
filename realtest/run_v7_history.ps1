@@ -29,7 +29,17 @@ function Stop-Run([string]$why) {
 function Line-Count([string]$p) { if (Test-Path $p) { @(Get-Content $p).Count } else { 0 } }
 
 Write-Host '=== AlexAligned Unified v7 part E: price history ===' -ForegroundColor Cyan
-if (Get-Process -Name 'RealTest*' -ErrorAction SilentlyContinue) { Stop-Run 'a RealTest process is already running. Wait for it to finish, then start again.' }
+$rtp = @(Get-Process -Name 'RealTest*' -ErrorAction SilentlyContinue)
+if ($rtp.Count) {
+  Write-Host ''
+  Write-Host 'Still running (from Task Manager, Details tab):' -ForegroundColor Yellow
+  foreach ($p in $rtp) {
+    $st = ''; try { $st = $p.StartTime.ToString('ddd HH:mm') } catch { $st = '?' }
+    $wt = ''; try { $wt = $p.MainWindowTitle } catch { }
+    Write-Host ('   ' + $p.ProcessName + '.exe   id ' + $p.Id + '   started ' + $st + $(if ($wt) { '   window: ' + $wt } else { '   (no window: a background job)' }))
+  }
+  Stop-Run ('RealTest is still running (' + $rtp.Count + ' process). Close the RealTest window, or if it has no window wait for the job to finish, or end it in Task Manager if it is left over from an earlier run. Then start again.')
+}
 if (-not (Test-Path $Exe)) { Stop-Run ('RealTest.exe not found at ' + $Exe) }
 if (-not (Test-Path (Join-Path $Scr $File))) { Stop-Run ('script missing: ' + $File) }
 if (-not (Test-Path $Rtd)) { Stop-Run ('the shared data file does not exist yet: ' + $Rtd + '. Run part C (or the main workflow) first.') }
