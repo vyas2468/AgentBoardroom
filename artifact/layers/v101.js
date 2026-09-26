@@ -69,6 +69,31 @@ qmParseX=function(q){
       if(SC.test(t)){ var tg3=target(q,t,C,false); if(tg3) return {kind:"hx101",mode:"score",syms:tg3.syms,from:tg3.from,label:tg3.label,skipped:tg3.skipped}; }
     }
     var tl=target(q,t,C,false);
+    /* rolling correlation of one or many tickers / sectors / subsectors / "these" against a reference (pairs stay with the existing chart) */
+    if(/\brolling correlations?\b|\brolling corr\b|\bcorrelation over time\b/.test(t)){
+      var tkR=[]; try{ tkR=A.tickers(q).filter(function(x){ return C.bySym[x]&&!new RegExp("\\b"+x.toLowerCase()+" sector\\b").test(t); }); }catch(e){}
+      var refT=null, rm=String(q).match(/\b(?:to|vs\.?|versus|against|with) ([A-Z][A-Z0-9.\-]{0,5})\s*(?:over|in|during|for|$|[?.!,])/);
+      if(rm&&tkR.indexOf(rm[1])>=0&&rm[1]!=="RSP"&&rm[1]!=="SPY"){ refT=rm[1]; tkR=tkR.filter(function(x){ return x!==refT; }); }
+      var refS=/\b(?:to|vs\.?|versus|against|with) (?:its|their|each name's|own|the) ?(?:own )?sectors?(?: baskets?)?\b/.test(t), refB=/\b(?:to|vs\.?|versus|against|with) (?:the )?(?:rsp|spy|market|benchmark|index|s&p)\b/.test(t);
+      var iiR=qmIndMentions(t,C), ssR=(qmSecMentions(t).inn||[]).map(function(v){ return qmSecKey(v)||v; }), lastR=null; try{ lastR=A.last?A.last():null; }catch(e){}
+      var TG=[]; tkR.forEach(function(x){ TG.push({t:"sym",v:x}); }); iiR.forEach(function(x){ TG.push({t:"ind",v:x}); }); if(!iiR.length||refS) ssR.forEach(function(x){ if(!refS||!TG.length) TG.push({t:"sec",v:x}); });
+      if(!TG.length&&FOLLOW.test(t)&&lastR&&lastR.syms) lastR.syms.filter(function(x){ return C.bySym[x]; }).slice(0,12).forEach(function(x){ TG.push({t:"sym",v:x}); });
+      var explicit=refT||refS||refB;
+      if(TG.length&&(TG.length===1||TG.length>=3||explicit||FOLLOW.test(t)))
+        return {kind:"hx101",mode:"rcor",tg:TG.slice(0,12),ref:refT?{t:"sym",v:refT}:(refS?{t:"own"}:{t:"bench"}),w:/\b(?:20|21) (?:bars|days)\b|\b1 month\b/.test(t)?21:(/\b(?:126) (?:bars|days)\b|\b6 months?\b/.test(t)?126:(/\b(?:252) (?:bars|days)\b|\b12 months?\b|\b1 year\b/.test(t)?252:63)),syms:TG.filter(function(g){ return g.t==="sym"; }).map(function(g){ return g.v; }).concat(["__x"]).filter(function(x){ return x!=="__x"||true; }),label:""};
+    }
+    var WIN=/\b(?:60|63) (?:bars|days)\b|\b3 months?\b|\bquarter\b/.test(t)?63:(/\b126 (?:bars|days)\b|\b6 months?\b/.test(t)?126:252);
+    /* spread of a whole list against its equal-weight basket; "spread of NVDA vs these" */
+    if(/\bspreads?\b|\bstretched\b/.test(t)){
+      var lastS=null; try{ lastS=A.last?A.last():null; }catch(e){}
+      var tkS=[]; try{ tkS=A.tickers(q).filter(function(x){ return C.bySym[x]; }); }catch(e){}
+      var vsL=/\b(?:vs\.?|versus|against|to|relative to) (?:these|them|those|the basket|the list|their basket|this list|the rest)\b/.test(t)&&lastS&&lastS.syms&&lastS.syms.length>=2;
+      if(vsL&&tkS.length===1) return {kind:"hx101",mode:"spread",syms:lastS.syms.filter(function(x){ return C.bySym[x]; }),focus:tkS[0],from:"last",label:"the previous answer's names",skipped:[],win:WIN};
+      if(tl&&(isList(tl)&&tl.syms.length>=3||tl.from==="group"&&tl.syms.length>=3)&&(tl.from!=="named"||tkS.length>=3)) return {kind:"hx101",mode:"spread",syms:tl.syms.slice(0,60),from:tl.from,label:tl.label,skipped:tl.skipped,win:WIN};
+    }
+    /* relative strength against each name's own sector basket */
+    if(tl&&/\brelative strength\b|\brs\b|\boutperform\w*\b|\bleaders?\b/.test(t)&&/\b(?:vs\.?|versus|against|relative to|compared (?:to|with)|within|inside) (?:their |its |the |each name's |own )*(?:own )?(?:sectors?|sector baskets?|sector peers|peers)\b/.test(t))
+      return {kind:"hx101",mode:"rsec",syms:tl.syms.slice(0,80),from:tl.from,label:tl.label,skipped:tl.skipped,win:WIN};
     if(tl&&(isList(tl)||tl.from==="group")){
       if(/\brelative strength (?:leaderboard|ranking|rankings|table|league)\b|\brs (?:leaderboard|ranking|table)\b|\bleaderboard\b/.test(t)) return {kind:"hx101",mode:"rsl",syms:tl.syms,from:tl.from,label:tl.label,skipped:tl.skipped,n:(t.match(/\btop (\d{1,2})\b/)||[])[1]||0};
     }
@@ -189,8 +214,59 @@ function barsSvg(items,title,fmt){ /* horizontal diverging bars: items [{k,v,c?}
     s.push('<text'+(i.tear?' data-tear="'+hE(i.k)+'" style="cursor:pointer"':'')+' x="'+(lw-8)+'" y="'+(y+13)+'" font-size="10.5" font-weight="700" text-anchor="end" fill="var(--ink)">'+hE(i.k)+'</text><rect x="'+x.toFixed(1)+'" y="'+(y+3)+'" width="'+Math.max(0.5,w).toFixed(1)+'" height="'+(rh-6)+'" fill="'+(i.c||(v>=0?"#16a34a":"#dc2626"))+'" rx="2"/><text x="'+(v>=0?x0+w+4:x0-w-4).toFixed(1)+'" y="'+(y+13)+'" font-size="10" text-anchor="'+(v>=0?"start":"end")+'" fill="var(--ink-2)">'+hE(fmt(i.v,i))+'</text>'); });
   s.push('</svg>'); return wrap(s.join(""));
 }
+function lineSvg(series,dates,a,title,fmt,refs){
+  var W=940,Hh=460,ml=56,mr=74,mt=30,mb=34,pw=W-ml-mr,ph=Hh-mt-mb, L=dates.length-1, lo=Infinity, hi=-Infinity;
+  series.forEach(function(sr){ for(var i=a;i<=L;i++){ var v=sr.v[i]; if(num(v)){ if(v<lo) lo=v; if(v>hi) hi=v; } } }); (refs||[]).forEach(function(r){ if(r.v<lo) lo=r.v; if(r.v>hi) hi=r.v; });
+  if(!isFinite(lo)) return ""; if(hi===lo){ hi+=1; lo-=1; } var pad=(hi-lo)*0.05; lo-=pad; hi+=pad;
+  function X(i){ return ml+(i-a)/(L-a)*pw; } function Y(v){ return mt+ph-(v-lo)/(hi-lo)*ph; }
+  var s=['<svg viewBox="0 0 '+W+' '+Hh+'" role="img" aria-label="'+hE(title)+'" style="width:100%;height:auto;max-width:1000px;display:block;background:var(--surface)">','<text x="10" y="18" font-size="13" font-weight="700" fill="var(--ink)">'+hE(title)+'</text>'];
+  for(var g=0;g<=4;g++){ var gv=lo+(hi-lo)*g/4; s.push('<line x1="'+ml+'" y1="'+Y(gv).toFixed(1)+'" x2="'+(ml+pw)+'" y2="'+Y(gv).toFixed(1)+'" stroke="var(--line)" stroke-width="0.6"/><text x="'+(ml-6)+'" y="'+(Y(gv)+3).toFixed(1)+'" font-size="10" text-anchor="end" fill="var(--ink-3)">'+hE(fmt(gv))+'</text>'); }
+  for(var k=0;k<=4;k++){ var di=Math.round(a+(L-a)*k/4); s.push('<text x="'+X(di).toFixed(1)+'" y="'+(mt+ph+16)+'" font-size="10" text-anchor="middle" fill="var(--ink-3)">'+hE(dates[di])+'</text>'); }
+  (refs||[]).forEach(function(r){ s.push('<line x1="'+ml+'" y1="'+Y(r.v).toFixed(1)+'" x2="'+(ml+pw)+'" y2="'+Y(r.v).toFixed(1)+'" stroke="'+(r.c||"var(--ink-3)")+'" stroke-dasharray="4 3"/>'+(r.t?'<text x="'+(ml+4)+'" y="'+(Y(r.v)-3).toFixed(1)+'" font-size="9.5" fill="var(--ink-3)">'+hE(r.t)+'</text>':'')); });
+  var ends=[];
+  series.forEach(function(sr){ var d="", on=false, last=null; for(var i=a;i<=L;i++){ var v=sr.v[i]; if(!num(v)){ on=false; continue; } d+=(on?"L":"M")+X(i).toFixed(1)+" "+Y(v).toFixed(1); on=true; last={i:i,v:v}; }
+    s.push('<path d="'+d+'" fill="none" stroke="'+sr.c+'" stroke-width="'+(sr.w||1.6)+'"'+(sr.dash?' stroke-dasharray="5 3"':'')+' opacity="'+(sr.o||0.95)+'"><title>'+hE(sr.k)+'</title></path>'); if(last) ends.push({k:sr.k,y:Y(last.v),c:sr.c,tear:sr.tear}); });
+  ends.sort(function(p,q){ return p.y-q.y; }); for(var e=1;e<ends.length;e++) if(ends[e].y-ends[e-1].y<11) ends[e].y=ends[e-1].y+11;
+  ends.forEach(function(e2){ s.push('<text'+(e2.tear?' data-tear="'+hE(e2.k)+'" style="cursor:pointer"':'')+' x="'+(W-mr+4)+'" y="'+(e2.y+3.5).toFixed(1)+'" font-size="10.5" font-weight="700" fill="'+e2.c+'">'+hE(e2.k)+'</text>'); });
+  s.push('</svg>'); return wrap(s.join(""));
+}
+/* equal-weight basket index (1 at bar a) from daily returns of the names with data */
+function basketIdx(h,syms,a){ var L=h.dates.length-1, B=[], v=1; for(var i=0;i<=L;i++) B.push(null); B[a]=1;
+  for(var i2=a+1;i2<=L;i2++){ var s0=0,k=0; syms.forEach(function(x){ var c=h.syms[x]; if(!c) return; var r=A.ret(c,i2); if(r!==null&&num(r)){ s0+=r; k++; } }); v*=1+(k?s0/k:0); B[i2]=v; } return B; }
+function priceRel(h,sym,B,a){ var c=h.syms[sym], L=h.dates.length-1, out=[], base=null, last=null; for(var i=0;i<=L;i++) out.push(null); if(!c) return out;
+  for(var i2=a;i2<=L;i2++){ var p=c[i2]; if(p===null||p===undefined) p=last; if(p===null||p===undefined) continue; last=p; if(base===null) base=p/B[i2]; out[i2]=p/B[i2]/base*100; } return out; }
+function zOf(arr,a){ var L=arr.length-1, v=[]; for(var i=a;i<=L;i++) if(num(arr[i])&&arr[i]>0) v.push(Math.log(arr[i])); if(v.length<20) return null; var m=v.reduce(function(x,y){ return x+y; },0)/v.length, sd=Math.sqrt(v.reduce(function(x,y){ return x+(y-m)*(y-m); },0)/(v.length-1)); return sd>0?(v[v.length-1]-m)/sd:null; }
 function relRet(h,sym,w){ var c=h.syms[sym]; if(!c) return null; var L=h.dates.length-1, a=L-w; if(a<0) return null; var li=L; while(li>a&&c[li]===null) li--; if(li<L-3||c[a]===null||c[a]===undefined||!c[a]) return null; return (c[li]/c[a]-1)*100; }
 
+/* rolling correlation: each target (ticker, or a sector / subsector equal-weight basket) against a reference */
+function runRcor(spec,ctx,res,fin,by){
+  var h=H(); if(!h){ res.lead="Rolling correlation is computed from the part E price history; load it on the Price history tab."; return fin(0); }
+  var L=h.dates.length-1, W=spec.w, span=Math.min(252,L-W-1); if(span<20){ res.lead="Not enough price history for a "+W+"-bar rolling window."; return fin(0); }
+  var a=L-span, cache={};
+  function rets(key,mem){ if(cache[key]) return cache[key]; var out=[]; for(var i=0;i<=L;i++){ var s0=0,k=0; mem.forEach(function(x){ var c=h.syms[x]; if(!c) return; var r=A.ret(c,i); if(r!==null&&num(r)){ s0+=r; k++; } }); out.push(k?s0/k:null); } cache[key]=out; return out; }
+  function memOf(g){ if(g.t==="sym") return [g.v]; if(g.t==="ind") return ctx.rows.filter(function(r){ return r.ind===g.v; }).map(function(r){ return r.sym; }); if(g.t==="sec") return ctx.rows.filter(function(r){ return r.sec===g.v; }).map(function(r){ return r.sym; }); return []; }
+  function nameOf(g){ return g.t==="sec"?qmSecName(g.v):g.v; }
+  var bn=(A.bench&&A.bench())||"RSP";
+  function refOf(g){ if(spec.ref.t==="sym") return {k:spec.ref.v,m:[spec.ref.v]}; if(spec.ref.t==="own"){ var sec=g.t==="sym"?(by[g.v]||{}).sec:(g.t==="ind"?((ctx.rows.filter(function(r){ return r.ind===g.v; })[0])||{}).sec:null); if(sec) return {k:qmSecName(sec)+" basket",m:memOf({t:"sec",v:sec}),own:true}; } return {k:bn,m:[bn]}; }
+  function roll(x,y){ var out=[]; for(var i=0;i<=L;i++) out.push(null); for(var j=a;j<=L;j++){ var xa=[],ya=[]; for(var i2=j-W+1;i2<=j;i2++){ if(i2<1) continue; var p=x[i2], q2=y[i2]; if(num(p)&&num(q2)){ xa.push(p); ya.push(q2); } } out[j]=xa.length>=Math.min(20,W-1)?A.corr(xa,ya):null; } return out; }
+  var ser=[], rows=[];
+  spec.tg.forEach(function(g,i){ var m=memOf(g).filter(function(x){ return h.syms[x]; }); if(!m.length) return; var rf=refOf(g); if(rf.own&&g.t==="sec") rf={k:bn,m:[bn]};
+    var mr=rf.m.filter(function(x){ return h.syms[x]; }); if(!mr.length) return;
+    var x=rets(g.t+":"+g.v,m), y=rets("ref:"+rf.k,rf.own&&g.t==="sym"?mr.filter(function(z){ return z!==g.v; }):mr), R=roll(x,y), v=[]; for(var j=a;j<=L;j++) if(num(R[j])) v.push(R[j]); if(!v.length) return;
+    var avg=v.reduce(function(p,c){ return p+c; },0)/v.length, now=R[L], ago=R[Math.max(a,L-21)];
+    ser.push({k:nameOf(g),v:R,c:SECCOL[i%SECCOL.length],tear:g.t==="sym"});
+    rows.push({g:g,row:[nameOf(g)+(g.t!=="sym"?" ("+m.length+" names)":""),rf.k,f0(now,2),num(now)&&num(ago)?sg(now-ago,2):"\u2013",f0(avg,2),f0(Math.min.apply(null,v),2),f0(Math.max.apply(null,v),2)],now:now}); });
+  if(!ser.length){ res.lead="No price history for those names."; return fin(0); }
+  var refTxt=spec.ref.t==="sym"?spec.ref.v:(spec.ref.t==="own"?(rows.length===1?rows[0].row[1]:"each one's own sector basket"):bn);
+  res.hxPlot=lineSvg(ser,h.dates,a,"Rolling "+W+"-bar correlation of daily returns with "+refTxt,function(v){ return v.toFixed(2); },[{v:0,t:"0"},{v:0.5,t:"0.5"}]);
+  rows.sort(function(p,q2){ return (num(q2.now)?q2.now:-9)-(num(p.now)?p.now:-9); });
+  var hi=rows[0], lo=rows[rows.length-1];
+  res.lead="Rolling "+W+"-bar correlation with <b>"+hE(refTxt)+"</b>"+(rows.length>1?": highest now <b>"+hE(hi.row[0])+"</b> ("+hi.row[2]+"), lowest <b>"+hE(lo.row[0])+"</b> ("+lo.row[2]+").":": <b>"+hE(hi.row[0])+"</b> is at "+hi.row[2]+" now, against "+hi.row[4]+" on average over the last "+span+" bars (range "+hi.row[5]+" to "+hi.row[6]+").");
+  res.table={head:["Target","Against","Now","Change over 1 month","Average","Lowest","Highest"],align:["l","l","r","r","r","r","r"],hxColor:{3:"sign"},body:rows.map(function(r){ return r.row; })};
+  res.notes.push("Each point is the correlation of daily returns over the previous "+W+" bars; sectors and subsectors are equal-weight baskets of their scanned stocks (a name is left out of its own sector basket). Say \u201Cto its sector\u201D, \u201Cto NVDA\u201D or \u201Cto RSP\u201D for the reference, and \u201C1 month\u201D, \u201C6 months\u201D or \u201C12 months\u201D for the window. Pairs (\u201Crolling correlation of NVDA and AMD\u201D) use the pair chart.");
+  var ss=spec.tg.filter(function(g){ return g.t==="sym"; }).map(function(g){ return g.v; }); res.send=ss.length?{label:"rolling correlation",items:ss.map(function(s){ return {sym:s,side:"long",w:null}; })}:null;
+  return fin(rows.length);
+}
 /* ---- run ---- */
 var _qmRunX101=qmRunX;
 qmRunX=function(spec,ctx,res,t0){
@@ -198,6 +274,7 @@ qmRunX=function(spec,ctx,res,t0){
   var h=H(), by=ctx.bySym;
   function fin(n){ res.cov=h?"Price history: <b>"+h.nSyms+" symbols</b> \u00D7 <b>"+h.bars+" bars</b>"+(A.cut?" to <b>"+A.cut()+"</b>":"")+" (part E).":qmCovX(ctx,""); res.rows=n; res.qualifying=n; res.ms=Date.now()-t0; return res; }
   function send(list,label){ var it=list.filter(function(s){ return by[s]; }).map(function(s){ return {sym:s,side:"long",w:null}; }); return it.length?{label:label,items:it.slice(0,50)}:null; }
+  if(spec.mode==="rcor") return runRcor(spec,ctx,res,fin,by);
   var syms=(spec.syms||[]).filter(function(s,i,a){ return by[s]&&a.indexOf(s)===i; }), L=spec.label||"";
   if(spec.skipped&&spec.skipped.length) res.notes.push("Not in the loaded stock scan, so left out: "+spec.skipped.slice(0,20).join(", ")+(spec.skipped.length>20?" and "+(spec.skipped.length-20)+" more":"")+".");
   if(!syms.length){ res.lead="None of those names are in the loaded stock scan."+(spec.from==="last"?" Ask for a list of stocks first, then this question.":""); return fin(0); }
@@ -303,6 +380,43 @@ qmRunX=function(spec,ctx,res,t0){
     res.extra=[{title:"Portfolio averages and the most repeated subsectors",table:{head:["Measure","Value"],align:["l","l"],body:[["Average strength percentile",f0(avg(all,"str"))],["Average risk percentile",f0(avg(all,"risk"))],["Average beta to the benchmark",num(b1)?b1.toFixed(2):"\u2013 (load the price history)"],["Names in an uptrend",all.filter(function(r){ return r.trend==="up"; }).length+" of "+n],["Improving / deteriorating",all.filter(function(r){ return r.dir==="improving"; }).length+" / "+all.filter(function(r){ return r.dir==="deteriorating"; }).length],["Subsectors with 2 or more names",topI.filter(function(k){ return inds[k]>=2; }).map(function(k){ return k+" ("+inds[k]+")"; }).join(", ")||"none"]]}}];
     res.notes.push("Equal weights are assumed. Universe weight is the sector's share of all scanned stocks; the effective number of sectors is 1 divided by the sum of squared sector weights (higher is more spread). Ask \u201Chow correlated are these\u201D for the full matrix.");
     res.send=send(syms,"exposure of "+L); return fin(n);
+  }
+  if(spec.mode==="spread"){
+    if(!h){ res.lead="The spread against the basket is computed from the part E price history; load it on the Price history tab."; return fin(0); }
+    var LL=h.dates.length-1, a=Math.max(0,LL-spec.win), have=syms.filter(function(x){ return h.syms[x]; });
+    var foc=spec.focus&&h.syms[spec.focus]?spec.focus:null, bk=have.filter(function(x){ return x!==foc; });
+    if(bk.length<2){ res.lead="Need at least two other names with price history to form the basket."; return fin(0); }
+    var B=basketIdx(h,bk,a), names=foc?[foc]:have, rows2=names.map(function(x){ var R=priceRel(h,x,B,a), z=zOf(R,a), lastv=R[LL]; return {s:x,R:R,z:z,rel:num(lastv)?lastv-100:null}; }).filter(function(o){ return num(o.z); });
+    if(!rows2.length){ res.lead="Not enough price history for these names over "+spec.win+" bars."; return fin(0); }
+    rows2.sort(function(p,q2){ return q2.z-p.z; });
+    var show=foc?rows2:(rows2.length>12?rows2.slice(0,6).concat(rows2.slice(-6)):rows2);
+    var ttl=foc?foc+" against an equal-weight basket of "+bk.length+" names ("+spec.win+" bars, basket = 100)":"Each name against the list's equal-weight basket ("+spec.win+" bars, basket = 100)";
+    res.hxPlot=lineSvg(show.map(function(o,i){ return {k:o.s,v:o.R,c:SECCOL[i%SECCOL.length],tear:true,w:foc?2.2:1.5}; }),h.dates,a,ttl,function(v){ return v.toFixed(0); },[{v:100,t:"basket"}]);
+    function tag(z){ return z>=2?"stretched above":(z<=-2?"stretched below":(z>=1?"leaning above":(z<=-1?"leaning below":"in line"))); }
+    var up=rows2.filter(function(o){ return o.z>=2; }), dn=rows2.filter(function(o){ return o.z<=-2; });
+    res.lead=foc?"<b>"+foc+"</b> against an equal-weight basket of "+hE(L)+" ("+bk.length+" names, "+spec.win+" bars): "+sg(rows2[0].rel,1)+"% relative to the basket, z-score <b>"+rows2[0].z.toFixed(2)+"</b> ("+tag(rows2[0].z)+").":
+      "Spread of <b>"+hE(L)+"</b> against their own equal-weight basket ("+spec.win+" bars): "+up.length+" stretched above (z 2 or more)"+(up.length?": "+up.map(function(o){ return o.s; }).join(", "):"")+"; "+dn.length+" stretched below"+(dn.length?": "+dn.map(function(o){ return o.s; }).join(", "):"")+".";
+    res.table={head:["Symbol","Sector","Relative to basket","Z-score of the spread","Reading"],align:["l","l","r","r","l"],hxColor:{2:"sign",3:"sign"},body:rows2.map(function(o){ return [o.s,qmSecName(by[o.s].sec),sg(o.rel,1)+"%",o.z.toFixed(2),tag(o.z)]; })};
+    if(!foc&&rows2.length>12) res.notes.push("The chart draws the 6 most stretched above and below; the table has all "+rows2.length+".");
+    res.notes.push("Spread = the name's price divided by the equal-weight basket of the "+(foc?"other names":"list")+", indexed to 100 at the start; the z-score is today's log spread against its own mean and spread over the window. A plain price ratio: no fitted hedge ratio, so a negative hedge ratio cannot occur. Say \u201C6 months\u201D or \u201C3 months\u201D for a shorter window. Not a trade signal on its own.");
+    res.send=send(foc?syms:rows2.map(function(o){ return o.s; }),"spread vs basket"); return fin(rows2.length);
+  }
+  if(spec.mode==="rsec"){
+    if(!h){ res.lead="Relative strength against the sector is computed from the part E price history; load it on the Price history tab."; return fin(0); }
+    var L2=h.dates.length-1, a2=Math.max(0,L2-spec.win), SB={}, bn2=(A.bench&&A.bench())||"RSP", b63=relRet(h,bn2,63);
+    function secB(sec){ if(!SB[sec]){ var mem=ctx.rows.filter(function(r){ return r.sec===sec&&h.syms[r.sym]; }).map(function(r){ return r.sym; }); SB[sec]={m:mem,B:basketIdx(h,mem,a2),r:{}}; [21,63,126].forEach(function(w){ var s0=0,k=0; mem.forEach(function(x){ var v=relRet(h,x,w); if(num(v)){ s0+=v; k++; } }); SB[sec].r[w]=k?s0/k:null; }); } return SB[sec]; }
+    var rr2=syms.filter(function(x){ return h.syms[x]; }).map(function(x){ var r=by[x], sb=secB(r.sec), o={s:x,r:r,sb:sb}; [21,63,126].forEach(function(w){ var v=relRet(h,x,w); o[w]=num(v)&&num(sb.r[w])?v-sb.r[w]:null; }); o.R=priceRel(h,x,sb.B,a2); var e=o.R[L2], e21=o.R[Math.max(a2,L2-21)]; o.slope=num(e)&&num(e21)&&e21?(e/e21-1)*100:null; o.lead=num(sb.r[63])&&num(b63)&&sb.r[63]<b63&&num(o[63])&&o[63]>0; return o; }).filter(function(o){ return num(o[63])||num(o[21]); });
+    if(!rr2.length){ res.lead="No price history for these names."; return fin(0); }
+    rr2.sort(function(p,q2){ return (num(q2[63])?q2[63]:-1e9)-(num(p[63])?p[63]:-1e9); });
+    var sh2=rr2.length>12?rr2.slice(0,6).concat(rr2.slice(-6)):rr2;
+    res.hxPlot=lineSvg(sh2.map(function(o,i){ return {k:o.s,v:o.R,c:SECCOL[i%SECCOL.length],tear:true}; }),h.dates,a2,"Each name divided by its own sector's equal-weight basket ("+spec.win+" bars, sector = 100)",function(v){ return v.toFixed(0); },[{v:100,t:"own sector"}]);
+    var ld=rr2.filter(function(o){ return o.lead; });
+    res.lead="Relative strength of <b>"+hE(L)+"</b> against each name's own sector: "+rr2.filter(function(o){ return num(o[63])&&o[63]>0; }).length+" of "+rr2.length+" beat their sector over 3 months"+(ld.length?"; leaders inside sectors that trail "+bn2+": <b>"+ld.map(function(o){ return o.s; }).join(", ")+"</b>":"")+".";
+    res.table={head:["Symbol","Sector","1M vs sector","3M vs sector","6M vs sector","RS line, last month","Sector 3M vs "+bn2,"Note"],align:["l","l","r","r","r","r","r","l"],hxColor:{2:"sign",3:"sign",4:"sign",5:"sign",6:"sign"},
+      body:rr2.map(function(o){ return [o.s,qmSecName(o.r.sec),sg(o[21],1),sg(o[63],1),sg(o[126],1),num(o.slope)?sg(o.slope,1)+"%":"\u2013",num(o.sb.r[63])&&num(b63)?sg(o.sb.r[63]-b63,1):"\u2013",o.lead?"leader in a lagging sector":(num(o[21])&&num(o[63])?(o[21]>0&&o[63]>0?"beating its sector":(o[21]<0&&o[63]<0?"trailing its sector":"mixed")):"")]; })};
+    if(rr2.length>12) res.notes.push("The chart draws the 6 strongest and 6 weakest against their sector; the table has all "+rr2.length+".");
+    res.notes.push("Sector basket: the equal-weight average of every scanned stock in that sector (from the part E history). Columns are the name's return minus its sector basket's, in percentage points; the RS line is price divided by the sector basket (100 at the window start). A leader in a lagging sector beats its sector over 3 months while the sector trails "+bn2+".");
+    res.send=send(rr2.map(function(o){ return o.s; }),"RS vs sector"); return fin(rr2.length);
   }
   if(spec.mode==="rsl"){
     if(!h){ res.lead="The relative strength leaderboard is computed from the part E price history; load it on the Price history tab."; return fin(0); }

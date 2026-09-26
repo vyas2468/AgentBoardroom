@@ -28,7 +28,10 @@ function heads(){
     p.querySelectorAll("figcaption").forEach(function(f){ add(f,f.textContent,3); });
     var bar=p.querySelector("#hx97Bar"); if(bar) add(bar,"Show / hide panels \u00b7 download thread",3);
     var tl=p.querySelector("#hx93Tiles"); if(tl&&tl.open){ var cards=[].slice.call(tl.querySelectorAll(":scope > div > div")); if(cards.length>2){
-      [[0,"start"],[Math.floor(cards.length/2),"middle"],[cards.length-1,"end"]].forEach(function(c){ var ttl=cards[c[0]].firstElementChild; add(cards[c[0]],"Example tiles: "+c[1]+" ("+(ttl?ttl.textContent:"")+")",3); }); } }
+      [[0,"start"],[Math.floor(cards.length/2),"middle"],[cards.length-1,"end"]].forEach(function(c){ var ttl=cards[c[0]].firstElementChild; add(cards[c[0]],"Example tiles: "+c[1]+" ("+(ttl?ttl.textContent:"")+")",3); });
+      /* every tile group as its own jump (charts, convergence, adaptive portfolios, trend, screener ...) */
+      cards.forEach(function(cd){ var ttl=cd.firstElementChild; if(ttl&&ttl.textContent) add(cd,"Tiles \u203A "+ttl.textContent,4); }); } }
+    else if(tl&&tl.offsetParent){ [].slice.call(tl.querySelectorAll(":scope > div > div")).forEach(function(cd){ var ttl=cd.firstElementChild, tx=ttl?(ttl.textContent||"").replace(/\s+/g," ").trim():""; if(tx) out.push({el:cd,t:"Tiles \u203A "+(tx.length>90?tx.slice(0,88)+"\u2026":tx),lv:4,open:tl}); }); }
     var th=p.querySelector("#qmThread"); if(th&&th.children.length){ add(th,"Answers thread",3); [].slice.call(th.querySelectorAll(":scope > .qm-turn")).slice(-10).forEach(function(t){ var q=t.querySelector(".qm-q"); if(q) add(q,"Answer: "+q.textContent,3); }); }
     out.sort(function(a,b){ return (a.el.compareDocumentPosition(b.el)&4)?-1:1; });
   }catch(e){}
@@ -45,13 +48,13 @@ function open(){
   var H=heads(), p=pane(), tab=p&&document.querySelector('[aria-controls="'+p.id+'"]'), name=tab?tab.textContent.replace(/\s+/g," ").trim():"this tab";
   menu.innerHTML='<div style="padding:4px 14px 8px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)">'+(name.replace(/[&<>"]/g,""))+': jump to</div>'+
     '<button type="button" data-nav="top" style="display:block;width:100%;text-align:left;padding:6px 14px;background:none;border:0;color:var(--ink-2);cursor:pointer;font:inherit">&uarr; Top of the page</button>'+
-    H.map(function(h,i){ return '<button type="button" data-nav="'+i+'" style="display:block;width:100%;text-align:left;padding:6px 14px 6px '+(h.lv===2?14:28)+'px;background:none;border:0;color:var(--ink);cursor:pointer;font:inherit;'+(h.lv===2?"font-weight:600":"")+'">'+h.t.replace(/[&<>"]/g,function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; })+'</button>'; }).join("")+
+    H.map(function(h,i){ return '<button type="button" data-nav="'+i+'" style="display:block;width:100%;text-align:left;padding:'+(h.lv===4?"4px 14px 4px 42px;font-size:.92em":"6px 14px 6px "+(h.lv===2?14:28)+"px")+';background:none;border:0;color:var(--ink);cursor:pointer;font:inherit;'+(h.lv===2?"font-weight:600":"")+'">'+h.t.replace(/[&<>"]/g,function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; })+'</button>'; }).join("")+
     '<button type="button" data-nav="bottom" style="display:block;width:100%;text-align:left;padding:6px 14px;background:none;border:0;color:var(--ink-2);cursor:pointer;font:inherit">&darr; Bottom of the page</button>';
   menu.querySelectorAll("button").forEach(function(b){
     b.addEventListener("mouseenter",function(){ b.style.background="var(--panel)"; }); b.addEventListener("mouseleave",function(){ b.style.background="none"; });
     b.addEventListener("click",function(){ var v=b.getAttribute("data-nav"); close();
       if(v==="top") window.scrollTo({top:0,behavior:"smooth"}); else if(v==="bottom") window.scrollTo({top:docH(),behavior:"smooth"});
-      else { var h=H[+v]; if(h&&h.el){ var r=h.el.getBoundingClientRect(); window.scrollTo({top:Math.max(0,y()+r.top-16),behavior:"smooth"}); } } });
+      else { var h=H[+v]; if(h&&h.el){ var go=function(){ var r=h.el.getBoundingClientRect(); window.scrollTo({top:Math.max(0,y()+r.top-16),behavior:"smooth"}); }; if(h.open&&!h.open.open){ h.open.open=true; setTimeout(go,60); } else go(); } } });
   });
   menu.hidden=false; secs.setAttribute("aria-expanded","true");
 }

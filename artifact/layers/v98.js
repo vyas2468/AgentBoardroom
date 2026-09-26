@@ -165,6 +165,18 @@ qmParseX=function(q){
     var th=themesIn(t), ii=qmIndMentions(t,C), sm=qmSecMentions(t), ss=sm.inn||[];
     var PORT=/\b(?:portfolio|portfolios|basket)\b/.test(t)&&!FOLLOW.test(t);
     var BUILD=/\b(?:build|create|construct|make|give|design|put together|assemble|want|suggest|pick)\b|\bportfolio (?:of|for|from|with|using)\b/.test(t);
+    /* ---- portfolio built from the previous answer ("these") or a named list: the adaptive builder, candidates limited to the list ---- */
+    if(/\b(?:portfolio|portfolios|basket)\b/.test(t)&&(BUILD||/\bsmart\b|\badaptive\b/.test(t))&&!/\bhedg\w*\b|\bpairs?\b|\bexposure\b|\bexit\b|\bbreadth\b|\bsentiment\b|\bmatrix\b|\bdiagnos\w*\b|\bplot\b|\bchart\b|\brisk level\b|\bspread\b/.test(t)){
+      var lastL=null; try{ lastL=A.last?A.last():null; }catch(e){}
+      var fromL=/\b(?:from|of|out of|using|among|with|within) (?:all )?(?:these|them|those|this list|that list|the list|the names above|the above)\b/.test(t)&&lastL&&lastL.syms&&lastL.syms.length;
+      var namedL=!fromL&&tks.length>=3&&/\bsmart\b|\badaptive\b/.test(t)&&/\b(?:from|out of|among|using|within)\b/.test(t);
+      if(fromL||namedL){
+        var lst=(fromL?lastL.syms:tks).filter(function(s,i,a){ return a.indexOf(s)===i; }), stN=lst.filter(function(s){ return C.bySym[s]; }).length;
+        var LS=/\blong[ -\/]?(?:and )?short\b/.test(t), lab0=fromL?"the previous answer's names":"the named tickers";
+        if(LS){ var ln2=t.match(/\b(\d{1,2}) ?(?:longs?|stocks?|names|etfs?)\b/); return mark({kind:"hsmart",uni:stN*2>=lst.length?"stocks":"etf",ls:{n:ln2?Math.max(2,Math.min(20,+ln2[1])):Math.max(2,Math.min(5,Math.floor(lst.length/3)))},t:t,only:lst.slice(0,300),onlyLab:lab0}); }
+        return mark({kind:"hsmart",uni:stN*2>=lst.length?"stocks":"etf",n:nOf(t,Math.min(10,lst.length)),t:t,only:lst.slice(0,300),onlyLab:lab0});
+      }
+    }
     /* hedge for a portfolio of named tickers: hand the list to the existing hedge question */
     if(/\bhedg\w*\b/.test(t)&&PORT&&tks.length>=2) return {kind:"hcport",mode:"hedge",syms:tks.slice(0,50),n:nOf(t,10),cross:/\b(?:other|another|different) sectors?\b|\boutside\b/.test(t)};
     /* Subsector Web in Alex's style for this one answer */
@@ -268,6 +280,8 @@ function runSmart(spec,ctx,res){
   var SHORT=spec.side==="short", t=SHORT?" portfolio ":(spec.t||""), G=groups(), h=H(), etf=spec.uni==="etf";
   var rows=etf?etfRows():ctx.rows.slice();
   var notes=[], read=[];
+  if(spec.only){ var OKL={}; spec.only.forEach(function(s){ OKL[s]=1; }); rows=rows.filter(function(r){ return OKL[r.sym]; }); read.push(["Candidates",(spec.onlyLab||"your list")+": "+rows.length+" "+(etf?"ETFs":"stocks")]);
+    if(!rows.length){ res.lead="None of the names in that list are "+(etf?"ETFs":"stocks")+" in the loaded scan."; return 0; } }
   /* hard filters */
   var sm=qmSecMentions(t), ii=qmIndMentions(t,ctx), th=spec.theme?TH_BY[spec.theme]:null;
   if(!etf){
@@ -326,6 +340,8 @@ function runSmart(spec,ctx,res){
   var maxHg=/\bhidden groups?\b/.test(t)?1:2, oneCl=/\bclusters?\b|\bhierarch\w*\b|\bdendrogram\b/.test(t);
   var lowCorr=/\blow(?:er)? correlat\w*\b|\buncorrelated\b|\bdiversif\w*\b|\bnot correlated\b|\bindependent\b|\bclusters?\b|\bhierarch\w*\b/.test(t), lam=lowCorr?3:1.2;
   if(th){ maxSec=Math.max(maxSec,Math.ceil(N/2)); maxInd=mxI?maxInd:Math.max(2,Math.ceil(N/3)); }
+  /* a portfolio from a given list: no sector / subsector / Hidden Group caps unless the question asks for them */
+  if(spec.only){ if(!mx&&!/\bacross sectors\b|\bdiversif\w*\b|\bdifferent sectors\b/.test(t)) maxSec=N; if(!mxI&&!/\bdifferent sub ?sectors\b/.test(t)) maxInd=N; if(!/\bhidden groups?\b/.test(t)) maxHg=N; }
   /* "can be in the same sector": no sector limit */
   if(/\bcan (?:all )?(?:be|come) (?:in|from|part of) the same sector\b|\bsame sector (?:is |are )?(?:ok|okay|fine|allowed)\b|\bno (?:sector )?(?:limit|cap) (?:per|on) sectors?\b|\bno sector (?:limit|cap)\b/.test(t)){
     if(mx||/\bacross sectors\b|\bdiversif\w*\b|\bdifferent sectors\b/.test(t)) notes.push("You asked both for a sector limit and for names in the same sector; the limit you named is kept.");
@@ -379,6 +395,7 @@ function runCombo(spec,ctx,res){
   var parts=spec.mix?[{lab:"Stocks",sp:{kind:"hsmart",uni:"stocks",n:spec.mix.stk,t:spec.t}},{lab:"ETFs",sp:{kind:"hsmart",uni:"etf",n:spec.mix.etf,t:spec.t}}]
     :[{lab:"Long",sp:{kind:"hsmart",uni:spec.uni||"stocks",n:spec.ls.n,t:spec.t}},{lab:"Short",sp:{kind:"hsmart",uni:spec.uni||"stocks",n:spec.ls.n,t:spec.t,side:"short"}}];
   var out=[], total=0;
+  if(spec.only) parts.forEach(function(p){ p.sp.only=spec.only; p.sp.onlyLab=spec.onlyLab; });
   parts.forEach(function(p){ var r={notes:[],extra:[],bullets:[]}; var n=runSmart(p.sp,ctx,r); out.push({p:p,r:r,n:n,syms:r.table?r.table.body.map(function(row){ return row[1]; }):[]}); total+=n; });
   if(!total){ res.lead="No names passed the rules for either part."; return 0; }
   var h=H(), all=[]; out.forEach(function(o){ o.syms.forEach(function(s){ all.push(s); }); });
@@ -398,6 +415,7 @@ function runCombo(spec,ctx,res){
   if(out[1].r.table) res.extra.push({title:out[1].p.lab+" ("+out[1].n+")"+(spec.ls?": scored for weakness":""),table:out[1].r.table});
   (out[0].r.extra||[]).slice(0,1).forEach(function(x){ res.extra.push({title:out[0].p.lab+" part - "+x.title,table:x.table}); });
   res.notes=res.notes.concat(out[1].r.notes.filter(function(x){ return !/^Adaptive:/.test(x); })).concat(out[0].r.notes);
+  if(spec.only&&spec.ls&&!out[1].n) res.notes.unshift("None of the list's names qualify as a short (each is improving or in an uptrend). Build it from a broader list, for example after \u201CTop 40 stocks by 5 day return\u201D.");
   var items=[]; out.forEach(function(o,i){ o.syms.forEach(function(s){ if(ctx.bySym[s]) items.push({sym:s,side:(spec.ls&&i===1)?"short":"long",w:null}); }); });
   if(items.length) res.send={label:spec.ls?"smart long / short":"mixed portfolio (stocks)",items:items.slice(0,50)};
   return total;
