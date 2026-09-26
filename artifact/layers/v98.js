@@ -64,6 +64,32 @@ function etfSet(){ try{ var X=moX(); if(X===ETX&&ETS) return ETS; var o={}; (X&&
 var _qmCell98=qmCell;
 qmCell=function(head,c){ if(head==="Symbol"&&!qmIsTk(String(c))&&etfSet()[String(c)]) return qmTk(String(c)); return _qmCell98(head,c); };
 
+/* ---------------- shared extra portfolio conditions (used by the smart builder and the block / cluster portfolios) ---------------- */
+var PC=[
+ ["fresh",/\b(?:fresh|new|young|recent|just turned)(?: trend)? (?:up ?trend|uptrend|trend up)s?\b/,"in a fresh uptrend (10 sessions or less)",function(r){ return r.trend==="up"&&num(r.tb)&&r.tb<=10; }],
+ ["estab",/\b(?:established|mature|long[- ]running|steady) (?:up ?trend|uptrend)s?\b/,"in an established uptrend (30 sessions or more)",function(r){ return r.trend==="up"&&num(r.tb)&&r.tb>=30; }],
+ ["up",/\buptrends?\b|\btrending up\b|\btrend up\b/,"in an uptrend",function(r){ return r.trend==="up"; }],
+ ["improving",/\bimproving\b(?! sub ?sectors?)/,"Early Warning direction improving",function(r){ return r.dir==="improving"; }],
+ ["notdet",/\bnot deteriorating\b/,"not deteriorating",function(r){ return r.dir!=="deteriorating"; }],
+ ["strength",/\bstrengthening\b/,"strengthening (score above zero)",function(r){ return num(r.sev)?r.sev>0:(num(r.rec)&&r.rec>0); }],
+ ["anom",/\banomal\w*\b|\bunusual\b/,"anomalous (graph anomaly 0.30 or more)",function(r){ return num(r.ga)&&r.ga>=0.3; }],
+ ["conv",/\bsignals? (?:are )?converg\w*\b|\bsignal convergence\b|\bconverging signals?\b/,"where signals converge (3 or more lenses)",function(r){ return num(r.conv)&&r.conv>=3; }],
+ ["notext",/\bnot (?:extended|stretched)\b|\bunextended\b/,"not extended (under 1 ATR above the trend line)",function(r){ return num(r.atr)&&r.atr<1; }],
+ ["neartl",/\bnear (?:its |the )?trend ?line\b|\bpull ?backs?\b|\bdips?\b/,"near its trend line (within 0.5 ATR)",function(r){ return num(r.atr)&&Math.abs(r.atr)<=0.5; }],
+ ["notob",/\bnot overbought\b/,"not overbought",function(r){ return !r.obs; }],
+ ["oversold",/\boversold\b/,"oversold",function(r){ return !!r.oss; }],
+ ["hivol",/\bhigh vol\w*\b|\bvolatile\b/,"high volatility (score 67 or more)",function(r){ return num(r.vol)&&r.vol>=67; }],
+ ["liquid",/\bliquid\b|\bheavily traded\b|\bhigh turnover\b/,"liquid (top third by 20-day turnover)",function(r){ return num(r.liq)&&r.liq>=66.7; }],
+ ["indep",/\bindependent\b|\bidiosyncratic\b|\blow (?:market|beta to the market) correlation\b|\bdecoupled\b/,"independent of the market (60-bar correlation 0.30 or less)",function(r){ return num(r.cu60)&&r.cu60<=0.3; }],
+ ["hi52",/\bnear (?:its |their |the )?(?:52[- ]week|yearly|annual) highs?\b|\bnew highs?\b|\bat highs?\b/,"within 5% of the 52-week high",function(r){ return num(r.hi52)&&r.hi52>=-5; }],
+ ["ytdpos",/\bpositive (?:ytd|year to date)\b|\bup (?:ytd|year to date|this year)\b|\bytd (?:winners|gainers)\b/,"up year to date",function(r){ return num(r.ytd)&&r.ytd>0; }],
+ ["beat",/\bbeating the market\b|\boutperform\w* (?:the market|rsp)\b|\brelative strength\b/,"beating RSP over 3 months",function(r){ var M=null; try{ M=A.metrics(); }catch(e){} var b=M&&M.bench&&M.by[M.bench]; return num(r.m3)&&b&&num(b.m3)&&r.m3>b.m3; }],
+ ["lowdd",/\blow drawdowns?\b|\bshallow drawdowns?\b|\bsmall drawdowns?\b/,"12-month drawdown better than -20%",function(r){ return num(r.dd12)&&r.dd12>-20; }],
+ ["lowbeta",/\blow beta\b/,"low beta (under 0.8 to RSP)",function(r){ return num(r.beta)&&r.beta<0.8; }]];
+function pcParse(t,skip){ var out=[]; PC.forEach(function(p){ if(skip&&skip.indexOf(p[0])>=0) return; if(p[0]==="up"&&(out.indexOf("fresh")>=0||out.indexOf("estab")>=0)) return; if(p[0]==="improving"&&/\bnot improving\b/.test(t)) return; if(p[1].test(t)) out.push(p[0]); }); return out; }
+function pcTest(k,r){ for(var i=0;i<PC.length;i++) if(PC[i][0]===k) return PC[i][3](r); return true; }
+function pcLab(k){ for(var i=0;i<PC.length;i++) if(PC[i][0]===k) return PC[i][2]; return k; }
+window.__pcond={parse:pcParse,test:pcTest,label:pcLab};
 /* ---------------- shared: themes ---------------- */
 function I(){ var a=[].slice.call(arguments); return function(r){ return a.indexOf(r.ind)>=0; }; }
 function S(){ var a=[].slice.call(arguments); return function(r){ return a.indexOf(r.sec)>=0; }; }
@@ -163,7 +189,7 @@ qmParseX=function(q){
     var EA=t.match(/\b(?:best|strongest|top|leading)(?: \d)? (?:stock|name|pick|company|ticker)s? (?:in|from|for|of) (?:each|every) (?:(rising|falling|improving|deteriorating|strong|weak) )?(sub ?sectors?|sectors?|themes?|hidden groups?|clusters?)\b/);
     if(EA) return mark({kind:"hsmart",mode:"each",uni:"stocks",by:/sub/.test(EA[2])?"ind":(/sector/.test(EA[2])?"sec":(/theme/.test(EA[2])?"theme":(/hidden/.test(EA[2])?"hg":"cl"))),dir:EA[1]||null,t:t});
     /* ---- adaptive portfolio ---- */
-    if(PORT&&!/\brisk level\b|\blong[ -]short\b|\bshort\b|\b(?:one|1) (?:stock |name )?(?:per|from each|in each|for each) (?:cluster|block|bloc)\b|\bfrom each (?:rising|falling) (?:block|cluster)\b|\bpairs?\b|\bhedg\w*\b/.test(t)){
+    if(PORT&&!/\brisk level\b|\blong[ -]short\b|\bshort\b|\b(?:one|1) (?:stock |name )?(?:per|from each|in each|for each) (?:cluster|block|bloc)\b|\bfrom each (?:rising|falling) (?:block|cluster)\b|\b(?:each|every) (?:rising |falling |directional )?(?:block|bloc)s?\b|\bpairs?\b|\bhedg\w*\b/.test(t)){
       var ETF=/\betfs?\b|\bfunds\b|\bexchange traded\b/.test(t);
       var F={conv:/\bconverg\w*\b|\blenses\b/.test(t),hg:/\bhidden groups?\b/.test(t),cl:/\bclusters?\b|\bhierarch\w*\b|\bdendrogram\b/.test(t),corr:/\blow(?:er)? correlat\w*\b|\buncorrelated\b|\bdiversif\w*\b|\bnot correlated\b|\bindependent\b/.test(t),
         sec:/\bacross (?:sectors|subsectors|industries)\b|\bmax(?:imum)? \d+ per (?:sector|subsector)\b|\bdifferent (?:sectors|subsectors)\b|\bno more than \d+ (?:per|in each|from each) (?:sector|subsector)\b/.test(t),rot:/\brising sub ?sectors?\b|\bsub ?sectors? (?:is |are |that are )?rising\b|\brotation\b|\bimproving sub ?sectors?\b/.test(t),
@@ -217,8 +243,12 @@ function runSmart(spec,ctx,res){
   var hard=[];
   if(/\bimproving\b/.test(t)&&!/\bimproving sub ?sectors?\b/.test(t)){ rows=rows.filter(function(r){ return r.dir==="improving"; }); hard.push("Early Warning direction improving"); }
   else if(/\bstrengthening\b/.test(t)){ rows=rows.filter(function(r){ return etf?num(r.rec)&&r.rec>0:num(r.sev)&&r.sev>0; }); hard.push("strengthening (score above zero)"); }
-  if(!etf&&/\buptrends?\b|\btrending up\b/.test(t)){ rows=rows.filter(function(r){ return r.trend==="up"; }); hard.push("in an uptrend"); }
+  if(!etf&&/\b(?:fresh|new|young|recent|just turned)(?: trend)? (?:up ?trend|uptrend|trend up)s?\b/.test(t)){ rows=rows.filter(function(r){ return r.trend==="up"&&num(r.tb)&&r.tb<=10; }); hard.push("in a fresh uptrend (10 sessions or less)"); }
+  else if(!etf&&/\buptrends?\b|\btrending up\b|\btrend up\b/.test(t)){ rows=rows.filter(function(r){ return r.trend==="up"; }); hard.push("in an uptrend"); }
+  if(/\banomal\w*\b|\bunusual\b/.test(t)){ rows=rows.filter(function(r){ return num(r.ga)&&r.ga>=0.3; }); hard.push("anomalous (graph anomaly 0.30 or more)"); }
   if(!etf&&/\brising sub ?sectors?\b|\bsub ?sectors? (?:is |are |that are )?rising\b|\bimproving sub ?sectors?\b/.test(t)){ rows=rows.filter(function(r){ var g=ctx.indStats[r.ind]; return g&&g.bias==="improving"; }); hard.push("in a rising subsector (most members improving)"); }
+  pcParse(t,["fresh","up","improving","strength","anom","conv","estab"].concat(etf?["notext","neartl","notob","oversold","liquid","hi52","beat","lowdd","lowbeta","estab"]:[])).forEach(function(k){ var n0=rows.length; rows=rows.filter(function(r){ return pcTest(k,r); }); hard.push(pcLab(k)); });
+  if(!etf&&/\b(?:established|mature|long[- ]running) (?:up ?trend|uptrend)s?\b/.test(t)){ rows=rows.filter(function(r){ return pcTest("estab",r); }); hard.push(pcLab("estab")); }
   var convHard=!etf&&/\b(?:where |with |whose )?signals? (?:converge|are converging)\b|\bsignal convergence\b|\bconverging signals?\b/.test(t);
   if(convHard){ var cc=rows.filter(function(r){ return num(r.conv)&&r.conv>=3; }); if(cc.length>=Math.max(4,(spec.n||10))){ rows=cc; hard.push("signals converge (3 or more of the six lenses)"); } else { cc=rows.filter(function(r){ return num(r.conv)&&r.conv>=2; }); rows=cc; hard.push("signal convergence of 2 or more lenses (3 or more left too few names)"); } }
   if(!rows.length){ res.lead="No "+(etf?"ETFs":"stocks")+" pass "+(hard.join(", ")||"the filters")+" on this bar."; return 0; }

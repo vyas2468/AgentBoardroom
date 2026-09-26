@@ -111,7 +111,12 @@ qmParseX=function(q){
       return {kind:"hcport",mode:"oneper",inner:inner,q2:q2,n:n||(inner&&inner.n)||10,win:winOf(t,"252")};
     }
     if(portW&&/\b(?:best|strongest|top|leading) (?:stock|name) (?:in|from|of) each (?:rising |falling |directional )?(?:block|cluster)\b|\b(?:one|1) (?:stock|name) from each (?:rising|falling|directional) (?:block|cluster)\b|\b(?:portfolio|basket) (?:from|of|using) (?:the )?(?:rising|falling|directional) (?:blocks|clusters)\b|\bfrom (?:the )?(?:rising|falling) (?:blocks|clusters)\b/.test(t))
-      return {kind:"hcport",mode:"blocks",dir:/\bfalling\b/.test(t)?"falling":"rising",n:n||0,win:winOf(t,"ytd"),secIn:qmSecMentions(t).inn};
+      { var bk={kind:"hcport",mode:"blocks",dir:/\bfalling\b/.test(t)?"falling":"rising",n:n||0,win:winOf(t,"ytd"),secIn:qmSecMentions(t).inn};
+      var fd=/\bimproving\b/.test(t)?"improving":(/\bdeteriorating\b/.test(t)?"deteriorating":null); if(fd) bk.fdir=fd;
+      var xc=[]; if(/\b(?:fresh|new|young|recent|just turned)(?: trend)? (?:up ?trend|uptrend|trend up)\b|\bfresh trend up\b/.test(t)) xc.push("fresh"); else if(/\buptrends?\b|\btrending up\b|\btrend up\b/.test(t)) xc.push("up");
+      if(/\banomal\w*\b|\bunusual\b/.test(t)) xc.push("anom"); if(/\bsignals? converg\w*\b|\bconvergence\b/.test(t)) xc.push("conv"); if(/\blow vol\w*\b|\bcalm\w*\b|\bquiet\b/.test(t)) xc.push("lowvol");
+      if(/\bstrengthening\b/.test(t)) xc.push("str"); try{ if(window.__pcond) window.__pcond.parse(t,["fresh","up","improving","strength","anom","conv"]).forEach(function(k){ if(xc.indexOf(k)<0&&!(k==="hivol"&&xc.indexOf("lowvol")>=0)) xc.push(k); }); }catch(e){} if(xc.length) bk.xc=xc;
+      return bk; }
     /* 3. hedges and partners of a whole list */
     if(fol&&/\bhedg\w*\b/.test(t)) return {kind:"hcport",mode:"hedge",syms:last.syms.slice(0,50),n:n||10,cross:/\b(?:other|another|different) sectors?\b|\boutside\b/.test(t)};
     if(fol&&/\b(?:moves?|moving|trades?) (?:most )?(?:with|like) (?:these|them|this list|the list|this portfolio|the basket)\b/.test(t)) return {kind:"hcport",mode:"partners",syms:last.syms.slice(0,50),n:n||10};
@@ -242,11 +247,17 @@ qmRunX=function(spec,ctx,res,t0){
   if(spec.mode==="blocks"){
     if(!CL){ res.lead="The clusters map is not available."; return fin(0); }
     var Mb=CL.build(spec.win); if(!Mb){ res.lead="Not enough price history for that window."; return fin(0); }
-    var bl=CL.blocks(Mb,0.263).filter(function(b){ return b.dir===spec.dir; }), rows=[];
+    var bl=CL.blocks(Mb,0.263).filter(function(b){ return b.dir===spec.dir; }), rows=[], skipB=0;
     var bsec=(spec.secIn||[]).map(function(v){ return qmSecKey(v)||v; });
     bl.forEach(function(b){ var mem=b.mem.map(function(x){ return Mb.names[x].sym; }).filter(function(s){ return by[s]&&(!bsec.length||bsec.indexOf(by[s].sec)>=0); }); if(!mem.length) return;
+      var PCN=window.__pcond; var XC={fresh:function(r){ return r.trend==="up"&&num(r.tb)&&r.tb<=10; },up:function(r){ return r.trend==="up"; },anom:function(r){ return num(r.ga)&&r.ga>=0.3; },conv:function(r){ return num(r.conv)&&r.conv>=3; },lowvol:function(r){ return num(r.vol)&&r.vol<=33; },str:function(r){ return num(r.sev)&&r.sev>0; }};
+      var pool=mem.filter(function(s){ var r=by[s]; if(spec.fdir&&r.dir!==spec.fdir) return false; return (spec.xc||[]).every(function(k){ return XC[k]?XC[k](r):(PCN?PCN.test(k,r):true); }); }); if(!pool.length){ skipB=(skipB||0)+1; return; }
       mem.sort(function(p,q){ var a3=by[p].str, b3=by[q].str; return spec.dir==="rising"?((num(b3)?b3:-1)-(num(a3)?a3:-1)):((num(a3)?a3:999)-(num(b3)?b3:999)); });
-      rows.push({pick:mem[0],mem:mem,avg:b.avg,ret:b.ret,size:b.size}); });
+      pool.sort(function(p,q){ var a3=by[p].str, b3=by[q].str; return spec.dir==="rising"?((num(b3)?b3:-1)-(num(a3)?a3:-1)):((num(a3)?a3:999)-(num(b3)?b3:999)); });
+      rows.push({pick:pool[0],mem:mem,avg:b.avg,ret:b.ret,size:b.size}); });
+    var XL={fresh:"in a fresh uptrend (10 sessions or less)",up:"in an uptrend",anom:"anomalous (graph anomaly 0.30 or more)",conv:"where signals converge (3 or more lenses)",lowvol:"with low volatility (score 33 or less)",str:"strengthening (score above zero)"};
+    var conds=(spec.fdir?["Early Warning direction "+spec.fdir]:[]).concat((spec.xc||[]).map(function(k){ return XL[k]||(window.__pcond?window.__pcond.label(k):k); }));
+    if(conds.length) res.notes.push("Only names that are "+conds.join(", ")+" were picked"+(skipB?"; "+skipB+" block"+(skipB>1?"s have":" has")+" no member that qualifies and "+(skipB>1?"were":"was")+" left out":"")+".");
     rows.sort(function(p,q){ return spec.dir==="rising"?q.ret-p.ret:p.ret-q.ret; }); if(spec.n) rows=rows.slice(0,spec.n);
     res.lead="The "+(spec.dir==="rising"?"strongest":"weakest")+" name from each <b>"+spec.dir+"</b> block of the hierarchical clusters map ("+wLab(spec.win)+")"+(bsec.length?", taking only names in "+bsec.map(qmSecName).join(", "):"")+": "+rows.length+" names, one per block, so no two move as one.";
     res.table={head:["Block","Symbol","Strength pctl","Block return","Block avg corr.","Members","Sector"],align:["r","l","r","r","r","l","l"],body:rows.map(function(r,i){ return [String(i+1),r.pick,qmN(by[r.pick].str,0),qmN(r.ret,1,1),qmN(r.avg,2),r.mem.join(" "),secN(r.pick)]; })};

@@ -62,9 +62,15 @@ function afApply(){
       ln.setAttribute("stroke",PURPLE); ln.setAttribute("stroke-width",(1+Math.max(0,e.r)*2.2).toFixed(1)); ln.setAttribute("stroke-opacity","0.85");
       var tt=document.createElementNS(ns,"title"); tt.textContent=syms[e.a]+" \u2013 "+syms[e.b]+": correlation "+e.r.toFixed(2)+" (252 bars)"; ln.appendChild(tt); if(first) first.parentNode.insertBefore(ln,first); });
   });
-  dots.forEach(function(d){ var r=by[d.getAttribute("data-s")]; if(r&&num(r.r1)){ d.setAttribute("fill",r.r1>=0?GREEN:RED); d.setAttribute("fill-opacity","0.95"); } });
-  var note=document.createElementNS(ns,"text"); note.setAttribute("x","12"); note.setAttribute("y","18"); note.setAttribute("font-size","11"); note.setAttribute("fill","#a78bfa"); note.setAttribute("font-weight","700");
-  note.textContent="AF Approach: purple links = strongest daily-return correlations (tree, 252 bars)"+(hist?"":" \u2013 load the price history for the links")+"; green up / red down on the day; size = graph anomaly";
+  /* colour follows the web's "Colour by" choice (1, 3 or 5 day return, or the severity score) */
+  var HK="r1"; try{ HK=(typeof sbwH!=="undefined"&&sbwH)?sbwH:"r1"; }catch(e){} var FK=HK==="rec"?"sev":HK, HL={r1:"on the day",r3:"over 3 days",r5:"over 5 days",sev:"on the severity score"}[FK]||"";
+  dots.forEach(function(d){ var r=by[d.getAttribute("data-s")]; if(r&&num(r[FK])){ d.setAttribute("fill",r[FK]>=0?GREEN:RED); d.setAttribute("fill-opacity","0.95"); } });
+  /* keep every dot and label inside the frame: grow the viewBox to fit them */
+  try{ var vb=(svg.getAttribute("viewBox")||"").split(/\s+/).map(Number); if(vb.length===4){ var x0=vb[0],y0=vb[1],x1=vb[0]+vb[2],y1=vb[1]+vb[3];
+    [].slice.call(svg.querySelectorAll("circle")).forEach(function(c){ if(c.style.display==="none") return; var cx=+c.getAttribute("cx"), cy=+c.getAttribute("cy"), rr=+c.getAttribute("r")||0; if(!isFinite(cx)||!isFinite(cy)) return; x0=Math.min(x0,cx-rr-30); x1=Math.max(x1,cx+rr+30); y0=Math.min(y0,cy-rr-12); y1=Math.max(y1,cy+rr+24); });
+    if(x0<vb[0]||y0<vb[1]||x1>vb[0]+vb[2]||y1>vb[1]+vb[3]) svg.setAttribute("viewBox",[x0,y0,x1-x0,y1-y0].map(function(v){ return v.toFixed(1); }).join(" ")); } }catch(e){}
+  var note=document.createElementNS(ns,"text"); var vbN=(svg.getAttribute("viewBox")||"0 0 0 0").split(/\s+/).map(Number); note.setAttribute("x",String((vbN[0]||0)+12)); note.setAttribute("y",String((vbN[1]||0)+18)); note.setAttribute("font-size","11"); note.setAttribute("fill","#a78bfa"); note.setAttribute("font-weight","700");
+  note.textContent="AF Approach: purple links = strongest daily-return correlations (tree, 252 bars)"+(hist?"":" \u2013 load the price history for the links")+"; green up / red down "+HL+"; size = graph anomaly";
   svg.appendChild(note);
 }
 window.__afApply=afApply;
