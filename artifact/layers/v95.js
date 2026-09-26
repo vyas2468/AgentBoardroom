@@ -44,7 +44,20 @@ function afApply(){
     var R=corrMat(syms,252), T=mst(syms,R);
     var avg=syms.map(function(s,i){ var t=0,n=0; syms.forEach(function(o,j){ if(i!==j&&num(R[i+","+j])){ t+=R[i+","+j]; n++; } }); return n?t/n:-9; });
     var root=0; avg.forEach(function(v,i){ if(v>avg[root]) root=i; });
-    if(iso&&centre){
+    if(syms.length>=20){
+      /* big subsectors (20+ names): a radial tree around the most central name - each branch gets its own wedge, so links do not cross */
+      var adjB={}, kids={}, seenB={}; syms.forEach(function(s,i){ adjB[i]=[]; kids[i]=[]; }); T.forEach(function(e){ adjB[e.a].push(e.b); adjB[e.b].push(e.a); });
+      var qB=[root]; seenB[root]=1; for(var qi=0;qi<qB.length;qi++) adjB[qB[qi]].forEach(function(n){ if(!seenB[n]){ seenB[n]=1; kids[qB[qi]].push(n); qB.push(n); } });
+      var lv={}; function leaves(i){ if(lv[i]) return lv[i]; var n=kids[i].length?kids[i].reduce(function(t,c){ return t+leaves(c); },0):1; lv[i]=n; return n; }
+      var dx=0, dy=1; if(centre){ dx=hx-centre.x; dy=hy-centre.y; var dl=Math.sqrt(dx*dx+dy*dy)||1; dx/=dl; dy/=dl; }
+      var rx=hx+dx*120, ry=hy+dy*120, STEP=58;
+      function place(i,a0,a1,d){ var ang=(a0+a1)/2, x=d?rx+Math.cos(ang)*d*STEP:rx, y=d?ry+Math.sin(ang)*d*STEP:ry, s=syms[i], p=pos[s];
+        p.el.setAttribute("cx",x.toFixed(1)); p.el.setAttribute("cy",y.toFixed(1)); p.x=x; p.y=y;
+        [].slice.call(svg.querySelectorAll("text.sbwlab")).forEach(function(t){ if(t.textContent===s){ t.setAttribute("x",x.toFixed(1)); t.setAttribute("y",(y+p.r+9).toFixed(1)); t.setAttribute("text-anchor","middle"); t.setAttribute("font-size","8.5"); } });
+        var tot=leaves(i), a=a0; kids[i].forEach(function(c){ var sp=(a1-a0)*leaves(c)/tot; place(c,a,a+sp,d+1); a+=sp; }); }
+      place(root,0,2*Math.PI,0);
+    }
+    else if(iso&&centre){
       /* lay the tree out along chains away from the sector centre, like Alex's view */
       var ux=hx-centre.x, uy=hy-centre.y, L0=Math.sqrt(ux*ux+uy*uy)||1; ux/=L0; uy/=L0; var px=-uy, py=ux;
       var adj={}; syms.forEach(function(s,i){ adj[i]=[]; }); T.forEach(function(e){ adj[e.a].push(e.b); adj[e.b].push(e.a); });
@@ -52,9 +65,11 @@ function afApply(){
       var lanes={}, laneOf={}; laneOf[root]=0; var nextLane=1;
       order.forEach(function(i){ if(i===root) return; var parent=adj[i].filter(function(n){ return depth[n]===depth[i]-1; })[0]; var pl=laneOf[parent]; var used=lanes[parent+"|"]||0;
         laneOf[i]=used===0?pl:(nextLane%2?1:-1)*Math.ceil(nextLane/2)+pl; if(used>0) nextLane++; lanes[parent+"|"]=used+1; });
-      order.forEach(function(i){ var s=syms[i], p=pos[s], d=depth[i], x=hx+ux*(60+d*70)+px*laneOf[i]*55, y=hy+uy*(60+d*70)+py*laneOf[i]*55;
+      /* big subsectors (20+ names): tighter steps and smaller labels so the chains stay readable */
+      var BIG=false, DS=70, LS=55;
+      order.forEach(function(i){ var s=syms[i], p=pos[s], d=depth[i], x=hx+ux*(60+d*DS)+px*laneOf[i]*LS, y=hy+uy*(60+d*DS)+py*laneOf[i]*LS;
         p.el.setAttribute("cx",x.toFixed(1)); p.el.setAttribute("cy",y.toFixed(1)); p.x=x; p.y=y;
-        [].slice.call(svg.querySelectorAll("text.sbwlab")).forEach(function(t){ if(t.textContent===s){ t.setAttribute("x",x.toFixed(1)); t.setAttribute("y",(y+p.r+12).toFixed(1)); t.setAttribute("text-anchor","middle"); } }); });
+        [].slice.call(svg.querySelectorAll("text.sbwlab")).forEach(function(t){ if(t.textContent===s){ t.setAttribute("x",x.toFixed(1)); t.setAttribute("y",(y+p.r+(BIG?9:12)).toFixed(1)); t.setAttribute("text-anchor","middle"); if(BIG) t.setAttribute("font-size","8.5"); } }); });
     }
     syms.forEach(function(s,i){ var l=spoke[s]; if(!l) return; if(i===root){ l.setAttribute("x2",pos[s].x.toFixed(1)); l.setAttribute("y2",pos[s].y.toFixed(1)); l.setAttribute("stroke",PURPLE); l.setAttribute("stroke-opacity","0.9"); l.setAttribute("stroke-width","1.8"); } else l.style.display="none"; });
     T.forEach(function(e){ var a=pos[syms[e.a]], b=pos[syms[e.b]], ln=document.createElementNS(ns,"line");

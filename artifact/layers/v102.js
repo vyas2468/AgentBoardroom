@@ -27,6 +27,9 @@ function rw(q){
   var s=String(q||""), n=[], two=null;
   function rep(re,to,lab){ if(re.test(s)){ s=s.replace(re,to); if(lab) n.push(lab); } }
   rep(/\b(show|display|find|list|get)(?: me)? (\d{1,2}) (?!stocks?\b|names?\b|tickers?\b|symbols?\b|companies\b|sub ?sectors?\b|sectors?\b|industr|groups?\b|pairs?\b|etfs?\b|clusters?\b|blocks?\b|themes?\b|hidden\b)/i,function(m,a,k){ return a+" me "+k+" "; },"");
+  rep(/\b(?:has |have |just |recently )*(?:crossed|crosses|crossing) (?:up )?(?:above|over|through) (?:the |its |their )?(?:dsp|rmesa(?: fir)?|spectral ma|slow line)(?: line)?\b/gi,"dsp cross up","“crossed above the DSP” read as a fresh cross up through the DSP line on this bar (the scan's cross event)");
+  rep(/\b(?:has |have |just |recently )*(?:crossed|crosses|crossing) (?:down )?(?:below|under|through) (?:the |its |their )?(?:dsp|rmesa(?: fir)?|spectral ma|slow line)(?: line)?\b/gi,"dsp cross down","“crossed below the DSP” read as a fresh cross down through the DSP line on this bar (the scan's cross event)");
+  rep(/\b(?:pulling|pulled|pulls) back\b|\bpulling in\b/gi,"pullback","“pulling back” read as a pullback (near its trend line)");
   rep(/\bfast (?:line )?(?:is )?above (?:the )?slow(?: line)?\b/gi,"fast cycle above slow","“fast above slow” read as the fast cycle line above the slow DSP line");
   rep(/\bfast (?:line )?(?:is )?below (?:the )?slow(?: line)?\b/gi,"fast cycle below slow","“fast below slow” read as the fast cycle line below the slow DSP line");
   rep(/\b(?:a )?bullish trend (?:flip|change|reversal)s?\b|\btrend (?:has )?(?:just )?flipped (?:to )?(?:up|bullish)\b/gi,"a fresh uptrend","“bullish trend flip” read as a fresh uptrend (started within the last 10 sessions)");
@@ -36,6 +39,7 @@ function rw(q){
       two={a:fa,b:fb,da:dir(tk[1].toLowerCase(),fa),db:dir(tk[2].toLowerCase(),fb)}; s=s.replace(tk[0],", rank by two-key score"); n.push("Ranked by "+X.lab(fa).toLowerCase()+" ("+(two.da==="asc"?"lowest":"highest")+" first), then "+X.lab(fb).toLowerCase()+" breaks ties"); } }
   return {q:s,notes:n,two:two};
 }
+try{ QM_SYM.indUp={lab:"Subsector direction (1 rising, -1 falling)",d:0}; var _en2=qmEnrich; qmEnrich=function(ctx){ var r=_en2(ctx); try{ ctx.rows.forEach(function(x){ var g=ctx.indStats&&ctx.indStats[x.ind]; x.indUp=g?(g.bias==="improving"?1:(g.bias==="deteriorating"?-1:0)):null; }); }catch(e){} return r; }; }catch(e){}
 try{ QM_SYM.twok={lab:"Two-key rank",d:0}; QMX_FIELDS.unshift(["twok",/\b(?:two|2)\W*key score/]); }catch(e){}
 var _ask=qmAsk;
 qmAsk=function(question,done){ var r={q:question,notes:[],two:null}; try{ r=rw(question); }catch(e){} RWN=r.notes; TWO=r.two; return _ask(r.q,done); };
@@ -116,6 +120,19 @@ qmParseX=function(q){
     }
   }catch(e){}
   var sp0=_p(q);
+  try{ var tt=qmT(q);
+    /* connections (and any spec with filters) in rising / falling subsectors */
+    if(sp0&&!sp0._err&&sp0.kind==="xlink"&&Array.isArray(sp0.filters)&&!sp0.filters.some(function(f){ return f&&f.f==="indUp"; })){
+      if(/\b(?:rising|improving) sub ?sectors?\b|\bsub ?sectors? (?:that are |which are |are )?(?:rising|improving)\b/.test(tt)) sp0.filters.push({f:"indUp",op:"=",v:1,txt:"in a rising subsector (most of its names improving)"});
+      else if(/\b(?:falling|deteriorating) sub ?sectors?\b|\bsub ?sectors? (?:that are |which are |are )?(?:falling|deteriorating)\b/.test(tt)) sp0.filters.push({f:"indUp",op:"=",v:-1,txt:"in a falling subsector (most of its names deteriorating)"}); }
+    /* "pulling back (in an uptrend)": near the trend line and down over 5 days, when the reader set no position filter */
+    if(sp0&&!sp0._err&&Array.isArray(sp0.filters)&&(sp0.kind==="screen"||sp0.kind==="portfolio")&&/\bpullback\b/.test(tt)&&!/\bpullback\b/.test(qmT(String(q).replace(/\bpull ?backs?\b/gi,"")))&&!sp0.filters.some(function(f){ return f&&f.f==="atr"; })){
+      sp0.filters.push({f:"atr",op:"<=",v:0.5,txt:"pulling back: within half an ATR of its trend line"}); sp0.filters.push({f:"atr",op:">=",v:-0.5,txt:"not more than half an ATR below it"}); sp0.filters.push({f:"r5",op:"<",v:0,txt:"down over the last 5 days"}); }
+    /* "above its trend line" and "near its trend line" together: keep both */
+    if(sp0&&!sp0._err&&Array.isArray(sp0.filters)&&/\babove (?:its|the|their) trend ?line\b/.test(tt)&&/\bnear (?:its|the|their) trend ?line\b|\bpullback/.test(tt)){
+      var seen={}; sp0.filters=sp0.filters.filter(function(f){ var k=f?f.f+"|"+f.op+"|"+f.v:""; if(seen[k]) return false; seen[k]=1; return true; });
+      if(!sp0.filters.some(function(f){ return f&&f.f==="atr"&&(f.op===">"||f.op===">=")&&f.v>=0; })) sp0.filters.push({f:"atr",op:">",v:0,txt:"above its trend line"}); }
+  }catch(e){}
   /* two-key ranking (set up by the rewrite) */
   try{ if(TWO&&sp0&&(sp0.kind==="screen"||sp0.kind==="portfolio")&&/\b(?:two|2)\W*key\b/.test(qmT(q))){ sp0.sort={f:"twok",d:"desc"}; sp0.sortGiven=true; } }catch(e){}
   /* "not in an uptrend / downtrend", "not overbought / oversold": invert the one filter the base reader kept without its "not" */
@@ -169,7 +186,8 @@ qmRunX=function(spec,ctx,res,t0){
     var out=[]; Object.keys(G2).sort().forEach(function(k){ var m=G2[k].sort(function(a,b){ return spec.d==="asc"?a[f]-b[f]:b[f]-a[f]; }); m.slice(0,spec.n).forEach(function(r,i){ out.push({k:k,i:i+1,r:r,of:m.length}); }); });
     if(spec.lvl==="ind") out.sort(function(a,b){ return spec.d==="asc"?a.r[f]-b.r[f]:b.r[f]-a.r[f]; });
     res.lead="The "+(spec.d==="asc"?"lowest":"top")+" "+spec.n+" per "+(spec.lvl==="ind"?"subsector":"sector")+" by <b>"+hE(X.lab(f).toLowerCase())+"</b>: "+out.length+" names from "+Object.keys(G2).length+" "+(spec.lvl==="ind"?"subsectors":"sectors")+".";
-    res.table={head:[spec.lvl==="ind"?"Subsector":"Sector","Rank in group","Symbol",X.lab(f),"Strength pct","Direction"],align:["l","l","l","r","r","l"],hxColor:{5:"dir"},body:out.map(function(o){ return [spec.lvl==="ind"?o.k:qmSecName(o.k),o.i+" of "+o.of,o.r.sym,X.fmtF(f,o.r[f]),f0(o.r.str),o.r.dir||"\u2013"]; })};
+    var dup=f==="str";
+    res.table={head:[spec.lvl==="ind"?"Subsector":"Sector","Rank in group","Symbol",X.lab(f)].concat(dup?[]:["Strength pct"]).concat(["Direction"]),align:["l","l","l","r"].concat(dup?[]:["r"]).concat(["l"]),hxColor:dup?{4:"dir"}:{5:"dir"},body:out.map(function(o){ return [spec.lvl==="ind"?o.k:qmSecName(o.k),o.i+" of "+o.of,o.r.sym,X.fmtF(f,o.r[f])].concat(dup?[]:[f0(o.r.str)]).concat([o.r.dir||"\u2013"]); })};
     res.notes.push("Each group's names are ranked on "+X.lab(f).toLowerCase()+" inside that group only; say \u201Cper subsector\u201D for subsectors, \u201Clowest\u201D to reverse.");
     res.send=send(out.map(function(o){ return o.r.sym; }),"top per group"); return fin(out.length);
   }

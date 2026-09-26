@@ -1,6 +1,6 @@
 ============================================================================
 SECTOR ROTATION TERMINAL - FINAL HANDOFF (26 Sep 2026, end of session)
-Live page: https://claude.ai/artifact/JBivgL88qHWeaCSsepr7cN  (version 129)
+Live page: https://claude.ai/artifact/JBivgL88qHWeaCSsepr7cN  (version 130)
 Code: branch claude/artifact-access-question-f3s8rs, folder artifact/ (base page + layers v81-v102)
 Technical detail for the next session: docs/HANDOFF.md (start at the top section)
 ============================================================================
@@ -74,6 +74,15 @@ This part of the session:
     - Leaders per group and dual momentum
     - One sentence: screen + chart, columns, exposure
 
+19. (v130) READER FIXES (tile "Reader fixes: DSP crosses, pullbacks, trend lines, rising subsectors"):
+    - "crossed above / below the DSP" = a fresh cross on this bar (the scan's cross event), not just "above";
+    - "pulling back in an uptrend" (or "with a pullback") = within half an ATR of the trend line and down over 5 days;
+    - "above StepMA and near its trend line" keeps both conditions (before, names below the line slipped in);
+    - connections questions obey "in rising subsectors" / "in falling subsectors".
+20. (v130) AF APPROACH MAP: subsectors with 20 or more names are drawn as a radial tree around the most central name,
+    each branch in its own wedge, so the links no longer cross (Subsector Web tab, AF Approach switch on).
+21. (v130) "Top 1 per subsector by strength" no longer shows the strength column twice.
+
 TIP: "these" always means the previous answer's names. After you build a portfolio, "these" is the portfolio.
 Start a chain with a list question (for example "Top 30 stocks by strength").
 
@@ -85,10 +94,11 @@ PART B. LEFT FOR THE NEXT SESSION - AND WHY
 2. Navy colour theme. You deferred it. Every chart has to be checked for hard-coded colours.
 3. Warn when part of a question was not used ("Not applied: ..."). Adding a warning line to existing answers would
    change their text, so it needs a separate pass that approves each changed answer.
-4. Harder base-reader phrases: "crossed above the DSP" (a fresh cross, not just above), "pulling back in an uptrend",
-   and "above StepMA and near its trend line" together. These are in the original reader; each needs its own test.
-5. Connections questions ignore "in rising subsectors"; the AF Approach layout is busy for 20+ names.
-6. The dual-momentum baseline is a snapshot. Turning it into a monthly backtest belongs with the RealTest work.
+4. Data check: a few names show extreme 12-month returns (e.g. AMCR +433%), probably a merger or share-count change in
+   the price history rather than a real move. Worth a "suspicious jump" filter in the history loader.
+5. The dual-momentum baseline is a snapshot. Turning it into a monthly backtest belongs with the RealTest work.
+(Done this round and removed from this list: connections "in rising subsectors", the busy AF map, "crossed above the
+DSP", "pulling back in an uptrend", "StepMA and near its trend line".)
 
 ----------------------------------------------------------------------------
 PART C. IDEAS: UNIQUE, USEFUL, HIGH IMPACT
