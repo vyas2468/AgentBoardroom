@@ -45,7 +45,7 @@ function engine(port,hx,bench){
   function lastClose(s,i){ var c=C[s]; if(!c) return null; for(var j=i;j>=0;j--) if(num(c[j])) return c[j]; return null; }
   function execPx(s,i){ if(entry==="open"){ if(O&&O[s]&&num(O[s][i])) return O[s][i]; return close(s,i); } return close(s,i); }
   var sched=ups.map(function(u){ return {u:u,i:entry==="open"?idxAfter(u.d):idxOnOrAfter(u.d)}; });
-  sched.filter(function(x){ return x.i<0; }).forEach(function(x){ out.pending.push({d:x.u.d,n:x.u.picks.length,msg:entry==="open"?"fills at the next open after "+x.u.d+" (not in the loaded history yet)":"fills at the close of "+x.u.d+" (not in the loaded history yet)"}); });
+  sched.filter(function(x){ return x.i<0; }).forEach(function(x){ out.pending.push({d:x.u.d,n:x.u.picks.length,msg:entry==="open"?(O?"fills at the next open after ":"fills at the next close after (no opens in the loaded history) ")+x.u.d+" (not in the loaded history yet)":"fills at the close of "+x.u.d+" (not in the loaded history yet)"}); });
   var run=sched.filter(function(x){ return x.i>=0; }); if(!run.length) return out;
   var i0=run[0].i, cash=N0, pos={}, lastPx={}, tradedNotional=0, bSh=null, bench0=null;
   var bpx0=execPx(bench,i0); if(num(bpx0)){ bSh=N0/bpx0; bench0=bpx0; }
@@ -103,7 +103,7 @@ function picksOf(res){
   function fromTable(t,side){ if(!t||!t.head) return false; var si=t.head.findIndex(function(h){ return /^symbol$/i.test(h); }); if(si<0) return false; t.body.forEach(function(r){ var s=String(r[si]||""); if(/^[A-Z][A-Z0-9.\-]{0,9}$/.test(s)) add(s,side); }); return true; }
   if(res.send&&res.send.items&&res.send.items.length) res.send.items.forEach(function(it){ add(it.sym,it.side==="short"?"short":"long"); });
   else fromTable(res.table,"long");
-  (res.extra||[]).forEach(function(x){ if(/^short\b/i.test(String(x.title||""))) fromTable(x.table,"short"); });
+  (res.extra||[]).forEach(function(x){ var tt=String(x.title||""); if(/^short\b/i.test(tt)) fromTable(x.table,"short"); else if(/^etfs?\b/i.test(tt)) fromTable(x.table,"long"); });
   return out;
 }
 function trackable(res){ var sp=res&&res.spec; if(!sp) return null; var k=TRACK_KINDS[sp.kind]; if(!k) return null; if(sp.kind==="hx102"&&!/^(?:dual|topsec)$/.test(sp.mode)) return null; if(sp.kind==="hcport"&&!/port|block|cluster/i.test(String(sp.mode||""))) return null; if(sp.kind==="dual") k="portfolio"; if(sp.kind==="hx102"&&sp.mode==="dual") k="portfolio"; return k; }
@@ -115,11 +115,11 @@ document.addEventListener("click",function(e){ var b=e.target&&e.target.closest?
   var d=scanDate(); if(!d){ b.textContent="No scan date: load a scan first"; return; }
   var turn=b.closest(".qm-turn"), q=turn&&turn.querySelector(".qm-q")?turn.querySelector(".qm-q").textContent.trim():"Tracked "+r.kind;
   var id="p"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-  ST.ports.push({id:id,name:q.slice(0,160),q:q,kind:r.kind,spec:r.spec,created:d,settings:{entry:"open",cost:10,notional:100000},ups:[{d:d,picks:r.picks,exits:{}}]}); save(); SEL=id; render();
+  LASTMSG=[]; ST.ports.push({id:id,name:q.slice(0,160),q:q,kind:r.kind,spec:r.spec,created:d,settings:{entry:"open",cost:10,notional:100000},ups:[{d:d,picks:r.picks,exits:{}}]}); save(); SEL=id; render();
   var p=b.parentNode; p.innerHTML='Tracked as “'+hE(q.slice(0,160))+'” ('+r.picks.length+' names, signal '+d+'). <button type="button" class="btn ghost" data-trkgo="1">Open the Portfolio Tracker</button>'; });
 
 /* ================= update all ================= */
-function reasonFor(spec,ctx,s,N){ var r=ctx.bySym[s]; if(!r) return "missing from the scan";
+function reasonFor(spec,ctx,s,N){ var r=ctx.bySym[s]; if(!r){ try{ var X=moX(), ek={}; if(X&&X.etf&&X.etfKeys){ var si=X.etfKeys.indexOf("sym"); X.etf.forEach(function(a){ ek[a[si]]=1; }); } if(ek[s]) return "ETF not picked this time (outranked, no longer improving, or a limit)"; }catch(e){} return "missing from the scan"; }
   if(Array.isArray(spec.filters)){ var bad=spec.filters.filter(function(f){ try{ return !qmTest(r,f); }catch(e){ return false; } }); if(bad.length) return "no longer "+bad.map(function(f){ try{ return f.txt||qmFilterTxt(f); }catch(e){ return f.f; } }).join("; "); }
   try{ var PC=window.__pcond; if(PC&&spec.t){ var ks=PC.parse(spec.t,[])||[], fl=ks.filter(function(k){ try{ return !PC.test(k,r); }catch(e){ return false; } }); if(fl.length) return "no longer "+fl.map(function(k){ return PC.label(k); }).join("; ");
     if(!Array.isArray(spec.filters)) return "not picked this time (outranked by stronger candidates or a diversification limit)"; } }catch(e){}

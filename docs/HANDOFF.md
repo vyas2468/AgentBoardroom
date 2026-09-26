@@ -115,7 +115,7 @@ uptrend, StepMA + near trend line), connections "in rising subsectors", AF layou
 6. Query backlog items 7, 8, 11-16; navy theme; connections "in rising subsectors"; AF layout for 20+ names.
 
 ## State
-- Base page `artifact/base/orig.html` + layers `artifact/layers/v81.js ... v102.js`, built by `splice81.py`. Latest published: **version 132** (v103 Portfolio Tracker phase 1). Owner summary: docs/FINAL_HANDOFF_2026-09-26_2015UTC.txt.
+- Base page `artifact/base/orig.html` + layers `artifact/layers/v81.js ... v102.js`, built by `splice81.py`. Latest published: **version 135** (v103 tracker + fixes: mixed ETFs tracked, in-page delete/undo, rename box, details drop-down, examples tile). Owner summary: docs/FINAL_HANDOFF_2026-09-26_2025UTC.txt.
 - Everything is published, committed and pushed. Regression suite passes: 49 original questions and all earlier tile
   questions answer word for word as before; all newer tile questions answer; no page errors.
 - Test data in `artifact/tools/fixtures` (scan + gzipped part E history); question sets in `artifact/tools/tests`.
