@@ -317,3 +317,4 @@ Still to do: 7 (multi-condition group counts), 8 (never drop a phrase silently),
 
 ### Version 119 (done)
 - Tear-sheet stepping (v100): after opening a tear sheet from any table / list / map, Up / Down arrows move to the previous / next ticker of that same list (stops at the ends), with a "3 / 10" badge; Esc still closes. Test: artifact/tools/nav_check.js.
+- Version 120: tile "Rank by wins, adjectives kept" (5 tested questions, artifact/tools/tests/q_v118.json).

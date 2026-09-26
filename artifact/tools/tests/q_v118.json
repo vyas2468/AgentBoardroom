@@ -1,0 +1,5 @@
+["Show me top 10 anomalous symbols above StepMA, not deteriorating. Rank by strength.",
+"Show me top 10 liquid symbols improving, sorted by lowest volatility.",
+"Show me top 10 unusual symbols in an uptrend, 2 per sector. Rank by correlation to sector.",
+"Show me top 10 symbols improving, 1 per sector. Rank by breadth of sector.",
+"Build a smart 8 stock portfolio of liquid improving stocks, weighted."]
