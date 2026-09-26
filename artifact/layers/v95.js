@@ -92,6 +92,7 @@ var NB=null;
 function behaviourNb(k){ if(NB) return NB; NB={}; try{ var pool=buildVectors(); pool.forEach(function(s){ NB[s.sym]=pool.filter(function(o){ return o!==s; }).map(function(o){ return {s:o.sym,d:dist2(s._v,o._v)}; }).sort(function(a,b){ return a.d-b.d; }).slice(0,k||4).map(function(x){ return x.s; }); }); }catch(e){} return NB; }
 var SECCOL=["#3b82f6","#f59e0b","#10b981","#ef4444","#a855f7","#06b6d4","#84cc16","#f97316","#ec4899","#14b8a6","#eab308","#8b5cf6"];
 /* generic network drawing: groups (hubs) on a ring, members around them; or an ego layout around one name */
+var NETOPT={};
 function network(o){
   var W=960, Hh=o.h||640, cx=W/2, cy=Hh/2+10, s=['<svg viewBox="0 0 '+W+' '+Hh+'" role="img" aria-label="'+hE(o.title)+'" style="width:100%;height:auto;max-width:1000px;display:block;background:var(--surface)">'];
   s.push('<text x="14" y="20" font-size="13" font-weight="700" fill="var(--ink)">'+hE(o.title)+'</text>');
@@ -108,8 +109,8 @@ function network(o){
     G.forEach(function(g){ o.nodes.filter(function(n){ return n.group===g.id; }).forEach(function(n){ s.push('<line x1="'+g.x.toFixed(1)+'" y1="'+g.y.toFixed(1)+'" x2="'+P[n.id].x.toFixed(1)+'" y2="'+P[n.id].y.toFixed(1)+'" stroke="var(--line-strong)" stroke-width="0.8" stroke-opacity=".5"/>'); }); });
   }
   (o.edges||[]).forEach(function(e){ var a=P[e.a], b=P[e.b]; if(!a||!b) return; s.push('<line x1="'+a.x.toFixed(1)+'" y1="'+a.y.toFixed(1)+'" x2="'+b.x.toFixed(1)+'" y2="'+b.y.toFixed(1)+'" stroke="'+(e.c||PURPLE)+'" stroke-width="'+(e.w||1.5)+'"'+(e.dash?' stroke-dasharray="5 4"':'')+' stroke-opacity=".85"><title>'+hE(e.t||"")+'</title></line>'); });
-  (o.groups||[]).forEach(function(g){ if(g.x===undefined) return; s.push('<circle cx="'+g.x.toFixed(1)+'" cy="'+g.y.toFixed(1)+'" r="'+(g.r||22)+'" fill="'+(g.fill||"#6d4a9c")+'" fill-opacity=".85" stroke="var(--ink-2)" stroke-width="1.5"/><text x="'+g.x.toFixed(1)+'" y="'+(g.y+(g.r||22)+13).toFixed(1)+'" text-anchor="middle" font-size="10.5" font-weight="700" fill="var(--ink)">'+hE(g.label.length>26?g.label.slice(0,25)+"\u2026":g.label)+'</text>'+(g.inner?'<text x="'+g.x.toFixed(1)+'" y="'+(g.y+4).toFixed(1)+'" text-anchor="middle" font-size="10" font-weight="700" fill="#fff">'+hE(g.inner)+'</text>':'')); });
-  o.nodes.forEach(function(n){ var p=P[n.id]; if(!p) return; s.push('<circle data-tear="'+hE(n.id)+'" cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="'+(n.r||8).toFixed(1)+'" fill="'+n.c+'" fill-opacity="'+(n.o||0.9)+'" stroke="'+(n.ring||"var(--surface)")+'" stroke-width="'+(n.ring?2.5:1)+'" style="cursor:pointer"><title>'+hE(n.tip||n.id)+'</title></circle><text x="'+p.x.toFixed(1)+'" y="'+(p.y+(n.r||8)+11).toFixed(1)+'" text-anchor="middle" font-size="'+(n.id===o.ego?12:9.5)+'" font-weight="'+(n.id===o.ego?700:500)+'" fill="var(--ink-2)" pointer-events="none">'+hE(n.id)+'</text>'); });
+  (o.groups||[]).forEach(function(g){ if(g.x===undefined) return; s.push('<circle cx="'+g.x.toFixed(1)+'" cy="'+g.y.toFixed(1)+'" r="'+(g.r||22)+'" fill="'+(g.fill||"#6d4a9c")+'" fill-opacity=".85" stroke="var(--ink-2)" stroke-width="1.5"/><text x="'+g.x.toFixed(1)+'" y="'+(g.y+(g.r||22)+13).toFixed(1)+'" text-anchor="middle" font-size="10.5" font-weight="700" fill="var(--ink)">'+hE(g.label.length>26?g.label.slice(0,25)+"\u2026":g.label)+'</text>'+(g.inner&&!NETOPT.noInner?'<text x="'+g.x.toFixed(1)+'" y="'+(g.y+4).toFixed(1)+'" text-anchor="middle" font-size="10" font-weight="700" fill="#fff">'+hE(g.inner)+'</text>':'')); });
+  o.nodes.forEach(function(n){ var p=P[n.id]; if(!p) return; s.push('<circle data-tear="'+hE(n.id)+'" cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="'+(n.r||8).toFixed(1)+'" fill="'+n.c+'" fill-opacity="'+(n.o||0.9)+'" stroke="'+(n.ring||"var(--surface)")+'" stroke-width="'+(n.ring?2.5:1)+'" style="cursor:pointer"><title>'+hE(n.tip||n.id)+'</title></circle>'+(NETOPT.noNames?'':'<text x="'+p.x.toFixed(1)+'" y="'+(p.y+(n.r||8)+11).toFixed(1)+'" text-anchor="middle" font-size="'+(n.id===o.ego?12:9.5)+'" font-weight="'+(n.id===o.ego?700:500)+'" fill="var(--ink-2)" pointer-events="none">'+hE(n.id)+'</text>')); });
   (o.legend||[]).forEach(function(l,i){ s.push('<text x="14" y="'+(Hh-12-i*15)+'" font-size="10.5" fill="'+(l.c||"var(--ink-3)")+'">'+hE(l.t)+'</text>'); });
   s.push('</svg>'); return '<div class="chart-scroll hx94plot" style="margin:8px 0">'+s.join("")+'</div>';
 }
@@ -163,6 +164,11 @@ qmValidateAny=function(raw){ if(!(raw&&raw.kind==="hview")) return _qmValidateAn
 var _qmRunX95=qmRunX;
 qmRunX=function(spec,ctx,res,t0){
   if(!(spec&&spec.kind==="hview")) return _qmRunX95(spec,ctx,res,t0);
+  /* "without scores / symbol names": hide those labels on the drawing (dots keep their hover tip and tear-sheet click) */
+  NETOPT={}; try{ var qq=qmT(ctx._q||""); var W0="(?:without|no|hide|hiding|remove|minus|excluding)(?: the| any)?";
+    if(new RegExp("\\b"+W0+" (?:mean |average )?(?:scores?|numbers?|averages?|values?)\\b").test(qq)) NETOPT.noInner=true;
+    if(new RegExp("\\b"+W0+" (?:symbol |ticker |stock |company )?(?:names|labels|tickers|symbols)\\b").test(qq)||/\b(?:and|or) (?:symbol |ticker )(?:names|labels)\b/.test(qq)&&NETOPT.noInner) NETOPT.noNames=true; }catch(e){}
+  if(NETOPT.noInner||NETOPT.noNames) res.notes.push("Hidden on the drawing as asked: "+[NETOPT.noInner?"the scores in the circles":null,NETOPT.noNames?"the symbol names (hover a dot for its name; click it for the tear sheet)":null].filter(Boolean).join(" and ")+".");
   var h=H(), by={}; ctx.rows.forEach(function(r){ by[r.sym]=r; });
   function fin(n){ res.cov=h?"Price history: <b>"+h.nSyms+" symbols</b> \u00D7 <b>"+h.bars+" bars</b> to <b>"+A.cut()+"</b> (part E).":qmCovX(ctx,""); res.rows=n; res.qualifying=n; res.ms=Date.now()-t0; return res; }
   function send(list,label){ var it=list.filter(function(s){ return by[s]; }).map(function(s){ return {sym:s,side:"long",w:null}; }); return it.length?{label:label,items:it.slice(0,50)}:null; }

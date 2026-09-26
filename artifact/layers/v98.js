@@ -235,6 +235,21 @@ qmRunX=function(spec,ctx,res,t0){
   }catch(e){ res.lead="This question could not be answered: "+hE(e.message); return fin(0); }
 };
 
+/* ---- "without / hide / no ... names | scores": strip those labels from any drawing in the answer (maps, Subsector Web) ---- */
+function hideWords(q){ var t=qmT(q||""), m=t.match(/\b(?:without|no|hide|hiding|remove|minus|excluding|drop)\b(.*)$/); if(!m) return null; var rest=m[1];
+  var o={names:/\b(?:names|labels|tickers|symbols|text)\b/.test(rest),scores:/\b(?:scores?|numbers?|averages?|values?|means?)\b/.test(rest)}; return (o.names||o.scores)?o:null; }
+var _qmRunX98h=qmRunX;
+qmRunX=function(spec,ctx,res,t0){
+  var r=_qmRunX98h(spec,ctx,res,t0);
+  try{ var hw=hideWords(ctx&&ctx._q); if(hw&&r&&typeof r.hxPlot==="string"&&/<svg/.test(r.hxPlot)){
+      var d=document.createElement("div"); d.innerHTML=r.hxPlot; var k=0;
+      [].slice.call(d.querySelectorAll("svg text")).forEach(function(x){ var v=(x.textContent||"").trim();
+        if(hw.names&&/^[A-Z]{1,5}(?:[.\-][A-Z])?$/.test(v)&&!x.closest("title")){ x.parentNode.removeChild(x); k++; return; }
+        if(hw.scores&&/^(?:mean |avg )?[-+]?\d+(?:\.\d+)?$/.test(v)){ x.parentNode.removeChild(x); k++; } });
+      if(k){ r.hxPlot=d.innerHTML; r.notes=(r.notes||[]).filter(function(n){ return !/Hidden on the drawing/.test(n); }); r.notes.push("Hidden on the drawing as asked: "+[hw.scores?"the scores":null,hw.names?"the symbol names (hover a dot for its name; click it for the tear sheet)":null].filter(Boolean).join(" and ")+"."); } } }catch(e){}
+  return r;
+};
+
 /* ================= smart portfolio ================= */
 function runSmart(spec,ctx,res){
   if(spec.mix||spec.ls) return runCombo(spec,ctx,res);
