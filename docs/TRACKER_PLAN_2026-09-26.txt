@@ -1,0 +1,167 @@
+============================================================================
+PORTFOLIO TRACKER - DETAILED PLAN (26 Sep 2026)
+Goal: save portfolios made in Ask the terminal, track each one run after run at real prices, see
+buys / holds / sells and performance, compare them, and combine them into one overall portfolio.
+Nothing existing may change: the 348 saved test answers must stay word for word the same.
+============================================================================
+
+----------------------------------------------------------------------------
+1. HOW IT WORKS FOR YOU (the user's view)
+----------------------------------------------------------------------------
+Day 1
+  - Ask for a portfolio as usual, e.g. "Build a smart portfolio of 8 stocks in an uptrend, pulling back".
+  - Press "Track this portfolio" under the answer. Give it a name (default: the question). Pick settings or keep
+    the defaults (below). It gets its own compartment in a new "Portfolio Tracker" tab.
+  - The tracker records today's picks as BUY orders, filled at the chosen price convention.
+Each later day (after you load the new scan and part E history, as you do now)
+  - Press "Update all tracked" (in the tab, or ask "update my tracked portfolios").
+  - For every tracked portfolio, the same rules are re-run on the new scan. The tracker shows
+    BUY (new names), HOLD (still qualifying), SELL (no longer qualifying, with the reason), and updates the
+    performance.
+Any time
+  - Overview: one row per portfolio (start date, days, holdings, return, vs RSP, max drawdown, trades, win rate).
+  - Detail: holdings, closed trades, equity curve vs RSP, settings, CSV export.
+  - Compare: tick several portfolios and see their equity curves on one chart and their stats side by side.
+  - Combined: tick several and give each an allocation (e.g. 50 / 30 / 20). You get one combined equity curve,
+    combined metrics, and the combined holdings by ticker (the same ticker held by two portfolios adds up;
+    overlap is shown).
+
+----------------------------------------------------------------------------
+2. THE KEY DESIGN DECISIONS (and why)
+----------------------------------------------------------------------------
+A. Freeze the rules, not the words.
+   When you track a portfolio, the tracker stores the exact validated query the engine ran (the JSON in
+   "How this was computed"), not just the question text. Later improvements to the question reader can
+   therefore never silently change a tracked portfolio's rules. Portfolios read by Claude need no AI later.
+   Portfolios built from "these" keep their frozen candidate list.
+
+B. Store only the decisions; recompute everything else.
+   Stored per portfolio: its definition (name, frozen query, settings, created date) and one small record per
+   update date: the target list (ticker, rank, target weight) and the scan date. Holdings, trades, prices,
+   equity curves and metrics are recomputed from those records plus the price history every time.
+   This avoids stored numbers drifting out of step, and makes every figure reproducible and testable.
+
+C. Prices come from part E (daily open / high / low / close for every name).
+   - The history file already contains opens; the loader keeps only closes today. Add opens to the loader
+     (one additive change, stored beside the closes; nothing else uses them).
+   - Between updates the tracker still has every day's close, so the equity curve is daily even if you
+     skip days.
+   - Without part E loaded: the tracker can still record picks (scan prices), but shows performance as
+     "load the price history" rather than guessing.
+
+D. Trade execution (you choose per portfolio; default in brackets):
+   - Entry: [next day's open after the signal] - realistic for an end-of-day scan; or the signal day's close
+     (optimistic reference). A pending order waits until the next day's data exists, then fills.
+   - Exit: same convention as entry.
+   - Costs: [10 basis points per side] (commission + slippage), adjustable, including 0.
+   - Sizing: [equal weight at each rebalance], or the answer's own weights (inverse volatility / score).
+     Notional start value [100,000]; fractional shares for exact maths (display rounds).
+
+E. When a name is sold (all per portfolio):
+   - Default: it no longer qualifies on an update day (drops out of the list).
+   - Buffer against churn: buy only the top N, keep holding while still within the top N + B
+     (default B = half of N). Stops a name flipping between rank 10 and 11 from being sold and rebought.
+   - Minimum holding days (default 0).
+   - Optional stop loss (e.g. -8% from entry, checked on daily closes) and optional time exit (N days).
+   - Forced exit if the ticker disappears from the scan / history (delisting, merger, ticker change):
+     sold at its last known price and flagged "data gap".
+   - Each SELL states its reason: which condition failed (e.g. "no longer improving", "below its trend
+     line"), or "fell out of the top N (now rank 14)", "stop -8% hit", "held 20 days", "missing from scan".
+
+F. Rebalance timing: [every update], weekly (first update each week), monthly, or manual.
+   On non-rebalance days the tracker only marks positions to market (and checks stops).
+
+G. Storage: your account store (the same one My tiles uses), one document per portfolio
+   ("tracker/<id>"), plus an index document. Browser storage as the offline copy, merged by
+   last-update time (the My tiles pattern that already works). Writes happen only when you press
+   Track / Update / Save settings / Delete, never on page load.
+
+----------------------------------------------------------------------------
+3. THE MATHS (exactly what will be computed)
+----------------------------------------------------------------------------
+- Signal dates: the scan dates of the stored updates.
+- Fill date / price: next open after the signal (or the signal close); if that price is missing, the next
+  available open; if none yet, the order stays pending and the answer says so.
+- Shares = target weight x portfolio value at fill / fill price; cost deducted from cash.
+- Daily value = cash + sum(shares x close). Daily return, equity curve, running peak, drawdown.
+- Benchmark: RSP bought with the same money on the first fill date, same price convention.
+- Metrics: total return, return vs RSP, annualised volatility, max drawdown, Sharpe-style ratio (rf 0),
+  number of trades, win rate, average gain / loss, average days held, turnover.
+- Combined: each chosen portfolio's daily value series scaled to its allocation of a combined notional; before
+  a portfolio's start date its allocation sits in cash. Combined holdings = sum of each position's value by
+  ticker, shown as weights, with an "overlap" flag for tickers held in more than one.
+
+----------------------------------------------------------------------------
+4. PITFALLS AND HOW EACH IS HANDLED
+----------------------------------------------------------------------------
+ 1. Re-running the same scan date twice -> the update for that date is replaced, never duplicated.
+ 2. Loading an OLDER scan than the last update -> updates are refused for that portfolio ("scan is older
+    than the last update"); viewing still works.
+ 3. Part E older than the scan -> decisions use the scan; fills wait for prices; the gap is shown.
+ 4. Missing price for a held name on some days -> last close carried for valuation, flagged; never
+    interpolated.
+ 5. Ticker gone (delisting, merger, rename such as BK -> BNY) -> forced exit at the last price, "data gap".
+ 6. Suspicious jumps (e.g. AMCR +433%: probably a merger or share change in the history) -> a daily move
+    over +/-40% is flagged on the holding and in the overview; the numbers are not altered silently.
+ 7. Question reader changes later -> no effect (frozen query, decision A).
+ 8. Weekends / holidays / skipped days -> nothing to do; the curve uses the trading days in part E.
+ 9. Two devices or tabs -> single document per portfolio, last save wins; each update is idempotent by
+    date, so re-pressing Update on the other device reproduces the same result.
+10. Floating-point drift -> nothing stored is derived; rounding only for display.
+11. Short sides (long / short portfolios) -> shorts tracked with negative shares; the P&L sign is tested
+    explicitly.
+12. Mixed ETF + stock portfolios -> ETF prices from part E like stocks; if an ETF has no history, it is
+    flagged, not dropped silently.
+13. Empty result on an update (no names qualify) -> everything is sold to cash with the reason; the
+    portfolio continues next time.
+14. Storage size -> about 10 to 40 names x 250 updates per year; compact records (a few KB per year).
+    Warn if a document nears the store's limit.
+
+----------------------------------------------------------------------------
+5. HOW NOTHING EXISTING BREAKS
+----------------------------------------------------------------------------
+- New layer v103 only, plus two small additive edits:
+  (a) the part E loader also keeps opens (new field; existing closes and every existing calculation are untouched);
+  (b) the new tab added the way the Guide tab was added (v90 pattern).
+- The "Track this portfolio" button is added to portfolio answers. It is extra text in those answers, so the
+  regression compares answers with that one line removed; everything else must still match word for word.
+  (Alternative if you prefer: a pin icon with no text, so no answer text changes at all.)
+- Tracker questions in Ask ("show my tracked portfolios", "update tracked portfolios", "compare ...") use new
+  phrasings only.
+- Full regression (348 answers) plus all new tiles, before every publish.
+
+----------------------------------------------------------------------------
+6. TESTS (proving every branch is right)
+----------------------------------------------------------------------------
+A. Ledger engine tests on made-up data (exact expected numbers):
+   buy / hold / sell; the buffer keeps rank 12 of top 10, sells rank 16; minimum hold blocks an early sell;
+   stop loss; time exit; weekly and monthly rebalance skipping; next-open vs close fills; pending order until
+   data arrives; costs; missing price carried; ticker vanished (forced exit); same-date re-run replaced;
+   older scan refused; empty list (all to cash); short P&L sign; combined allocation maths; overlap by ticker.
+B. In-page test with two scan dates: load the scan as of an earlier date, track two portfolios, then load a
+   modified scan dated a week later (some names no longer improving / out of trend). Check BUY / HOLD / SELL,
+   reasons, fills against the part E opens, and the equity against a hand calculation.
+C. Storage: the cloud simulation used for My tiles, plus the browser-storage fallback and the merge.
+D. The full regression (348 answers), the tile tests, no page errors, visual check of the tab and charts.
+
+----------------------------------------------------------------------------
+7. BUILD ORDER (each step tested before the next)
+----------------------------------------------------------------------------
+Phase 1 - core (fits the current budget if nothing goes wrong):
+  1. Loader keeps opens.
+  2. Ledger engine (pure calculation) + its tests (section 6A).
+  3. Storage (account store + browser copy) + "Track this portfolio" button with default settings.
+  4. "Update all tracked": re-run each frozen query on the loaded scan and record the update.
+  5. Portfolio Tracker tab: overview table, per-portfolio detail (BUY / HOLD / SELL with reasons, holdings,
+     closed trades, equity curve vs RSP), delete / rename, CSV export.
+  6. Regression, publish, handoff.
+Phase 2 - next session or remaining budget:
+  7. Settings editor (entry convention, costs, buffer, min hold, stop, time exit, rebalance timing, weights).
+  8. Compare and Combined views (allocations, combined curve and metrics, combined holdings and overlap).
+  9. Ask phrasings + a tracker tile group.
+Phase 3 - later: RealTest export for true backtests (as in HANDOFF.md, Future task 2 part B).
+
+What this is and is not: forward tracking from the day you start, at real daily prices, with realistic
+fills and costs. It is not a backtest; the terminal cannot recompute past days' signals (RealTest can,
+Phase 3).
+============================================================================
