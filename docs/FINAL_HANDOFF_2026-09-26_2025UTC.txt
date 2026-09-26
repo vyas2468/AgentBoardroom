@@ -1,6 +1,6 @@
 ============================================================================
 SECTOR ROTATION TERMINAL - FINAL HANDOFF (2026-09-26_2025UTC, end of session)
-Live page: https://claude.ai/artifact/JBivgL88qHWeaCSsepr7cN  (version 135)
+Live page: https://claude.ai/artifact/JBivgL88qHWeaCSsepr7cN  (version 137)
 Code: branch claude/artifact-access-question-f3s8rs, folder artifact/ (base page + layers v81-v102)
 Technical detail for the next session: docs/HANDOFF.md (start at the top section)
 ============================================================================
@@ -228,6 +228,13 @@ UPDATE (version 135) - checked with your mixed-portfolio example
  - As designed in phase 1: the tracker uses equal weights (the answer's score-rank weights come in phase 2), and a
    portfolio tracked on the latest scan shows "pending" until the next day's prices are loaded.
  - A sold ETF now says "ETF not picked this time" rather than "missing from the scan".
+
+UPDATE (versions 136-137) - dual momentum with rules
+ - Dual momentum now obeys: max N per price cluster / Hidden Group / sector / subsector; "weighted" (momentum rank)
+   or "inverse volatility"; conditions (improving, uptrend, above cluster 1, ...); a sector or subsector; signals
+   converge; rising subsectors; positive sector breadth; low volatility (12M vol at or below the median); low
+   correlation (no two picks above 0.60). The answer lists every rule applied; skipped names and cash are shown.
+ - 8 new examples in the tile "Leaders per group and dual momentum" (all tested).
 
 NEXT (phase 2, in docs/TRACKER_PLAN_2026-09-26.txt): settings per portfolio (entry at close, costs, buffer, minimum
 hold, stop loss, time exit, weekly / monthly rebalance, answer weights), Compare and Combined views (allocations,

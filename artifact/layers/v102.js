@@ -101,7 +101,12 @@ qmParseX=function(q){
       var tps=t.match(/\b(?:top|best|leading|highest|lowest|worst|bottom) (?:max(?:imum)? |at most )?(\d) (?:names? |stocks? |tickers? )?(?:per|in each|from each|for each|of each) (sub ?-?sector|sector|industry)s? (?:by|on|ranked by|for) ([a-z0-9 \-]+?)\s*$/);
       if(tps){ var ff=fld(tps[3]); if(ff&&QM_SYM[ff]) return {kind:"hx102",mode:"topsec",n:+tps[1],lvl:/sub|industry/.test(tps[2])?"ind":"sec",f:ff,d:/\b(?:lowest|worst|bottom)\b/.test(t)||/^(?:risk|vol|volp|vol12|beta)$/.test(ff)&&!/\bhighest\b/.test(t)?"asc":"desc"}; }
       /* dual momentum */
-      if(/\bdual momentum\b|\b12[- ](?:minus[- ])?1(?: month)? momentum\b|\babsolute momentum\b/.test(t)){ var nm=t.match(/\b(?:top|best) (\d{1,2})\b|\b(\d{1,2}) (?:stocks|names|leaders)\b/); return {kind:"hx102",mode:"dual",n:nm?+(nm[1]||nm[2]):10}; }
+      if(/\bdual momentum\b|\b12[- ](?:minus[- ])?1(?: month)? momentum\b|\babsolute momentum\b/.test(t)){ var nm=t.match(/\b(?:top|best) (\d{1,2})\b|\b(\d{1,2}) (?:stocks|names|leaders)\b/); var lim={}; [["cl",/\b(?:max(?:imum)?|at most|no more than) (\d) (?:per|in each|from each) (?:price )?cluster\b|\b(\d) per (?:price )?cluster\b/],["hg",/\b(?:max(?:imum)?|at most|no more than) (\d) (?:per|in each|from each) hidden group\b|\b(\d) per hidden group\b/],["ind",/\b(?:max(?:imum)?|at most|no more than) (\d) (?:per|in each|from each) sub ?-?sector\b|\b(\d) per sub ?-?sector\b/],["sec",/\b(?:max(?:imum)?|at most|no more than) (\d) (?:per|in each|from each) sector\b|\b(\d) per sector\b/]].forEach(function(x){ var m=t.match(x[1]); if(m) lim[x[0]]=+(m[1]||m[2]); });
+        var wm=/\binverse vol\w*\b|\brisk[- ]weighted\b|\brisk parity\b|\bvolatility weighted\b/.test(t)?"iv":(/\bweight(?:ed|ing)?\b|\bscore weighted\b|\brank weighted\b/.test(t)?"rank":"eq");
+        var pk=[]; try{ pk=window.__pcond?window.__pcond.parse(t,[])||[]:[]; }catch(e){ pk=[]; }
+        var ssD=(qmSecMentions(t).inn||[]).map(function(v){ return qmSecKey(v)||v; }), iiD=qmIndMentions(t,C)||[];
+        var ex={lowvol:/\blow(?:er)? vol\w*\b|\bcalm\w*\b|\bquiet\b/.test(t),lowcorr:/\blow(?:er)? correlat\w*\b|\buncorrelated\b|\bdiversif\w*\b/.test(t),rising:/\brising sub ?sectors?\b|\bimproving sub ?sectors?\b/.test(t),breadth:/\b(?:strong|positive|good|improving) (?:sector )?breadth\b|\bsector breadth\b/.test(t),conv:/\bconverg\w*\b|\bsignal convergence\b/.test(t)};
+        return {kind:"hx102",mode:"dual",n:nm?+(nm[1]||nm[2]):10,lim:lim,wm:wm,conds:pk,secs:ssD,inds:iiD,ex:ex}; }
       /* chosen columns */
       var tq=String(q).toLowerCase().replace(/[^a-z0-9%,&\- ]/g," ").replace(/\s+/g," ").trim(), cm=tq.match(/^(?:show|add|display|give|include)(?: me)?(?: the)? ([a-z0-9 ,\-%&]+?) (?:columns? )?(?:for|of|on) (.+)$/);
       if(cm&&!/\b(?:map|matrix|chart|plot|scatter|scorecard|web|graph|treemap|breadth|sentiment|spread|leaderboard|portfolio|basket|diagnos\w*|correlat\w*|exposure|pairs?)\b/.test(t)){
@@ -207,12 +212,31 @@ qmRunX=function(spec,ctx,res,t0){
     var bn=(A.bench&&A.bench())||"RSP", b12=X.relRet(h,bn,252), b1=X.relRet(h,bn,21), N=Math.max(1,Math.min(30,spec.n||10));
     if(!num(b12)){ res.lead="The benchmark "+bn+" needs at least 252 bars of history."; return fin(0); }
     var bm=((1+b12/100)/(1+(num(b1)?b1:0)/100)-1)*100;
-    var cand=ctx.rows.map(function(r){ var a=X.relRet(h,r.sym,252), c=X.relRet(h,r.sym,21); if(!num(a)||!num(c)) return null; return {r:r,m12:a,m121:((1+a/100)/(1+c/100)-1)*100}; }).filter(Boolean).sort(function(a,b){ return b.m121-a.m121; });
-    var top=cand.slice(0,N), keep=top.filter(function(o){ return o.m121>bm&&o.m121>0; }), w=100/N;
-    res.lead="Dual momentum ("+N+" slots): the "+N+" strongest 12-1 month momentum names, each kept only if it beats "+bn+"'s 12-1 momentum ("+sg(bm,1)+"%) and is positive; <b>"+keep.length+"</b> kept, <b>"+(N-keep.length)+"</b> slot"+(N-keep.length===1?"":"s")+" in cash ("+((N-keep.length)*w).toFixed(0)+"%).";
+    var PC=window.__pcond, conds=(spec.conds||[]).filter(function(k){ return PC; }), lim=spec.lim||{}, wm=spec.wm||"eq";
+    var ex=spec.ex||{}, secs=spec.secs||[], inds=spec.inds||[], vmed=null;
+    if(ex.lowvol){ var vv=ctx.rows.map(function(r){ return num(r.vol12)?r.vol12:null; }).filter(num).sort(function(a,b){ return a-b; }); vmed=vv.length?vv[Math.floor(vv.length/2)]:null; }
+    var cand=ctx.rows.filter(function(r){ if(inds.length&&inds.indexOf(r.ind)<0) return false; if(!inds.length&&secs.length&&secs.indexOf(r.sec)<0) return false;
+      if(ex.lowvol&&num(vmed)&&!(num(r.vol12)&&r.vol12<=vmed)) return false; if(ex.rising&&r.indUp!==1) return false; if(ex.breadth&&!(num(r.secb)&&r.secb>0)) return false; if(ex.conv&&conds.indexOf("conv")<0&&!(num(r.conv)&&r.conv>=3)) return false; return true; }).filter(function(r){ return conds.every(function(k){ try{ return PC.test(k,r); }catch(e){ return true; } }); }).map(function(r){ var a=X.relRet(h,r.sym,252), c=X.relRet(h,r.sym,21); if(!num(a)||!num(c)) return null; return {r:r,m12:a,m121:((1+a/100)/(1+c/100)-1)*100}; }).filter(Boolean).sort(function(a,b){ return b.m121-a.m121; });
+    var CL={}, HG={}; if(lim.cl){ try{ var CLS=window.__hxClusters, Mc=CLS&&CLS.build("252"); if(Mc){ var g=CLS.flat(Mc,0.5); Mc.names.forEach(function(x,k){ CL[x.sym]=g[k]; }); } }catch(e){} }
+    if(lim.hg){ try{ relClusters("stocks",0.6).clusters.forEach(function(c){ c.members.forEach(function(m){ HG[m.sym]=c.id; }); }); }catch(e){} }
+    var cnt={cl:{},hg:{},ind:{},sec:{}}, top=[], skip=0;
+    function cor252(a,b){ var ca=h.syms[a], cb=h.syms[b]; if(!ca||!cb) return null; var L2=h.dates.length-1, xa=[], xb=[]; for(var i=L2-251;i<=L2;i++){ if(i<1) continue; var p=A.ret(ca,i), q2=A.ret(cb,i); if(p!==null&&q2!==null){ xa.push(p); xb.push(q2); } } return A.corr(xa,xb); }
+    cand.forEach(function(o){ if(top.length>=N) return; if(ex.lowcorr&&top.some(function(p){ var c=cor252(p.r.sym,o.r.sym); return num(c)&&c>0.6; })){ skip++; return; } var keys={cl:CL[o.r.sym],hg:HG[o.r.sym],ind:o.r.ind,sec:o.r.sec}, ok=true;
+      Object.keys(lim).forEach(function(k){ var v=keys[k]; if(v!==undefined&&v!==null&&(cnt[k][v]||0)>=lim[k]) ok=false; }); if(!ok){ skip++; return; }
+      Object.keys(lim).forEach(function(k){ var v=keys[k]; if(v!==undefined&&v!==null) cnt[k][v]=(cnt[k][v]||0)+1; }); top.push(o); });
+    var keep=top.filter(function(o){ return o.m121>bm&&o.m121>0; });
+    var raw=top.map(function(o,k){ if(wm==="rank") return (top.length-k)+top.length/2; if(wm==="iv"){ var v=num(o.r.vol12)?o.r.vol12:o.r.vol; return num(v)&&v>0?1/v:1; } return 1; }), rs=raw.reduce(function(a,b){ return a+b; },0)||1;
+    top.forEach(function(o,k){ o.w=raw[k]/rs*100*(top.length/N); }); var cashW=100-keep.reduce(function(a,o){ return a+o.w; },0);
+    var rules=[]; conds.forEach(function(k){ try{ rules.push(PC.label(k)); }catch(e){} }); Object.keys(lim).forEach(function(k){ rules.push("at most "+lim[k]+" per "+{cl:"price cluster (252-bar dendrogram cut at 0.5)",hg:"Hidden Group",ind:"subsector",sec:"sector"}[k]); });
+    if(inds.length) rules.unshift("in "+inds.join(", ")); else if(secs.length) rules.unshift("in "+secs.map(qmSecName).join(", "));
+    if(ex.lowvol) rules.push("low volatility (12-month volatility at or below the universe median)"); if(ex.rising) rules.push("in rising subsectors"); if(ex.breadth) rules.push("sector breadth positive (more improving than deteriorating)"); if(ex.conv&&conds.indexOf("conv")<0) rules.push("signals converge (3 or more lenses)"); if(ex.lowcorr) rules.push("low correlation (no two picks correlated above 0.60 over 252 bars)");
+    rules.push({eq:"equal weights",rank:"weighted by momentum rank (the first "+((N+N/2)/(1+N/2)).toFixed(1)+" times the last)",iv:"inverse-volatility weights"}[wm]);
+    res.lead="Dual momentum ("+N+" slots): the strongest 12-1 month momentum names"+(rules.length?" ("+rules.join("; ")+")":"")+", each kept only if it beats "+bn+"'s 12-1 momentum ("+sg(bm,1)+"%) and is positive; <b>"+keep.length+"</b> kept, cash <b>"+Math.max(0,cashW).toFixed(1)+"%</b>.";
     res.table={head:["Rank","Symbol","Sector","12-1 month momentum","12M return","1M return","Beats "+bn+"?","Weight"],align:["r","l","l","r","r","r","l","r"],hxColor:{3:"sign",4:"sign",5:"sign"},
-      body:top.map(function(o,i){ var k=keep.indexOf(o)>=0; return [String(i+1),o.r.sym,qmSecName(o.r.sec),sg(o.m121,1)+"%",sg(o.m12,1)+"%",sg(((1+o.m12/100)/(1+o.m121/100)-1)*100,1)+"%",k?"yes":"no → cash",k?w.toFixed(1)+"%":"0% (cash)"]; }).concat(N>keep.length?[["","CASH","","","","","",((N-keep.length)*w).toFixed(1)+"%"]]:[])};
-    res.notes.push("12-1 month momentum: the 12-month return excluding the latest month (skips the short-term reversal month). Relative momentum picks the strongest; absolute momentum sends a slot to cash when the name does not beat "+bn+" (and zero). Equal slots; a baseline for backtests, not advice.");
+      body:top.map(function(o,i){ var k=keep.indexOf(o)>=0; return [String(i+1),o.r.sym,qmSecName(o.r.sec),sg(o.m121,1)+"%",sg(o.m12,1)+"%",sg(((1+o.m12/100)/(1+o.m121/100)-1)*100,1)+"%",k?"yes":"no \u2192 cash",k?o.w.toFixed(1)+"%":"0% (cash)"]; }).concat(cashW>0.05?[["","CASH","","","","","",cashW.toFixed(1)+"%"]]:[])};
+    if(skip) res.notes.push(skip+" stronger names were skipped to respect the limits.");
+    if(top.length<N) res.notes.push("Only "+top.length+" names passed the conditions and limits; the empty slots are cash.");
+    res.notes.push("12-1 month momentum: the 12-month return excluding the latest month (skips the short-term reversal month). Relative momentum picks the strongest; absolute momentum sends a slot to cash when the name does not beat "+bn+" (and zero). A baseline for backtests, not advice.");
     res.send=send(keep.map(function(o){ return o.r.sym; }),"dual momentum"); return fin(top.length);
   }
   return fin(0);
