@@ -78,7 +78,7 @@ function blocks(M,cut){
     var up=0,dn=0,tr=0; mem.forEach(function(x){ var r=M.names[x].ret; if(r>0) up++; else if(r<0) dn++; tr+=r; });
     var s=0,k=0; for(var a=0;a<mem.length;a++) for(var b=a+1;b<mem.length;b++){ s+=M.R[mem[a]*M.n+mem[b]]; k++; }
     var secs={}; mem.forEach(function(x){ secs[M.names[x].sec]=(secs[M.names[x].sec]||0)+1; });
-    out.push({st:st,en:en,size:mem.length,mem:mem,dir:up===mem.length?"rising":(dn===mem.length?"falling":"mixed"),avg:k?s/k:null,ret:tr/mem.length,h:nd.h,secs:secs}); });
+    out.push({up:up,dn:dn,st:st,en:en,size:mem.length,mem:mem,dir:up===mem.length?"rising":(dn===mem.length?"falling":"mixed"),avg:k?s/k:null,ret:tr/mem.length,h:nd.h,secs:secs}); });
   out.sort(function(p,q){ return p.st-q.st; });
   M.blocks[cut]=out; return out;
 }
@@ -200,7 +200,7 @@ function mapDraw(reset){
   $("#hx88CutR").textContent=(1-CM.cut).toFixed(2);
   $("#hx88Note").textContent=M.n+" stocks · "+B.length+" directional blocks ("+rise+" rising, "+(B.length-rise)+" falling; "+(all.length-B.length)+" mixed) · cutoff "+CM.cut+" · "+winLab(M.win)+" from "+h.dates[M.a]+" to "+h.dates[M.L]+(ms>5?" · clustered in "+ms+" ms":"");
   $("#hx88Pos").textContent=CM.blk>=0&&B[CM.blk]?(CM.blk+1)+"/"+B.length:"–/"+B.length;
-  $("#hx88Tbl tbody").innerHTML=B.map(function(b,k){ return '<tr><td class="num">'+(k+1)+'</td><td style="text-align:left">'+b.mem.slice().sort(function(x,y){ return M.pos[x]-M.pos[y]; }).map(function(x){ return '<strong class="num" data-tear="'+hE(M.names[x].sym)+'" style="cursor:pointer">'+hE(M.names[x].sym)+'</strong>'; }).join(" ")+'</td><td class="num">'+b.size+'</td><td style="text-align:left;color:'+(b.dir==="rising"?LIME:ORANGE)+';font-weight:600">'+b.dir+'</td><td class="num">'+(num(b.avg)?b.avg.toFixed(2):"&#8211;")+'</td><td class="num">'+(b.ret>0?"+":"")+b.ret.toFixed(1)+'%</td><td style="text-align:left;font-size:12px;color:var(--ink-2)">'+Object.keys(b.secs).map(function(s){ return hE(secShort(s))+" "+b.secs[s]; }).join(", ")+'</td><td><button type="button" class="up-link-btn" data-hx88go="'+k+'">Show</button></td></tr>'; }).join("")||'<tr><td colspan="8" style="color:var(--ink-3)">No directional block at this cutoff.</td></tr>';
+  $("#hx88Tbl tbody").innerHTML=B.map(function(b,k){ return '<tr><td class="num">'+(k+1)+'</td><td style="text-align:left">'+b.mem.slice().sort(function(x,y){ return M.pos[x]-M.pos[y]; }).map(function(x){ return '<strong class="num" data-tear="'+hE(M.names[x].sym)+'" style="cursor:pointer">'+hE(M.names[x].sym)+'</strong>'; }).join(" ")+'</td><td class="num">'+b.size+'</td><td style="text-align:left;color:'+(b.dir==="rising"?LIME:ORANGE)+';font-weight:600">'+b.dir+'</td><td class="num">'+(num(b.avg)?b.avg.toFixed(2):"&#8211;")+'</td><td class="num">'+(b.ret>0?"+":"")+b.ret.toFixed(1)+'%</td><td style="text-align:left;font-size:12px;color:var(--ink-2)">'+(Object.keys(b.secs).length>1?'<span style="color:var(--accent);font-weight:600">crosses sectors</span> ':'')+Object.keys(b.secs).map(function(s){ return hE(secShort(s))+" "+b.secs[s]; }).join(", ")+'</td><td><button type="button" class="up-link-btn" data-hx88go="'+k+'">Show</button></td></tr>'; }).join("")||'<tr><td colspan="8" style="color:var(--ink-3)">No directional block at this cutoff.</td></tr>';
   $$("#hx88Tbl [data-hx88go]").forEach(function(bt){ bt.addEventListener("click",function(){ var k=+bt.getAttribute("data-hx88go"), b=B[k]; CM.blk=k; CM.hi=null; $("#hx88Map").scrollIntoView({behavior:"smooth",block:"start"}); goTo(b.st,b.st,b.en-b.st+1); blockInfo(b,k,B.length); paint(); }); });
   if(reset){ var sc=$("#hx88Scroll"); if(sc) sc.scrollTo({left:0,top:0}); }
   paint();
@@ -218,22 +218,24 @@ function savePng(btn,mode){
 }
 
 /* ---- Ask: directional blocks ---- */
-var BL_RE=/\bhierarchical clusters?\b|\bdirectional (?:blocks?|clusters?)\b|\b(?:blocks?|clusters?)(?: that| which)?(?: are| is)? (?:moving|rising|falling|going|trading|heading)(?: up| down| higher| lower)? together\b|\b(?:rising|falling) (?:blocks?|clusters?)\b|\b(?:blocks?|clusters?) (?:moving|going) (?:up|down)\b|\bwhich (?:cluster|block) (?:is|are) [a-z0-9.\- ]{1,30}in\b|\bclusters? map\b/;
+var BL_RE=/\bhierarchical clusters?\b|\bdirectional (?:blocks?|clusters?)\b|\b(?:blocks?|clusters?)(?: that| which)?(?: are| is)? (?:moving|rising|falling|going|trading|heading)(?: up| down| higher| lower)? together\b|\b(?:rising|falling) (?:blocks?|clusters?)\b|\b(?:blocks?|clusters?) (?:moving|going) (?:up|down)\b|\bwhich (?:cluster|block) (?:is|are) [a-z0-9.\- ]{1,30}in\b|\bclusters? map\b|\b(?:blocks?|clusters?)(?: that| which)?(?: are| is)? (?:cross(?:es|ing)?|span(?:s|ning)?|mix(?:es|ing)?) (?:different |multiple )?sectors?\b|\b(?:cross[- ]sector|sector[- ]crossing) (?:blocks?|clusters?)\b/;
 var _qmParseX88=qmParseX;
 qmParseX=function(q){
   try{ var t=qmT(q); if(BL_RE.test(t)&&!/\bpairs?[- ]?(?:trad|test)/.test(t)){
     var tk=A.tickers(q), w=/\b60\b|\b3 months?\b/.test(t)?"60":(/\b126\b|\b6 months?\b/.test(t)?"126":(/\b252\b|\b12 months?\b|\bone year\b|\ba year\b|\btrailing year\b/.test(t)?"252":"ytd"));
     var dir=/\b(?:falling|down|lower|declin\w*)\b/.test(t)?"falling":(/\b(?:rising|up|higher|advanc\w*)\b/.test(t)?"rising":"both");
-    var cm=t.match(/\bcutoff (0?\.\d+)\b/), nm=t.match(/\b(?:top|first|show) (\d{1,2})\b/);
-    return {kind:"hblocks",win:w,dir:dir,focus:tk.length===1?tk[0]:null,cut:cm?parseFloat(cm[1]):0.263,n:nm?+nm[1]:20,secIn:qmSecMentions(t).inn};
+    var cm=t.match(/\bcutoff (0?\.\d+)\b/)||t.match(/\bat (0?\.\d+)\b/), nm=t.match(/\b(?:top|first|show) (\d{1,2})\b/);
+    return {kind:"hblocks",cross:/\b(?:cross(?:es|ing)? sectors?|across sectors|different sectors|multiple sectors|more than one sector|cross[- ]sector)\b/.test(t),win:w,dir:dir,focus:tk.length===1?tk[0]:null,cut:cm?parseFloat(cm[1]):null,n:nm?+nm[1]:20,secIn:qmSecMentions(t).inn};
   } }catch(e){}
   return _qmParseX88(q);
 };
 QMX_KINDS.hblocks=1;
+/* "cluster" in a clusters-map question is not a scan cluster condition: drop that one "not applied" note for these questions only */
+try{ var _qmIgn88=qmIgn; qmIgn=function(q){ var a=_qmIgn88(q); try{ var t=qmT(q); if(BL_RE.test(t)) a=a.filter(function(x){ return !/cluster conditions/.test(x); }); }catch(e){} return a; }; }catch(e){}
 var _qmValidateAny88=qmValidateAny;
 qmValidateAny=function(raw){ if(!(raw&&raw.kind==="hblocks")) return _qmValidateAny88(raw);
   var sp={kind:"hblocks",win:["ytd","60","126","252"].indexOf(String(raw.win))>=0?String(raw.win):"ytd",dir:["rising","falling","both"].indexOf(raw.dir)>=0?raw.dir:"both",focus:raw.focus?String(raw.focus).toUpperCase():null,
-    cut:Math.max(0.1,Math.min(0.6,parseFloat(raw.cut)||0.263)),n:Math.max(1,Math.min(60,parseInt(raw.n,10)||20)),secIn:(raw.secIn||[]).map(function(v){ return qmSecKey(v)||v; })};
+    cross:!!raw.cross,cut:Math.max(0.1,Math.min(0.6,parseFloat(raw.cut)||(raw.cross?0.35:0.263))),n:Math.max(1,Math.min(60,parseInt(raw.n,10)||20)),secIn:(raw.secIn||[]).map(function(v){ return qmSecKey(v)||v; })};
   return {spec:sp}; };
 var _qmRunX88=qmRunX;
 qmRunX=function(spec,ctx,res,t0){
@@ -242,7 +244,7 @@ qmRunX=function(spec,ctx,res,t0){
   if(!h){ res.lead="The clusters map is built from the daily price history (part E), which is not loaded in this view."; res.notes.push("Load it in Ask the terminal with “Load price history”, then ask again."); return fin(0); }
   var M=build(spec.win); if(!M){ res.lead="Not enough price history for that window."; return fin(0); }
   var all=blocks(M,spec.cut), idx={}; M.names.forEach(function(x,k){ idx[x.sym]=k; });
-  var list=all.filter(function(b){ return b.dir!=="mixed"; });
+  var list=spec.cross?all.slice():all.filter(function(b){ return b.dir!=="mixed"; });
   if(spec.focus){
     var k=idx[spec.focus]; if(k===undefined){ res.lead=spec.focus+" is not in the map (it needs a full "+winLab(spec.win)+" window of prices)."; return fin(0); }
     var inB=all.filter(function(b){ return b.mem.indexOf(k)>=0; })[0];
@@ -253,12 +255,13 @@ qmRunX=function(spec,ctx,res,t0){
     res.send={label:"closest to "+spec.focus,items:near.slice(0,10).map(function(x){ return {sym:x.s,side:"long",w:null}; })};
     return fin(10);
   }
-  if(spec.dir!=="both") list=list.filter(function(b){ return b.dir===spec.dir; });
+  if(spec.dir!=="both") list=list.filter(function(b){ return spec.cross?(spec.dir==="rising"?b.up*3>=b.size*2:b.dn*3>=b.size*2):b.dir===spec.dir; });
   if(spec.secIn.length) list=list.filter(function(b){ return spec.secIn.some(function(s){ return b.secs[s]; }); });
+  if(spec.cross) list=list.filter(function(b){ return Object.keys(b.secs).length>1; });
   var L2=list.slice().sort(function(p,q){ return Math.abs(q.ret)-Math.abs(p.ret); }).slice(0,spec.n), rise=all.filter(function(b){ return b.dir==="rising"; }).length, fall=all.filter(function(b){ return b.dir==="falling"; }).length;
-  res.lead="<b>"+(spec.dir==="both"?rise+fall:list.length)+"</b> "+(spec.dir==="both"?"directional blocks ("+rise+" rising, "+fall+" falling)":spec.dir+" blocks")+" in the hierarchical clusters map, "+winLab(spec.win)+", cutoff "+spec.cut+". "+(L2.length<list.length?"The "+L2.length+" with the biggest moves:":"Largest moves first:");
-  res.table={head:["Block","Members","Size","Direction","Avg corr.","Avg return","Sectors"],align:["r","l","r","l","r","r","l"],body:L2.map(function(b,i){ return [String(i+1),b.mem.map(function(x){ return M.names[x].sym; }).join(" "),String(b.size),b.dir,qmN(b.avg,2),qmN(b.ret,1,1),Object.keys(b.secs).map(function(s){ return qmSecName(s)+" "+b.secs[s]; }).join(", ")]; })};
-  res.notes.push("Average-linkage clustering of every scan stock's daily-return correlation over "+winLab(spec.win)+" (prices "+h.dates[M.a]+" to "+h.dates[M.L]+"). A block is a dendrogram node of 3 or more names merging within distance "+spec.cut+" (average correlation about "+(1-spec.cut).toFixed(2)+" or more); rising or falling means every member moved that way over the window. See it drawn in the Correlation Matrix tab. Say “cutoff 0.35” for looser blocks, or “60 bars” / “12 months” for another window.");
+  res.lead="<b>"+(spec.dir==="both"&&!spec.cross?rise+fall:list.length)+"</b> "+(spec.cross?(spec.dir==="both"?"blocks":"mostly "+spec.dir+" blocks (two thirds or more of the members)"):(spec.dir==="both"?"directional blocks ("+rise+" rising, "+fall+" falling)":spec.dir+" blocks"))+(spec.cross?" that cross sectors":"")+" in the hierarchical clusters map, "+winLab(spec.win)+", cutoff "+spec.cut+". "+(L2.length<list.length?"The "+L2.length+" with the biggest moves:":"Largest moves first:");
+  res.table={head:["Block","Members","Size","Direction","Avg corr.","Avg return","Sectors"],align:["r","l","r","l","r","r","l"],body:L2.map(function(b,i){ return [String(i+1),b.mem.map(function(x){ return M.names[x].sym; }).join(" "),String(b.size),b.dir==="mixed"?"mixed ("+b.up+" up, "+b.dn+" down)":b.dir,qmN(b.avg,2),qmN(b.ret,1,1),Object.keys(b.secs).map(function(s){ return qmSecName(s)+" "+b.secs[s]; }).join(", ")]; })};
+  res.notes.push("Average-linkage clustering of every scan stock's daily-return correlation over "+winLab(spec.win)+" (prices "+h.dates[M.a]+" to "+h.dates[M.L]+"). A block is a dendrogram node of 3 or more names merging within distance "+spec.cut+" (average correlation about "+(1-spec.cut).toFixed(2)+" or more); rising or falling means every member moved that way over the window. See it drawn in the Correlation Matrix tab. The clustering never sees sector labels, so a block can mix sectors; “clusters that cross sectors” uses the loose cutoff 0.35 unless you name one. Say “cutoff 0.35” for looser blocks, or “60 bars” / “12 months” for another window.");
   var s5=[]; L2.forEach(function(b){ b.mem.forEach(function(x){ if(s5.length<50&&ctx.bySym[M.names[x].sym]) s5.push({sym:M.names[x].sym,side:"long",w:null}); }); });
   res.send=s5.length?{label:"directional blocks",items:s5}:null;
   return fin(L2.length,list.length);

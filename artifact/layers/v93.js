@@ -1,0 +1,54 @@
+/* ================= v93: Ask the terminal, example questions grouped into theme tiles =================
+   A new "Examples by theme" panel above the existing numbered list (which stays as it was). Each tile names a theme, says in one line
+   what that kind of question does and which words drive it, and lists examples with Run (ask it now) and Edit (put it in the box to
+   change it). Nothing else changes. */
+(function(){
+try{
+var box=$("#qmEx20"), inp=$("#qmInput"); if(!box||!inp||$("#hx93Tiles")) return;
+function hE(s){ return String(s).replace(/[&<>"]/g,function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
+var T=[
+ {t:"Screens: find names",d:"Filters plus a ranking. Words: least/most volatile, highest anomaly, strength, uptrend, in a sector or subsector, excluding.",h:"",q:[
+  "Which are the 10 least volatile symbols in rising subsectors?","Show 10 stocks with volatility below 30 in Healthcare","Give me 8 quiet stocks in an established uptrend, max 2 per sector, excluding Energy.","Show 10 independent stocks with strong momentum.","Show 10 liquid stocks in an uptrend with low volatility.","Show 10 oversold stocks in a downtrend."]},
+ {t:"Trend concepts",d:"Plain-English setups turned into rules: strong and improving, recovering, rolling over, breaking out, not extended, healthy or steady uptrend.",q:[
+  "Show 10 strong and improving stocks that are not extended.","Show 10 recovering stocks with the lowest volatility.","Show 10 stocks rolling over in Financials.","Show 10 momentum leaders in a fresh uptrend.","Which 10 stocks are extended and fading?","Give me 10 stocks with a steady uptrend of at least 30 sessions, sorted by trend length."]},
+ {t:"Portfolios by risk level",d:"Conservative, moderate or aggressive sets volatility and extension limits; add caps (max 2 per sector), long short, amount to invest.",q:[
+  "Build a conservative 10 stock portfolio of strong and improving stocks.","Build a moderate 12 stock portfolio of healthy uptrends, max 2 per sector.","Build an aggressive 8 stock portfolio of stocks breaking out.","Show the risk spectrum with 5 steady uptrend stocks each.","Build a 10 stock long short portfolio, conservative, invest 100k.","Build a conservative 10 stock portfolio with a 12 month return above 10%"]},
+ {t:"Diversified portfolios",d:"Keep names from moving together: add “with low correlation between them” or “correlation below 0.3 between them”, or cap per sector or subsector.",q:[
+  "Build a moderate 10 stock portfolio of healthy uptrends with low correlation between them","Build a conservative 8 stock portfolio of strong and improving stocks with correlation below 0.3 between them","Build a 10 stock portfolio from the calmest subsectors, fresh uptrend, above cluster one, no sector limit.","Which stocks are least correlated with the market?","Average correlation of these"]},
+ {t:"Sectors and subsectors",d:"Group-level reads: rising or falling subsectors, mean scores, compare two sectors, counts by sector.",q:[
+  "Which 10 subsectors have the highest mean anomaly?","Compare Energy and Materials.","Which 5 sectors have the highest mean 1D return?","How many stocks are in an uptrend by subsector?","How many stocks are rolling over, by sector?","Show 10 stocks leading their sector with low volatility."]},
+ {t:"Long-horizon history (part E)",d:"Needs the price history: YTD, 1 to 12 month returns, drawdown, volatility, beta and correlation to RSP, distance from the 52-week high.",q:[
+  "Stocks in an uptrend with YTD return above 20% and 12M drawdown better than -15%.","Which 10 stocks have the highest 12 month return?","stocks within 5% of their 52 week high","lowest beta stocks","best 3 month performers in Healthcare","YTD losers"]},
+ {t:"Diagnostics and follow-ups",d:"Say “these” to work on the previous answer: diagnostic, pair test, correlation, which of these …",q:[
+  "Give me a diagnostic of MGM LVS WYNN","diagnostic of NDSN ITW IEX AME","Give me a diagnostic of these","which of these are in an uptrend","How correlated are these?","Pair test these"]},
+ {t:"Specific names",d:"One ticker at a time: its story, neighbours, returns, group, cohort and cluster.",q:[
+  "Tell me about NVDA","What are the symbols around AAPL?","what is the year to date return of NDSN","which hidden group is NVDA in","which cohort is AAPL in","Which cluster is AMAT in?"]},
+ {t:"Advancing and declining",d:"Direction words: rising or falling subsectors, accelerating or decelerating, improving or deteriorating, breaking out or down.",q:[
+  "Show 10 accelerating stocks that are above cluster one.","Show 10 decelerating stocks in rising subsectors.","Show 10 weak and falling stocks with a larger anomaly.","Show 10 stocks breaking down with high volatility.","How many stocks are recovering, by subsector?","Show 10 stocks lagging their sector that are accelerating."]},
+ {t:"Combined questions",d:"Stack any of the above in one sentence: concept + risk + sector + history + caps + correlation.",q:[
+  "Show 10 strong and improving stocks in rising subsectors with a YTD return above 10% and low volatility","Build a conservative 10 stock portfolio of healthy uptrends in Healthcare and Industrials, max 2 per subsector","Build an aggressive 8 stock portfolio of momentum leaders, excluding Energy","Show 10 recovering stocks above cluster one with a larger anomaly","Which Industrials stocks are connected to Financials and improving?","Top 10 subsector pairs with the most tickers connected and above cluster 1","Build a 10 stock portfolio of uptrends with 12 month drawdown better than -25% and low correlation between them","Build an aggressive 10 stock portfolio with a YTD return above 10% and low correlation between them"]},
+ {t:"Correlation numbers and matrices",d:"Numbers straight from the correlation matrices: a pair, a matrix of names, ranked pairs in a group, two sectors.",q:[
+  "What is the correlation between NVDA and AMD?","Correlation matrix of XOM CVX COP SLB EOG","How correlated are MGM LVS WYNN?","Most correlated pairs in Semiconductors","Least correlated pairs in Energy","Most correlated pairs across sectors","What is the correlation between Energy and Utilities?"]},
+ {t:"Hierarchical clusters map",d:"Alex-style blocks from the clustered matrix: rising or falling together, a name's block, blocks that cross sectors, other windows.",q:[
+  "Which clusters are rising together?","Falling blocks YTD","Which cluster is AMAT in?","Which clusters cross sectors?","Hierarchical clusters over 252 bars","Which blocks are falling together over 60 bars?"]},
+ {t:"Price relationships",d:"What moves with what: partners, hedges, stocks that trade like another sector, relationships breaking down or forming.",q:[
+  "What moves with NVDA?","Hedges for NVDA in other sectors","Which stocks trade like another sector?","Which relationships are breaking down?","Which relationships are forming across sectors?","What is NVDA decoupling from?"]},
+ {t:"Pairs trading",d:"Cointegration both ways, beta stability, half-life, spread z-score and a verdict, for two names, a list or a whole group.",q:[
+  "Pair test MGM LVS","Is LVS WYNN an eligible pairs trade?","Pair test MGM LVS WYNN","Top 5 pairs trades in Energy","Best pairs trades in Semiconductors","Pair test these"]},
+ {t:"Hidden groups, links and lead-lag",d:"Connections the sector labels hide: neighbours in other sectors, hidden groups, cohorts, price groups, what tends to move first.",q:[
+  "Which stocks have neighbours in other sectors?","show hidden groups that cross sectors","How is NVDA connected to other sectors?","Which subsectors in different sectors move alike?","Price groups that cross sectors","What leads Semiconductors?"]}
+];
+var el=document.createElement("details"); el.id="hx93Tiles"; el.open=true; el.style.marginTop="10px";
+el.innerHTML='<summary style="cursor:pointer;color:var(--accent);font-weight:600">Examples by theme: '+T.length+' themes, '+T.reduce(function(s,x){ return s+x.q.length; },0)+' questions. Run one, or Edit it into your own</summary>'+
+  '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(330px,100%),1fr));gap:10px;margin-top:10px">'+
+  T.map(function(x){ return '<div style="border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--panel)"><div style="font-weight:700;margin-bottom:2px">'+hE(x.t)+'</div><div class="mini" style="margin-bottom:6px;color:var(--ink-2)">'+hE(x.d)+'</div>'+
+    x.q.map(function(q){ return '<div style="display:flex;gap:6px;align-items:flex-start;font-size:12.5px;margin:3px 0"><span style="flex:1;color:var(--ink)">'+hE(q)+'</span><button type="button" class="up-link-btn" data-hx93run="'+hE(q)+'">Run</button><button type="button" class="up-link-btn" data-hx93edit="'+hE(q)+'">Edit</button></div>'; }).join("")+'</div>'; }).join("")+'</div>';
+box.parentNode.insertBefore(el,box);
+el.addEventListener("click",function(e){ var r=e.target.closest?e.target.closest("[data-hx93run],[data-hx93edit]"):null; if(!r) return; e.preventDefault();
+  var q=r.getAttribute("data-hx93run")||r.getAttribute("data-hx93edit");
+  if(r.hasAttribute("data-hx93run")){ try{ qmSubmit(q); }catch(err){} }
+  else { inp.value=q; inp.focus(); try{ inp.setSelectionRange(q.length,q.length); }catch(err){} inp.scrollIntoView({behavior:"smooth",block:"center"}); } });
+/* the long numbered list stays, closed by default now that the tiles are above it (click to open) */
+try{ box.open=false; }catch(e){}
+}catch(e){ try{ console.warn("v93 layer disabled: "+(e&&e.message)); }catch(e2){} }
+})();
