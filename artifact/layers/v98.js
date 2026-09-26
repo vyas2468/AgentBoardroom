@@ -71,6 +71,9 @@ qmCell=function(head,c){ if(head==="Symbol"&&!qmIsTk(String(c))&&etfSet()[String
 
 /* ---------------- shared extra portfolio conditions (used by the smart builder and the block / cluster portfolios) ---------------- */
 var PC=[
+ ["dsp",/\babove (?:its |the |their )?(?:slow )?(?:rmesa(?: fir)?|dsp)(?: line)?\b/,"above its RMESA FIR (DSP) line",function(r){ return num(r.dspd)&&r.dspd>0; }],
+ ["c1",/\babove cluster (?:one|1)\b/,"above cluster 1",function(r){ return num(r.d1)&&r.d1>0; }],
+ ["tl",/\babove (?:its |the |their )?(?:trend ?line|stepma)(?: trend| line)?\b/,"above its trend line",function(r){ return num(r.atr)&&r.atr>0; }],
  ["breakout",/\bbreak(?:ing|s)? ?out\b|\bbreakouts?\b/,"breaking out (uptrend of 5 sessions or less, above its trend line)",function(r){ return r.trend==="up"&&num(r.tb)&&r.tb<=5&&num(r.atr)&&r.atr>0; }],
  ["fresh",/\b(?:fresh|new|young|recent|just turned)(?: trend)? (?:up ?trend|uptrend|trend up)s?\b/,"in a fresh uptrend (10 sessions or less)",function(r){ return r.trend==="up"&&num(r.tb)&&r.tb<=10; }],
  ["estab",/\b(?:established|mature|long[- ]running|steady) (?:up ?trend|uptrend)s?\b/,"in an established uptrend (30 sessions or more)",function(r){ return r.trend==="up"&&num(r.tb)&&r.tb>=30; }],
