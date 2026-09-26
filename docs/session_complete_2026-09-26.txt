@@ -176,3 +176,35 @@ PART 4. WORTH KNOWING
 - The clusters map finds fewer blocks than Alex's at the default cutoff (his exact settings are not public);
   "Loose 0.35" finds more.
 - Lead-lag results are weak by nature and labelled as ideas to check.
+
+
+PART 5. ADDED LATER IN THE SESSION
+----------------------------------
+I. Maps inside Ask answers (new tile "Maps in Ask")
+   - "Relationship map of NVDA / of Credit Services / of Energy", "Signal convergence map of Financials",
+     "Correlation matrix of Semiconductors over 60 bars", "Hidden groups map for Financials", "All hidden groups map".
+     Works for one ticker, a subsector, a sector or everything; dots open tear sheets; each drawing saves as PNG;
+     a button opens the full tab.
+
+J. AF Approach (Subsector Web)
+   - A switch next to "Isolate" on the Subsector Web tab (off by default, so the normal view is unchanged).
+   - When on: inside each subsector the links become the strongest daily-return correlations (a "minimum spanning
+     tree" over 252 bars, which needs the part E history), drawn as purple chains like Alex's web
+     (for Credit Services: V-MA-AXP-COF with SYF and PYPL off COF). Dots are green (up on the day) or red (down).
+   - It also applies when the web is drawn inside an Ask answer.
+
+K. Alex-style colour-coded tables (new tile "Sentiment and breadth tables")
+   - "Overall sentiment" (strengthening / weakening, net and prior breadth, one-day breadth, direction),
+     "ETF SEW summary" (equity and non-equity), "Sentiment by sector", "Breadth by subsector in Financials",
+     "SEW summary for Energy", "Weakening stocks table in Financials". Green = good, amber = mixed, red = bad.
+
+L. Ask the terminal - comfort features
+   - "Show" switches for the Try chips, the part E price-history panel and "What you can ask" (remembered on this
+     device; all on by default; the tiles always stay).
+   - Every answer shows how long it took and when it was asked and answered (e.g. "45 ms - asked 12:01:27").
+   - Every answer has "Remove" (with Undo) and "PNG" buttons.
+   - "Download thread": the whole thread as a high-resolution PNG (2x) or a PDF (A4 pages, breaks between answers
+     where possible), keeping the colours and layout. The PDF pages are images, so their text is not selectable.
+
+Checks for these: 207 tile questions all answered with no errors; the original questions answer word for word as
+before (the only changes are the earlier deliberate fixes); tear sheets and original tab content identical.

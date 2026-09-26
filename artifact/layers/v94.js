@@ -255,7 +255,7 @@ qmRunX=function(spec,ctx,res,t0){
   }
   if(spec.mode==="sbw"){
     if(!spec.sec){ res.lead="Name a sector, a subsector or a ticker, for example \u201Cshow me the subsector web for Credit Services\u201D."; return fin(0); }
-    var okW=false; try{ sbwUni="stocks"; sbwSec=spec.sec; sbwInd=spec.ind||null; sbwRender(); okW=!!$("#sbwChart svg"); }catch(e){ okW=false; }
+    var okW=false; try{ sbwUni="stocks"; sbwSec=spec.sec; sbwInd=spec.ind||null; sbwRender(); try{ if(window.__afApply) window.__afApply(); }catch(e2){} okW=!!$("#sbwChart svg"); }catch(e){ okW=false; }
     var memW=ctx.rows.filter(function(r){ return spec.ind?r.ind===spec.ind:r.sec===spec.sec; }).sort(function(p,q){ return (num(q.sev)?q.sev:-999)-(num(p.sev)?p.sev:-999); });
     var svgW=okW?$("#sbwChart svg").outerHTML:"";
     res.hxPlot=(svgW?'<div class="chart-scroll hx94plot hx95web" style="margin:8px 0">'+svgW+'</div>':'')+'<p style="margin:4px 0 8px"><button type="button" class="btn" data-goto="tab-sbw">Open the interactive Subsector Web on '+hE(spec.ind||qmSecName(spec.sec))+'</button> <span class="mini">Click any company dot above for its tear sheet; the tab adds hover details, isolating other industries, and the Names / Means toggles.</span></p>';
