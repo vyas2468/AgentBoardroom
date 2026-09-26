@@ -101,6 +101,69 @@ PART B. LEFT FOR THE NEXT SESSION - AND WHY
 DSP", "pulling back in an uptrend", "StepMA and near its trend line".)
 
 ----------------------------------------------------------------------------
+PART D. SINCE USAGE CREDITS WERE ADDED (versions 127-130): TILES AND WHAT YOU CAN NOW DO
+----------------------------------------------------------------------------
+TILE GROUPS ADDED (all new, none of the older tiles were changed; find them in Ask > Example tiles or the menu
+button > "Tiles > ..."):
+  1. Charts: scatter, market map, scorecard
+  2. Lists and "these": maps, breadth, exit check, exposure, leaderboard
+  3. Portfolios from a list (adaptive, combined conditions)
+  4. Spread and relative strength of a list
+  5. Rolling correlation: tickers, sectors, subsectors, comparisons
+  6. Combined workflows: screen, chart, build, check
+  7. Query fixes: negations, two-key ranking, group counts
+  8. Leaders per group and dual momentum
+  9. One sentence: screen + chart, columns, exposure
+ 10. Reader fixes: DSP crosses, pullbacks, trend lines, rising subsectors
+Also: the navigation menu now lists every tile group as a jump (works with the tiles closed).
+
+CHARTS AND PLOTS - BEFORE vs NOW
+  Before: line charts of named tickers (price, relative strength vs RSP, YTD, drawdown, volatility), a 2-name spread,
+          a 2-name rolling correlation, and maps only for ONE ticker, a subsector or a sector.
+  Now you can also:
+  - Quadrant SCATTER of any two measures, your names over the grey universe:
+      "Risk return scatter of these", "Scatter of 1 month return vs beta for Energy"
+  - MARKET MAP (treemap) sized by turnover, coloured by any measure:
+      "Treemap of the market", "Market map of Energy coloured by 1 month / strength / direction"
+  - SCORECARD heat grid (15 measures, coloured by universe percentile): "Scorecard of these", "Compare these"
+  - Maps on ANY list: "Signal convergence map on ILMN, KEYS, WBD ...", "Relationship map of these",
+      "Hidden groups map of these", "Correlation matrix of these"
+  - SPREAD of a whole list vs its own basket (z-scores): "Plot the spread of these", "Which of these are stretched?",
+      "Spread of NVDA vs these"
+  - RELATIVE STRENGTH vs each name's own sector: "Relative strength of these vs their sector"
+  - RELATIVE STRENGTH LEADERBOARD vs RSP (bar chart): "Relative strength leaderboard of these / of Energy"
+  - ROLLING CORRELATION of one or many tickers / sectors / subsectors vs RSP, their sector or a ticker, compared on
+      one chart: "Rolling correlation of NVDA to its sector", "Compare the rolling correlation of Energy, Utilities
+      and Financials to RSP", "Rolling correlation of AMD AVGO MU to NVDA"
+  - EXPOSURE chart (sector over / under weight vs the universe): "Exposure of these"
+  - ONE SENTENCE: chart a screen directly: "Risk return scatter of strong and improving stocks",
+      "Market map of stocks in an uptrend coloured by 1 month", "Scorecard of the top 10 improving stocks"
+  - AF Approach map readable for big subsectors (20+ names)
+
+PORTFOLIO GENERATION - BEFORE vs NOW
+  Before: the smart builder always picked from the whole market; "portfolio from these" used the older builder
+          (no adaptive weights or "why" column); "ranked by X" was ignored by the smart builder.
+  Now you can:
+  - Build from YOUR list (previous answer or named tickers), with all smart options:
+      "Build a smart portfolio of 8 from these, low correlation, max 2 per sector"
+      "Defensive portfolio of 6 from these, ranked by risk, inverse volatility weighted"
+      "Smart portfolio of 6 from these, improving, above their trend line, signals converge"
+      "Smart long short portfolio of 3 longs from these"
+      "Build a smart momentum portfolio of 5 from NVDA AMD AVGO MU QCOM ANET ARM ..., low correlation, weighted"
+  - Use "ranked by X", "near their trend line", "can be in the same sector" in the smart builder
+  - Chain: screen -> chart -> build -> check: after building, "Exit check on these" (HOLD / WATCH / EXIT with reasons),
+      "Exposure of these" (sector weights, Hidden Group / price-cluster overlap, concentration warning and FIVE names
+      that would diversify it), "Rolling correlation of these to RSP", "Relative strength leaderboard of these"
+  - Leaders per group: "Top 2 per sector by 5D return", "Lowest 2 per sector by risk", "Top 1 per subsector by strength"
+  - Dual momentum baseline: "12-1 month momentum leaders beating RSP, else cash", "Dual momentum top 8"
+  - Your own columns on any list: "Show 3 month return, beta and rank in sector for the top 10 improving stocks"
+  - Two-key ranking: "Top 10 improving stocks, rank by strength, then by correlation to sector"
+  - Group counts: "Which sector has the most improving tickers and the fewest anomalies?"
+  - Screens read more correctly: "Show 15 ..." gives 15; "not overbought", "not in an uptrend", "fast above slow",
+      "bullish trend flip", "crossed above the DSP", "pulling back in an uptrend", "above StepMA and near its trend
+      line", connections "in rising subsectors".
+
+----------------------------------------------------------------------------
 PART C. IDEAS: UNIQUE, USEFUL, HIGH IMPACT
 ----------------------------------------------------------------------------
 1. Daily "what changed" digest: one answer each morning listing names that entered or left an uptrend, crossed
