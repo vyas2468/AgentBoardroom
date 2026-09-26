@@ -119,6 +119,8 @@ qmParseX=function(q){
   return _qmParseX94(q);
 };
 QMX_KINDS.hplot=1; QMX_KINDS.hcport=1;
+/* "cluster" / "block" in these questions refers to the clusters map, not a scan cluster condition: drop that one "not applied" note */
+try{ var _qmIgn94=qmIgn; qmIgn=function(q){ var a2=_qmIgn94(q); try{ var t=qmT(q); if(/\b(?:one|1) (?:stock |name )?(?:per|from each|in each|for each) (?:cluster|block|bloc)\b|\b(?:rising|falling|directional) (?:blocks?|clusters?)\b|\bdifferent clusters\b|\bsame (?:price )?cluster\b|\bdiversif\w* (?:by|across) clusters?\b/.test(t)) a2=a2.filter(function(x){ return !/cluster conditions/.test(x); }); }catch(e){} return a2; }; }catch(e){}
 var _qmValidateAny94=qmValidateAny;
 qmValidateAny=function(raw){
   if(!raw||(raw.kind!=="hplot"&&raw.kind!=="hcport")) return _qmValidateAny94(raw);
