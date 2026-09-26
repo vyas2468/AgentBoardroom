@@ -77,6 +77,7 @@ qmParseX=function(q){
       var refS=/\b(?:to|vs\.?|versus|against|with) (?:its|their|each name's|own|the) ?(?:own )?sectors?(?: baskets?)?\b/.test(t), refB=/\b(?:to|vs\.?|versus|against|with) (?:the )?(?:rsp|spy|market|benchmark|index|s&p)\b/.test(t);
       var iiR=qmIndMentions(t,C), ssR=(qmSecMentions(t).inn||[]).map(function(v){ return qmSecKey(v)||v; }), lastR=null; try{ lastR=A.last?A.last():null; }catch(e){}
       var TG=[]; tkR.forEach(function(x){ TG.push({t:"sym",v:x}); }); iiR.forEach(function(x){ TG.push({t:"ind",v:x}); }); if(!iiR.length||refS) ssR.forEach(function(x){ if(!refS||!TG.length) TG.push({t:"sec",v:x}); });
+      if(!TG.length&&/\b(?:every|each|all(?: the)?) sectors?\b|\ball \d+ sectors\b/.test(t)){ var sk={}; C.rows.forEach(function(r){ sk[r.sec]=1; }); Object.keys(sk).sort().forEach(function(k){ TG.push({t:"sec",v:k}); }); }
       if(!TG.length&&FOLLOW.test(t)&&lastR&&lastR.syms) lastR.syms.filter(function(x){ return C.bySym[x]; }).slice(0,12).forEach(function(x){ TG.push({t:"sym",v:x}); });
       var explicit=refT||refS||refB;
       if(TG.length&&(TG.length===1||TG.length>=3||explicit||FOLLOW.test(t)))
@@ -434,6 +435,7 @@ qmRunX=function(spec,ctx,res,t0){
   }
   return fin(0);
 };
+try{ window.__hx101={target:target,fieldOf:fieldOf,horizon:horizon,barsSvg:barsSvg,lineSvg:lineSvg,scatterSvg:scatterSvg,treeSvg:treeSvg,scoreSvg:scoreSvg,scoreData:scoreData,pctOf:pctOf,divCol:divCol,fmtF:fmtF,lab:lab,sg:sg,f0:f0,hE:hE,num:num,secCol:secCol,relRet:relRet,FOLLOW:FOLLOW}; }catch(e){}
 try{ QM_PROMPT=QM_PROMPT.replace("\nQ: ","Charts and list tools: {\"kind\":\"hx101\",\"mode\":\"scatter\"|\"tree\"|\"score\"|\"breadth\"|\"rank\"|\"exit\"|\"expo\"|\"rsl\",\"syms\":[tickers],\"label\":\"...\",\"x\":field,\"y\":field,\"color\":field,\"f\":field,\"d\":\"asc\"|\"desc\"}.\nQ: "); }catch(e){}
 }catch(e){ try{ console.warn("v101 layer disabled: "+(e&&e.message)); }catch(e2){} }
 })();

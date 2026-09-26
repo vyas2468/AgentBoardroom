@@ -37,6 +37,7 @@ function hxParseCsv(text){
   function cells(l){ return l.split(",").map(function(c){ return c.trim().replace(/^"|"$/g,""); }); }
   var head=cells(lines[0]), iD=head.indexOf("Date"), iS=head.indexOf("Symbol"), iC=head.indexOf("HClose");
   if(iC<0) iC=head.indexOf("Close"); if(iC<0) iC=head.indexOf("Price");
+  var iO=head.indexOf("HOpen"); if(iO<0) iO=head.indexOf("Open"); var byO={};
   if(iD<0) gates.push("no Date column"); if(iS<0) gates.push("no Symbol column"); if(iC<0) gates.push("no HClose column");
   if(gates.length) return {gates:["This does not look like the part E history file: "+gates.join(", ")+". The header was: "+lines[0].slice(0,160)]};
   var by={}, ds={}, bad=0, n=0;
@@ -45,6 +46,7 @@ function hxParseCsv(text){
     var d=hxDate(c[iD]), s=String(c[iS]||"").toUpperCase(), v=parseFloat(c[iC]);
     if(!d||!/^[A-Z0-9][A-Z0-9.\-]{0,11}$/.test(s)||!isFinite(v)||v<=0){ bad++; continue; }
     (by[s]=by[s]||{})[d]=v; ds[d]=1;
+    if(iO>=0){ var o=parseFloat(c[iO]); if(isFinite(o)&&o>0) (byO[s]=byO[s]||{})[d]=o; }
   }
   var dates=Object.keys(ds).sort(); if(dates.length>HX_KEEP) dates=dates.slice(dates.length-HX_KEEP);
   var syms=Object.keys(by).sort(), last=dates[dates.length-1];
@@ -56,7 +58,9 @@ function hxParseCsv(text){
   if(gates.length) return {gates:gates};
   var out={};
   syms.forEach(function(s){ var m=by[s]; out[s]=dates.map(function(d){ var v=m[d]; return v===undefined?null:Math.round(v*1e4)/1e4; }); });
-  return {gates:[],hx:{v:1,dates:dates,syms:out,lastDate:last,nSyms:syms.length,bars:dates.length,rows:n,badRows:bad}};
+  var opens=null; if(iO>=0){ opens={}; syms.forEach(function(s){ var m=byO[s]||{}; opens[s]=dates.map(function(d){ var v=m[d]; return v===undefined?null:Math.round(v*1e4)/1e4; }); }); }
+  var hx={v:1,dates:dates,syms:out,lastDate:last,nSyms:syms.length,bars:dates.length,rows:n,badRows:bad}; if(opens) hx.opens=opens;
+  return {gates:[],hx:hx};
 }
 
 /* ---------- 1b. storage: IndexedDB on this device + chunked copy in the artifact store ---------- */

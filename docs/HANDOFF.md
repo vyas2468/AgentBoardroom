@@ -5,6 +5,16 @@
 **How to work on it:** read `.claude/skills/sector-terminal/SKILL.md` first (setup, build, test, publish, lessons).
 **Owner-facing history:** `docs/SESSION_COMPLETE_FINAL_2026-09-26.txt` (plain English, Parts 1-13).
 
+## SESSION UPDATE - version 132 (v103 Portfolio Tracker phase 1) - START HERE
+- v81: part E loader also keeps opens (hx.opens; additive). v103: Track button (qmHtml wrapper, kinds portfolio,
+  hsmart, hcport portfolios, screen, hx102 dual / topsec), tab pane-ptk in group trk, updateAll (fresh qmBuildCtx +
+  qmEnrich like qmAsk, frozen spec -> qmValidateAny -> qmRun), pure engine window.__trk.engine, storage tracker/main
+  + localStorage alexaligned.tracker.v1. Sell reasons: spec.filters via qmTest, else __pcond on spec.t.
+- Tests: artifact/tools/trkunit.js (19 engine checks), trkint.js (two scans, fixtures/scan_d1.json, scan_d2.json).
+  regress.sh ignores only the "Track this portfolio / list" line. Backup: artifact/backup/index_v131_before_tracker.html.
+- v101: "rolling correlation of every / all sectors" draws all sectors.
+- Next: phase 2 of docs/TRACKER_PLAN_2026-09-26.txt.
+
 ## SESSION UPDATE - version 130, 26 Sep 2026 - START HERE
 Done (348 / 348 unchanged; 6 new tile questions tested, tile "Reader fixes: DSP crosses, pullbacks, trend lines, rising subsectors"):
 - v102 rewrites: "crossed above/below the DSP" -> "dsp cross up/down" (base ev event); "pulling back" -> "pullback".
@@ -105,7 +115,7 @@ uptrend, StepMA + near trend line), connections "in rising subsectors", AF layou
 6. Query backlog items 7, 8, 11-16; navy theme; connections "in rising subsectors"; AF layout for 20+ names.
 
 ## State
-- Base page `artifact/base/orig.html` + layers `artifact/layers/v81.js ... v102.js`, built by `splice81.py`. Latest published: **version 131** (v102 + v95 AF radial + combinations tile). Owner summary: docs/FINAL_HANDOFF_2026-09-26_1951UTC.txt. Owner-facing summary: docs/FINAL_HANDOFF_2026-09-26.txt.
+- Base page `artifact/base/orig.html` + layers `artifact/layers/v81.js ... v102.js`, built by `splice81.py`. Latest published: **version 132** (v103 Portfolio Tracker phase 1). Owner summary: docs/FINAL_HANDOFF_2026-09-26_2015UTC.txt.
 - Everything is published, committed and pushed. Regression suite passes: 49 original questions and all earlier tile
   questions answer word for word as before; all newer tile questions answer; no page errors.
 - Test data in `artifact/tools/fixtures` (scan + gzipped part E history); question sets in `artifact/tools/tests`.

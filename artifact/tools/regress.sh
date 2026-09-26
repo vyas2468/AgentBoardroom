@@ -13,6 +13,8 @@ import json,sys
 T=sys.argv[1]
 for base,new in [('r_new30.json','rg_new_%s.json'),('r_tiles30.json','rg_tiles_%s.json'),('r_bt.json','rg_bt_%s.json'),('r_nd2.json','rg_nd_%s.json'),('r_tall12.json','rg_tall_%s.json')]:
     a=json.load(open(base)); b=json.load(open(new%T))
-    ch=[x['q'] for x,y in zip(a['answers'],b['answers']) if x['a']!=y['a']]
+    import re
+    nz=lambda s: re.sub(r'\n+','\n',re.sub(chr(0x1F4CC)+r' Track this (?:portfolio|list)','',s)).strip()
+    ch=[x['q'] for x,y in zip(a['answers'],b['answers']) if nz(x['a'])!=nz(y['a'])]
     print(base, 'same %d/%d'%(len(a['answers'])-len(ch),len(a['answers'])), 'changed:',ch, [e for e in b['errs'] if 'pageerror' in e])
 P
