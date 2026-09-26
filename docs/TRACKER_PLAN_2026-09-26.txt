@@ -167,3 +167,7 @@ What this is and is not: forward tracking from the day you start, at real daily 
 fills and costs. It is not a backtest; the terminal cannot recompute past days' signals (RealTest can,
 Phase 3).
 ============================================================================
+
+PHASE 2 ADDITION - Money, sizing and overlap (owner's idea): hypothetical account balance per portfolio, the answer's own
+weights, whole-share position sizing, one overall account split between portfolios, duplicate tickers merged across
+portfolios with concentration warnings, and a combined order list in shares. Details in the final handoff.
