@@ -262,8 +262,8 @@ forecast; connection paths show co-movement, not cause.
 
 PART 8. FINAL STATUS (end of session, 26 Sep 2026)
 --------------------------------------------------
-Live page: https://claude.ai/artifact/JBivgL88qHWeaCSsepr7cN (version 103)
-Code:      branch claude/artifact-access-question-f3s8rs (layers v81 to v98 in artifact/layers, splice81.py builds the page)
+Live page: https://claude.ai/artifact/JBivgL88qHWeaCSsepr7cN (version 104)
+Code:      branch claude/artifact-access-question-f3s8rs (layers v81 to v99 in artifact/layers, splice81.py builds the page)
 
 Your last checks, reviewed: all seven answers you pasted (smart 10-stock portfolio, themes strengthening, Credit Services
 vs Capital Markets connection, sentiment by sector, strongest names in weakest sectors, defensive smart portfolio,
@@ -286,3 +286,23 @@ Outstanding: nothing required. Optional ideas and things only your browser can c
   4. PDF export pages are images (text not selectable).
   5. Daily routine unchanged: run the daily workflow, then part E, load both, Save this run.
   6. A pull request to merge the branch into main has not been opened (only when you want it).
+
+
+PART 9. MY TILES - YOUR OWN SAVED QUESTIONS (last addition)
+-----------------------------------------------------------
+Where: Ask the terminal, a "My tiles" panel just above the example tiles.
+- Create a tile: type a name (for example Favourites) and press Create tile (or Enter).
+- Save from an answer: every answer has a "☆ Save" button (top right, next to PNG and Remove). Pick a tile, or
+  "+ New tile..." and type a name, then Save. The button shows "★ Saved".
+- In a tile: Run (asks it now), Edit (puts it in the Ask box to change), ↑ (move up), ✕ (remove),
+  "Run all" (asks every question in the tile in order), type a question and Add, or "Add the Ask box".
+- Rename a tile; Delete a tile (click twice: the first click turns into "Confirm delete").
+- Kept in this browser, and survives reloads and new versions of the page. To keep a backup or move them to another
+  browser or computer: "Copy all" copies them as text; in the other browser press "Paste tiles", paste, and
+  "Add these tiles" (duplicates are skipped).
+Checked: create, save from answers (existing and new tile), add, move, remove, rename, run, edit, two-click delete,
+reload, backup and restore all work, with no page errors. The 49 original questions and all 207 earlier tile questions
+still answer word for word as before; the 34 new tile questions answer as before (one explanation label improved:
+a lowered momentum weight now says "lowered: you asked for low risk").
+Note: saved tiles live in this browser only. Clearing site data, or a private window, starts empty, so keep a
+"Copy all" backup of tiles you care about.
