@@ -46,7 +46,7 @@ qmRunX=function(spec,ctx,res,t0){
   try{ if(r&&r.notes){
       if(NOTE&&NOTE.length) r.notes.unshift("Read as: "+NOTE.join("; ")+".");
       if(spec&&spec._w) r.notes.unshift(spec._w+".");
-      if(spec&&spec.kind==="screen"&&(spec.maxSec||spec.maxInd)&&r.table&&r.table.body&&spec.n&&r.table.body.length<spec.n)
+      if(spec&&spec.kind==="screen"&&(spec.maxSec||spec.maxInd)&&r.table&&r.table.body&&spec.n&&r.table.body.length<spec.n&&r.table.body.length>0)
         r.notes.push("Only "+r.table.body.length+" names fit: with at most "+(spec.maxSec?spec.maxSec+" per sector":spec.maxInd+" per subsector")+", the qualifying names ran out.");
   } }catch(e){}
   NOTE=null; return r;
