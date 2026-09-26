@@ -63,6 +63,33 @@ qmRunX=function(spec,ctx,res,t0){
   } }catch(e){}
   NOTE=null; return r;
 };
+/* ---- "every symbol in every sector / subsector": the universe grouped sector -> subsector ---- */
+try{
+  var _px2=qmParseX;
+  qmParseX=function(q){ try{ var t=qmT(q);
+      if((/\b(?:every|all)(?: the| of the)? (?:symbols?|stocks?|tickers?|names|companies|etfs?|funds)\b/.test(t)||/\blist (?:all|every)\b/.test(t))&&/\bsub ?-?sectors?\b|\bsectors?\b|\bindustr|\bgroups?\b|\betfs?\b/.test(t)&&!/\b(?:top|best|rank|ranked|portfolio|correlat|count|how many|which|highest|lowest|most|least)\b/.test(t)&&!FOLLOWQ.test(t))
+        return {kind:"hlist",sub:/\bsub ?-?sectors?\b|\bindustr|\bgroups?\b/.test(t),scope:/\betfs? only\b|\bonly etfs?\b|\b(?:every|all)(?: the)? (?:etfs?|funds)\b/.test(t)&&!/\bstocks?\b/.test(t)?"etf":(/\bstocks? only\b|\bonly stocks?\b|\b(?:every|all)(?: the)? stocks?\b/.test(t)&&!/\betfs?\b/.test(t)?"stocks":"both"),t:t}; }catch(e){}
+    return _px2(q); };
+  var FOLLOWQ=/\b(these|them|those)\b/;
+  QMX_KINDS.hlist=1;
+  var _qc=qmCell; qmCell=function(h,c){ if(h==="Symbols") return _qc("Holdings and weights",c); return _qc(h,c); };
+  var _va=qmValidateAny; qmValidateAny=function(raw){ if(raw&&raw.kind==="hlist") return {spec:JSON.parse(JSON.stringify(raw))}; return _va(raw); };
+  var _rx=qmRunX; qmRunX=function(spec,ctx,res,t0){
+    if(!(spec&&spec.kind==="hlist")) return _rx(spec,ctx,res,t0);
+    var P=window.__pcond, keys=P?P.parse(spec.t,[]):[], sc=spec.scope||"both", rows=[];
+    if(sc!=="etf") rows=ctx.rows.filter(function(r){ return keys.every(function(k){ return P.test(k,r); }); }).map(function(r){ return {sym:r.sym,sec:r.sec,ind:r.ind}; });
+    var etfN=0; if(sc!=="stocks"){ try{ var X=moX(), ek={}; (X.etfKeys||[]).forEach(function(k,i){ ek[k]=i; });
+      (X.etf||[]).forEach(function(a){ var e={sym:a[ek.sym],dir:a[ek.dir]||"n/a",rec:a[ek.rec]}; if(!keys.every(function(k){ return P.test(k,e); })) return; etfN++; rows.push({sym:e.sym,sec:"ETF",ind:(typeof moEtfGroupOf==="function"?moEtfGroupOf(e.sym):"ETFs")||"ETFs"}); }); }catch(e){} }
+    var G={}; rows.forEach(function(r){ var k=r.sec+"|"+(spec.sub?r.ind:""); (G[k]=G[k]||[]).push(r.sym); });
+    var ks=Object.keys(G).sort(function(a,b){ var A=a.split("|"),B=b.split("|"); var ea=A[0]==="ETF"?1:0, eb=B[0]==="ETF"?1:0; return (ea-eb)||(A[0]==="ETF"?0:qmSecName(A[0]).localeCompare(qmSecName(B[0])))||A[1].localeCompare(B[1]); });
+    var secN=function(k){ return k==="ETF"?"ETFs":qmSecName(k); };
+    res.lead=(sc==="etf"?"Every ETF":(sc==="stocks"?"Every stock":"Every symbol (stocks and ETFs)"))+(keys.length?" that is "+keys.map(function(k){ return P.label(k); }).join(", "):"")+" by sector"+(spec.sub?" and subsector (ETFs by fund group)":"")+": <b>"+rows.length+"</b> names"+(sc==="both"?" ("+(rows.length-etfN)+" stocks, "+etfN+" ETFs)":"")+" in "+Object.keys(G).length+" groups. Click any ticker for its tear sheet.";
+    res.table={head:spec.sub?["Sector","Subsector","Names","Symbols"]:["Sector","Names","Symbols"],align:spec.sub?["l","l","r","l"]:["l","r","l"],
+      body:ks.map(function(k){ var A=k.split("|"), L=G[k].slice().sort(); return spec.sub?[secN(A[0]),A[1],String(L.length),L.join(", ")]:[secN(A[0]),String(L.length),L.join(", ")]; })};
+    res.notes.push("The last column lists the symbols (click one for its tear sheet; Up / Down then steps through that row). Add conditions to narrow it, e.g. \u201cevery symbol in every sector and subsector that is improving\u201d; say \u201cstocks only\u201d or \u201cETFs only\u201d (or \u201call ETFs by group\u201d) for one universe. ETFs only take direction and strengthening conditions. Copy as CSV exports the table.");
+    res.send={label:"universe listing",items:rows.filter(function(r){ return r.sec!=="ETF"; }).slice(0,50).map(function(r){ return {sym:r.sym,side:"long",w:null}; })};
+    res.cov=qmCovX(ctx,""); res.rows=rows.length; res.qualifying=rows.length; res.ms=Date.now()-t0; return res; };
+}catch(e){}
 /* ---- tear-sheet stepping: ↑ / ↓ move through the tickers of the table (or list / map) the tear sheet was opened from ---- */
 try{
   var TL=null;

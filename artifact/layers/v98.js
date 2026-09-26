@@ -58,7 +58,7 @@ qmAsk=function(question,done){
   /* "2 per sector" means "max 2 per sector" */
   try{ question=String(question).replace(/(^|[^a-z])(?<!max |maximum |at most |no more than )(\d{1,2}) (?:per|from each|in each) (sector|sub ?-?sector|industry)\b/gi,"$1max $2 per $3"); }catch(e){}
   var ra=[]; try{ ra=readAs(question); }catch(e){}
-  return _qmAsk98(question,function(r){ READAS=(ra.length&&r&&r.spec)?ra:null; try{ window.__qmHow=r&&r.spec?(r.how||"rules"):null; }catch(e){} done(r); });
+  return _qmAsk98(question,function(r){ READAS=(ra.length&&r&&r.spec)?ra:null; try{ window.__qmHow=r&&r.spec?(r.how||"rules"):(r&&/claude/i.test(String(r.error||""))?"claude-failed":null); }catch(e){} done(r); });
 };
 var _qmRun98=qmRun;
 qmRun=function(spec,ctx){ var res=_qmRun98.apply(this,arguments); try{ if(READAS&&res&&res.notes){ res.notes.unshift("Spelling: read "+READAS.map(function(p){ return "“"+p[0]+"” as “"+p[1]+"”"; }).join(", ")+"."); } }catch(e){} READAS=null; return res; };
