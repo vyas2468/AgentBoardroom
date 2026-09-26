@@ -1,0 +1,9 @@
+["Show me top 10 ranked symbols, above cluster 1, 1 per sector. Rank by cluster strength.",
+"Show me top 10 ranked symbols, above cluster 1, 1 per sector. Rank by breadth of sector.",
+"Show me top 10 ranked symbols, above cluster 1, 1 per sector. Rank by correlation to sector.",
+"Show me top 10 ranked symbols, above cluster 1, 1 per sector, above StepMA Trend.",
+"Show me top 10 ranked symbols, above cluster 1, 1 per sector, price is at or above StepMA Alex upper ring.",
+"Show me the trend strength for the top 10 ranked symbols, above cluster 1, 2 per sector.",
+"Show me top 10 symbols, 1 per sector, not deteriorating, pullback.",
+"Show me convergence map of KR symbol.",
+"Sentiment by sector"]

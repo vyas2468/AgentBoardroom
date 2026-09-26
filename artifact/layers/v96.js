@@ -50,6 +50,7 @@ qmParseX=function(q){
       return {kind:"htable",mode:"overall"};
     if(/\betfs?\b/.test(t)&&/\bsew\b|\bscores? (?:table|summary)\b|\bsummary\b|\btable\b|\bdirection\b|\b(?:improving|deteriorating|stable|strengthening|weakening) etfs?\b|\betfs? (?:that are )?(?:improving|deteriorating|strengthening|weakening)\b/.test(t))
       return {kind:"htable",mode:"etf",dir:dirF,grp:/\bnon[- ]?equity\b|\bbonds?\b|\bcommodit\w*\b|\brates?\b/.test(t)?"non":(/\bequity\b/.test(t)?"eq":"all"),n:n};
+    if(/\b(?:symbols?|stocks?|names|tickers)\b/.test(t)&&/\b(?:rank|ranked|sort|sorted|top)\b/.test(t)) throw 0; /* ranking symbols: not a table question */
     if(/\b(?:sentiment|breadth|strengthening and weakening|advancing and declining|sew)\b/.test(t)&&/\bby (?:sector|subsector|industry|industries)\b|\bper (?:sector|subsector)\b|\bsector (?:breadth|sentiment)\b|\bsubsector (?:breadth|sentiment)\b/.test(t)||/\b(?:sentiment|breadth)\b/.test(t)&&GRP.test(t))
       return {kind:"htable",mode:"sector",level:/\bsub ?-?sector|\bindustr/.test(t)?"ind":"sec",secIn:ss.map(function(v){ return qmSecKey(v)||v; })};
     /* "which subsectors have weak breadth", "overall sentiment in the Energy sector": questions the page could not read before */

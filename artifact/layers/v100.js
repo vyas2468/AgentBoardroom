@@ -1,0 +1,55 @@
+/* ================= v100: query fixes from the owner's own questions =================
+   Rewrites phrasings the base reader misses into ones it knows, adds "sector breadth" as a rank, fixes "correlation to
+   sector", explains short lists, and widens single-name subsector convergence maps. Only these phrasings are touched. */
+(function(){
+try{
+var NOTE=null;
+function rw(q){
+  var s=String(q||""), n=[];
+  function rep(re,to,lab){ if(re.test(s)){ s=s.replace(re,to); n.push(lab); } }
+  rep(/\b(?:price (?:is )?)?(?:at or )?above (?:the )?(?:stepma )?(?:alex )?upper (?:ring|band)(?: ([123]))?\b/gi,function(m,k){ return "above band "+(k||1); },"Alex upper band read as “above band N” (band 1 unless named)");
+  rep(/\b(?:price (?:is )?)?(?:at or )?below (?:the )?(?:stepma )?(?:alex )?lower (?:ring|band)(?: ([123]))?\b/gi,function(m,k){ return "below band "+(k||1); },"Alex lower band read as “below band N”");
+  rep(/\babove (?:the |its )?stepma(?: trend| line| trend line)?\b/gi,"above its trend line","“above StepMA” read as above its trend line");
+  rep(/\bbelow (?:the |its )?stepma(?: trend| line| trend line)?\b/gi,"below its trend line","“below StepMA” read as below its trend line");
+  rep(/\bcluster strength\b/gi,"cluster balance","“cluster strength” read as cluster balance");
+  rep(/\btrend strength\b/gi,"trend length","“trend strength” read as trend length (sessions in the trend)");
+  rep(/\b(?:breadth of (?:its |the |their )?sector|sector'?s? breadth)\b/gi,"sector breadth","");
+  return {q:s,notes:n};
+}
+var _ask=qmAsk;
+qmAsk=function(question,done){ var r=rw(question); NOTE=r.notes.filter(Boolean); return _ask(r.q,done); };
+
+/* sector breadth as a rankable field: its sector's net share of improving members */
+try{ QM_SYM.secb={lab:"Sector breadth (net % improving)",d:0}; QMX_FIELDS.unshift(["secb",/sector breadth/]); }catch(e){}
+var _en=qmEnrich;
+qmEnrich=function(ctx){ var r=_en(ctx); try{ ctx.rows.forEach(function(x){ var g=ctx.secStats&&ctx.secStats[x.sec]; x.secb=g&&g.cov?Math.round((g.impr-g.det)/g.cov*100):null; }); }catch(e){} return r; };
+
+var _px=qmParseX;
+qmParseX=function(q){
+  var sp=_px(q);
+  try{ var t=qmT(q);
+    /* "correlation to sector" means the 60-bar tie to its own sector, not to the universe */
+    if(sp&&sp.sort&&sp.sort.f==="cu60"&&/correlation (?:to|with) (?:its |own |the )?sector/.test(t)) sp.sort.f="cs60";
+    /* "rank by cluster balance / sector breadth": the base ranker does not take these two */
+    if(sp&&(sp.kind==="screen"||sp.kind==="portfolio")&&sp.sort){
+      if(/\b(?:rank(?:ed)?|sort(?:ed)?|order(?:ed)?) by (?:the |its )?cluster balance\b/.test(t)){ sp.sort={f:"bal",d:/\b(?:lowest|weakest|ascending)\b/.test(t)?"asc":"desc"}; sp.sortGiven=true; }
+      if(/\b(?:rank(?:ed)?|sort(?:ed)?|order(?:ed)?) by (?:the |its )?sector breadth\b/.test(t)){ sp.sort={f:"secb",d:/\b(?:lowest|weakest|ascending)\b/.test(t)?"asc":"desc"}; sp.sortGiven=true; } }
+    /* a ticker alone in its subsector: draw its sector's convergence map instead */
+    if(sp&&sp.kind==="hview"&&sp.view==="conv"&&sp.target&&sp.target.t==="sym"){ var C=QM_CTX||qmBuildCtx(), r0=C&&C.bySym[sp.target.v];
+      if(r0&&C.rows.filter(function(x){ return x.ind===r0.ind; }).length<2){ sp._w=sp.target.v+" is the only "+r0.ind+" name, so its whole sector is drawn"; sp.target={t:"sec",v:r0.sec}; } }
+  }catch(e){}
+  return sp;
+};
+var _run=qmRunX;
+qmRunX=function(spec,ctx,res,t0){
+  var r=_run(spec,ctx,res,t0);
+  try{ if(r&&r.notes){
+      if(NOTE&&NOTE.length) r.notes.unshift("Read as: "+NOTE.join("; ")+".");
+      if(spec&&spec._w) r.notes.unshift(spec._w+".");
+      if(spec&&spec.kind==="screen"&&(spec.maxSec||spec.maxInd)&&r.table&&r.table.body&&spec.n&&r.table.body.length<spec.n)
+        r.notes.push("Only "+r.table.body.length+" names fit: with at most "+(spec.maxSec?spec.maxSec+" per sector":spec.maxInd+" per subsector")+", the qualifying names ran out.");
+  } }catch(e){}
+  NOTE=null; return r;
+};
+}catch(e){ try{ console.warn("v100 layer skipped:",e); }catch(_){} }
+})();
