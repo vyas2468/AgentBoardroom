@@ -72,7 +72,8 @@ try{
     return _px2(q); };
   var FOLLOWQ=/\b(these|them|those)\b/;
   QMX_KINDS.hlist=1;
-  var _qc=qmCell; qmCell=function(h,c){ if(h==="Symbols") return _qc("Holdings and weights",c); return _qc(h,c); };
+  var ESET=null; function etfs(){ if(ESET) return ESET; ESET={}; try{ (moX().etfSym||[]).forEach(function(x){ ESET[x.sym]=1; }); }catch(e){} return ESET; }
+  var _qc=qmCell; qmCell=function(h,c){ if(h==="Symbols"){ var E=etfs(); return String(c).split(", ").map(function(x){ return (qmIsTk(x)||E[x])?qmTk(x):esc(x); }).join(", "); } return _qc(h,c); };
   var _va=qmValidateAny; qmValidateAny=function(raw){ if(raw&&raw.kind==="hlist") return {spec:JSON.parse(JSON.stringify(raw))}; return _va(raw); };
   var _rx=qmRunX; qmRunX=function(spec,ctx,res,t0){
     if(!(spec&&spec.kind==="hlist")) return _rx(spec,ctx,res,t0);

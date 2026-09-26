@@ -385,3 +385,4 @@ names from the previous answer). To add:
   optional conditions via `__pcond` (ETFs take direction / strengthening only). Trigger needs "every / all symbols" or
   "list all / every" and backs off on which / highest / lowest / top / rank. Tile "Universe listings". The timing label
   now says "tried Claude (no usable query)" when Claude was tried and failed.
+- Version 125: ETF tickers in the universe listing open their tear sheets (v100 qmCell for the "Symbols" column).
