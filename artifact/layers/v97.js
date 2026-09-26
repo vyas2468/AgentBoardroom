@@ -48,6 +48,7 @@ function stampTurn(turn){
   var el=document.createElement("div"); el.className="hx97time";
   if(T0){ var ms=now()-T0.t; el.textContent="\u23F1 "+fmtDur(ms)+" \u00b7 asked "+hms(T0.at)+" \u00b7 answered "+hms(new Date()); el.title="Time from pressing Ask to the answer being on the page (includes Claude's reading of the question when the built-in rules could not)"; T0=null; }
   else el.textContent="answered "+hms(new Date());
+  try{ var hw=window.__qmHow; if(hw){ el.textContent+=/claude/i.test(hw)?" \u00b7 read by Claude (uses your Claude plan)":" \u00b7 built-in rules (no AI)"; } window.__qmHow=null; }catch(e){}
   var q=turn.querySelector(".qm-q"); if(q&&q.parentNode===turn) turn.insertBefore(el,q.nextSibling); else turn.appendChild(el);
 }
 function decorate(turn){

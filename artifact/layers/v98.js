@@ -56,7 +56,7 @@ qmAsk=function(question,done){
   try{ var qs0=String(question||""); if(/\bIT\b(?! [Ss]ector)/.test(qs0)&&(/sub ?-?sectors?|\bsectors?\b|\bindustr/i.test(qs0.replace(/\bIT [Ss]ector\b/g,""))||(/\b(?:links?|connect\w*|between|bridg\w*|in common)\b/i.test(qs0)&&!(qs0.replace(/\bIT\b/g,"").match(/\b[A-Z]{2,5}\b/g)||[]).length))&&!/\bIT (?:stock|shares|ticker)\b|gartner/i.test(qs0)) question=qs0.replace(/\bIT\b(?! [Ss]ector)/g,"information technology sector");
     if(/\bIT [Ss]ector\b/.test(String(question))&&!/\bIT (?:stock|shares|ticker)\b|gartner/i.test(String(question))) question=String(question).replace(/\bIT [Ss]ector\b/g,"information technology sector"); }catch(e){}
   var ra=[]; try{ ra=readAs(question); }catch(e){}
-  return _qmAsk98(question,function(r){ READAS=(ra.length&&r&&r.spec)?ra:null; done(r); });
+  return _qmAsk98(question,function(r){ READAS=(ra.length&&r&&r.spec)?ra:null; try{ window.__qmHow=r&&r.spec?(r.how||"rules"):null; }catch(e){} done(r); });
 };
 var _qmRun98=qmRun;
 qmRun=function(spec,ctx){ var res=_qmRun98.apply(this,arguments); try{ if(READAS&&res&&res.notes){ res.notes.unshift("Spelling: read "+READAS.map(function(p){ return "“"+p[0]+"” as “"+p[1]+"”"; }).join(", ")+"."); } }catch(e){} READAS=null; return res; };
