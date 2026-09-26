@@ -230,7 +230,7 @@ function runSmart(spec,ctx,res){
   if(/\bconverg\w*\b|\blenses\b/.test(t)&&!etf) boost("conv",3,"you asked for signal convergence");
   if(/\bimproving\b|\bstrengthening\b|\bturning up\b/.test(t)) boost("dir",2.5,"you asked for improving names");
   if(/\brising\b|\brotation\b|\bimproving sub ?sectors?\b|\bsector strength\b/.test(t)&&!etf) boost("rot",2.5,"you asked for rising subsectors / rotation");
-  if(/\bdefensive\b|\blow vol\w*\b|\bcalm\w*\b|\bsteady\b|\blow risk\b|\bconservative\b|\bsafe\b/.test(t)){ boost("low",5,"you asked for low risk"); W.mom*=0.6; }
+  if(/\bdefensive\b|\blow vol\w*\b|\bcalm\w*\b|\bsteady\b|\blow risk\b|\bconservative\b|\bsafe\b/.test(t)){ boost("low",5,"you asked for low risk"); W.mom*=0.6; if(why.mom==="base") why.mom="lowered: you asked for low risk"; }
   if(/\baggressive\b|\bhigh risk\b/.test(t)){ boost("mom",2,"you asked for an aggressive tilt"); W.low=0; why.low="off: aggressive"; }
   if(etf&&/\bsew\b|\bsentiment\b|\bscore\b/.test(t)) boost("sent",2.5,"you asked for the SEW score");
   if(th) boost("mom",1.5,"theme portfolio: favour the theme's leaders");
