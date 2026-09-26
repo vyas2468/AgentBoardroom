@@ -55,6 +55,8 @@ qmAsk=function(question,done){
   /* a bare "IT" in a question about sectors or subsectors means the IT Sector, not the ticker IT (Gartner) */
   try{ var qs0=String(question||""); if(/\bIT\b(?! [Ss]ector)/.test(qs0)&&(/sub ?-?sectors?|\bsectors?\b|\bindustr/i.test(qs0.replace(/\bIT [Ss]ector\b/g,""))||(/\b(?:links?|connect\w*|between|bridg\w*|in common)\b/i.test(qs0)&&!(qs0.replace(/\bIT\b/g,"").match(/\b[A-Z]{2,5}\b/g)||[]).length))&&!/\bIT (?:stock|shares|ticker)\b|gartner/i.test(qs0)) question=qs0.replace(/\bIT\b(?! [Ss]ector)/g,"information technology sector");
     if(/\bIT [Ss]ector\b/.test(String(question))&&!/\bIT (?:stock|shares|ticker)\b|gartner/i.test(String(question))) question=String(question).replace(/\bIT [Ss]ector\b/g,"information technology sector"); }catch(e){}
+  /* "2 per sector" means "max 2 per sector" */
+  try{ question=String(question).replace(/(^|[^a-z])(?<!max |maximum |at most |no more than )(\d{1,2}) (?:per|from each|in each) (sector|sub ?-?sector|industry)\b/gi,"$1max $2 per $3"); }catch(e){}
   var ra=[]; try{ ra=readAs(question); }catch(e){}
   return _qmAsk98(question,function(r){ READAS=(ra.length&&r&&r.spec)?ra:null; try{ window.__qmHow=r&&r.spec?(r.how||"rules"):null; }catch(e){} done(r); });
 };
