@@ -208,7 +208,13 @@ qmParseX=function(q){
         return mark({kind:"hsmart",uni:ETF?"etf":"stocks",n:nOf(t,ETF?0:10),t:t});
     }
   }catch(e){}
-  return _qmParseX98(q);
+  var sp0=_qmParseX98(q);
+  /* "not deteriorating / not improving": the base reader drops the "not"; turn that one filter into "is not" */
+  try{ var tn=qmT(q), neg=tn.match(/\bnot (deteriorating|improving)\b/g);
+    if(sp0&&!sp0._err&&neg&&Array.isArray(sp0.filters)) neg.forEach(function(m){ var v=m.split(" ")[1];
+      if(new RegExp("\\b(?!not )\\w+ "+v+"\\b|^ "+v+"\\b").test(tn.replace(new RegExp("\\bnot "+v+"\\b","g"),""))) return;
+      sp0.filters.forEach(function(f){ if(f&&f.f==="dir"&&f.v===v&&f.op==="=") { f.op="!="; if(f.txt) f.txt="not "+v; } }); }); }catch(e){}
+  return sp0;
 };
 QMX_KINDS.hsmart=1; QMX_KINDS.hconn=1; QMX_KINDS.htheme=1;
 var _qmValidateAny98=qmValidateAny;
