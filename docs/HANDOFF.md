@@ -374,3 +374,4 @@ names from the previous answer). To add:
    each name's own sector basket, with a small sparkline per row and the RS line's slope (rising / falling), sortable.
 8. RS vs own sector / sector ETF: "Plot relative strength of these vs their sector" - each name divided by its sector's
    equal-weight basket (or the sector ETF, e.g. XLK for IT), so leaders inside weak sectors show up.
+- Read "can be (in|part of) the same sector / subsector" as "no sector (subsector) limit"; if the question also says "N per sector", warn about the contradiction and say which one was applied.
