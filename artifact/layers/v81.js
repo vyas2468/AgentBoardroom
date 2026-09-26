@@ -324,6 +324,8 @@ function hxParse(q){
   }
   return null;
 }
+/* "rising" / "falling" about stocks (not subsectors) read as the Early Warning direction, the same field "improving" / "deteriorating" use */
+function hxDirWords(t){ return t.replace(/\b(rising|going up|advancing|strengthening)\b/g,"improving").replace(/\b(falling|going down|declining|weakening)\b/g,"deteriorating"); }
 function hxParseLink(q,t,tk,follow,w){
   var ctx=QM_CTX, lvl=/\b(?:other|different|another|outside|cross)[- ](?:\w+ ){0,2}(?:subsectors?|industr(?:y|ies))\b/.test(t)?"industry":"sector";
   var mode=w.misW?"misfit":(w.grpW?"groups":(w.cohW?"cohort":(tk.length?"focus":"list")));
@@ -332,9 +334,10 @@ function hxParseLink(q,t,tk,follow,w){
   var li=t.search(HX_LINKW), SM=qmSecMentions(t), own=[], tgt=[];
   if(SM.all.length){ QMX_SEC.forEach(function(p){ var re=new RegExp(p[1].source,"g"), m; while((m=re.exec(t))){ var k=p[0]; if(SM.out.indexOf(k)>=0) continue; if(li>=0&&m.index>li){ if(tgt.indexOf(k)<0) tgt.push(k); } else if(own.indexOf(k)<0) own.push(k); } }); }
   var thrM=t.match(/\b(?:link strength|threshold|strength|correlation|at) (?:of |above |at least |>=? ?)?(0?\.\d+)\b/), thr=thrM?Math.max(0.3,Math.min(0.95,parseFloat(thrM[1]))):0.6;
-  var C=qmConds(t.replace(HX_LINKW," ").replace(/\bcorrelat\w*\b/g," "));
+  var C=qmConds(hxDirWords(t.replace(HX_LINKW," ").replace(/\bcorrelat\w*\b/g," ")));
   var filters=C.filters.filter(function(f){ return f.f!=="cu60"&&f.f!=="cs60"; });
-  var sp={kind:"xlink",mode:mode,level:lvl,src:src,secIn:own,secTarget:tgt,secOut:SM.out,filters:filters,n:qmNX(t)||(mode==="groups"||mode==="cohort"?12:15),thr:thr,focus:tk[0]||null};
+  var gsort=null; if(mode==="groups"){ var rk=qmRankX(t.replace(HX_LINKW," ").replace(/\b(?:cross|crossing|span\w*|sectors?|subsectors?|different|other)\b/g," ")); if(rk&&QM_SYM[rk.f]&&rk.f!=="_nb") gsort=rk; }
+  var sp={kind:"xlink",mode:mode,gsort:gsort,level:lvl,src:src,secIn:own,secTarget:tgt,secOut:SM.out,filters:filters,n:qmNX(t)||(mode==="groups"||mode==="cohort"?12:15),thr:thr,focus:tk[0]||null};
   if(follow&&!tk.length&&(mode==="list"||mode==="misfit")) sp.onlyTk=QMV_LAST.syms.slice();
   return sp;
 }
@@ -354,12 +357,14 @@ function hxParsePairs(q,t){
   var cross=lvl==="industry"&&/\b(?:different|other|another|separate) (?:parent )?sectors?\b|\bnot in the same (?:parent )?sector\b|\beven if\b|\boutside (?:their|its) (?:own )?(?:parent )?sector\b|\bacross sectors\b|\bcross[- ]sector\b|\bnot (?:part of|in) (?:their|its) (?:own )?parent\b/.test(t);
   var nM=t.match(/\b(\d{1,2}) pairs?\b/)||t.match(/\b(?:top|best|first) (\d{1,2})\b/), mnM=t.match(/\bat least (\d{1,2}) (?:names|stocks|members|tickers|companies)\b/), mcM=t.match(/\bcorrelation (?:of )?(?:at least|above|over|>=?) ?(-?0?\.\d+)\b/);
   var src="all"; if(/\bcorrelat\w*|\breturn peers?\b/.test(t)&&measure==="conn") src="corr"; if(/\b(profile|look[- ]?alikes?)\b/.test(t)&&measure==="conn") src="prof";
-  var SM=qmSecMentions(t);
+  var SM=qmSecMentions(t), pf=[];
+  try{ var tc=hxDirWords(t.replace(HX_LINKW," ").replace(/\bcorrelat\w*\b/g," ").replace(/\b(?:at least|more than|over|above|minimum of|min) \d{1,3}(?:\.\d+)? ?(?:%|percent)|\b\d{1,3}(?:\.\d+)? ?(?:%|percent) (?:or more|and above|plus)\b/g," ").replace(/\b(?:similar(?:ly)?|alike|behav\w*|mov\w*|in sync|in step|trade together)\b/g," "));
+    pf=qmConds(tc).filters.filter(function(f){ return f.f!=="cu60"&&f.f!=="cs60"; }); }catch(e){ pf=[]; }
   return {kind:"xlink",mode:"pairs",measure:measure,simKind:simKind,level:lvl,crossParent:cross,minShare:pctM?parseFloat(pctM[1]):0,minN:mnM?parseInt(mnM[1],10):(lvl==="industry"?3:1),
-    minCorr:mcM?parseFloat(mcM[1]):null,n:nM?parseInt(nM[1],10):10,src:src,thr:0.6,secIn:SM.inn,secTarget:[],secOut:SM.out,filters:[]};
+    minCorr:mcM?parseFloat(mcM[1]):null,n:nM?parseInt(nM[1],10):10,src:src,thr:0.6,secIn:SM.inn,secTarget:[],secOut:SM.out,filters:pf};
 }
 function hxGroupsOf(level,spec){
-  var g={}; QM_CTX.rows.forEach(function(r){ if(spec.secOut&&spec.secOut.indexOf(r.sec)>=0) return; var k=level==="industry"?r.ind:r.sec; if(!k||k==="Unassigned") return; (g[k]=g[k]||{k:k,sec:r.sec,rows:[]}).rows.push(r); });
+  var g={}; QM_CTX.rows.forEach(function(r){ if(spec.secOut&&spec.secOut.indexOf(r.sec)>=0) return; if(spec.filters&&spec.filters.length&&!spec.filters.every(function(f){ return qmTest(r,f); })) return; var k=level==="industry"?r.ind:r.sec; if(!k||k==="Unassigned") return; (g[k]=g[k]||{k:k,sec:r.sec,rows:[]}).rows.push(r); });
   Object.keys(g).forEach(function(k){ if(g[k].rows.length<spec.minN) delete g[k]; });
   return g;
 }
@@ -380,6 +385,7 @@ function hxRunPairs(spec,ctx,res,t0){
     var out=pairs.slice(0,spec.n);
     res.lead=pairs.length?("<b>"+pairs.length+"</b> "+unit+" pairs"+(spec.minShare?" have at least "+spec.minShare+"% of their names linked to the other":" are linked")+(spec.crossParent?" across parent sectors":"")+". The "+out.length+" most connected:"):
       ("No "+unit+" pair"+(spec.minShare?" has "+spec.minShare+"% or more of its names linked to the other":" is linked")+(spec.crossParent?" across parent sectors":"")+". Try a lower share.");
+    if(spec.filters&&spec.filters.length) res.notes.push("Only names meeting "+spec.filters.map(qmFT).join(" and ")+" were counted, both as members of a "+unit+" and as the linked names; the other names were left out before the shares were worked out.");
     res.table={head:["Rank",unit==="sector"?"Sector A":"Subsector A",unit==="sector"?"Sector B":"Subsector B","Names linked","A names linked to B","B names linked to A","Links","Strongest link"],align:["r","l","l","r","r","r","r","l"],
       body:out.map(function(p,i){ var b=p.b; return [String(i+1),hxPairName(lv,G[p.A]),hxPairName(lv,G[p.B]),qmN(p.sh,0)+"%",p.ab+" of "+p.nA,p.ba+" of "+p.nB,String(Math.round(p.l)),b?(b.a+" – "+b.b+(qmNum(b.v)?" "+qmN(b.v,2):"")):"–"]; })};
     res.notes.push("Names linked: the share of the two groups’ names (together) that have at least one link into the other group. A link is any of: the closest return peer RealTest found (60 bars) either way, the same Hidden Group (link 0.60), "+(X.hasCorr?"the five most return-correlated names over 60 and 252 bars (price history), ":"")+"or a top-5 profile look-alike"+(spec.src==="corr"?"; here only return-correlation links were counted, as asked":(spec.src==="prof"?"; here only profile look-alikes were counted, as asked":""))+". "+(lv==="industry"?"Subsectors with fewer than "+spec.minN+" names are left out, because one name would decide the share. ":"")+"A link shows co-movement or a shared profile today, not a business relationship.");
@@ -408,6 +414,7 @@ function hxRunPairs(spec,ctx,res,t0){
     pairs.push({A:A2,B:B2,c60:c60,c252:c252,d:d}); }
   pairs.sort(kind==="move"?function(p,q){ return q.c60-p.c60||(p.A+p.B<q.A+q.B?-1:1); }:function(p,q){ return p.d-q.d||(p.A+p.B<q.A+q.B?-1:1); });
   var out2=pairs.slice(0,spec.n);
+  if(spec.filters&&spec.filters.length) res.notes.push("Only names meeting "+spec.filters.map(qmFT).join(" and ")+" were used to build each "+unit+".");
   res.lead="The "+out2.length+" "+unit+" pairs that "+(kind==="move"?"move most alike (their daily returns track each other most closely)":"behave most alike today (closest average profile)")+(spec.crossParent?", in different parent sectors":"")+":";
   res.table={head:["Rank",unit==="sector"?"Sector A":"Subsector A",unit==="sector"?"Sector B":"Subsector B","Return correlation, 60 bars","Return correlation, 252 bars","Profile distance","Names"],align:["r","l","l","r","r","r","r"],
     body:out2.map(function(p,i){ return [String(i+1),hxPairName(lv,G[p.A]),hxPairName(lv,G[p.B]),qmN(p.c60,3),qmN(p.c252,3),qmN(p.d,2),G[p.A].rows.length+" + "+G[p.B].rows.length]; })};
@@ -444,6 +451,7 @@ function hxValidate(raw){
   sp.focus=raw.focus?String(raw.focus).toUpperCase():null;
   if(sp.focus&&!ctx.bySym[sp.focus]) return {error:"No stock called "+sp.focus+" in the loaded scan."};
   if(sp.mode==="focus"&&!sp.focus) return {error:"Name the ticker to connect, for example \u201Chow is NVDA connected to other sectors\u201D."};
+  sp.gsort=(raw.gsort&&QM_SYM[raw.gsort.f]&&raw.gsort.f!=="_nb")?{f:raw.gsort.f,d:raw.gsort.d==="asc"?"asc":"desc"}:null;
   sp.onlyTk=(raw.onlyTk||[]).map(function(x){ return String(x).toUpperCase(); }).filter(function(x){ return ctx.bySym[x]; });
   if(err.length) return {error:"The query used something this scan does not have: "+err.join("; ")+"."};
   return {spec:sp};
@@ -493,6 +501,9 @@ function hxRunLink(spec,ctx,res,t0){
     var R=relClusters("stocks",spec.thr), cl=R.clusters.filter(function(c){ return c.nSec>1; });
     if(spec.secIn.length) cl=cl.filter(function(c){ return spec.secIn.some(function(k){ return c.secs[k]; }); });
     if(spec.secTarget.length) cl=cl.filter(function(c){ return spec.secTarget.every(function(k){ return c.secs[k]; }); });
+    var gfl=spec.filters||[], gpass=function(c){ return c.members.filter(function(m){ var r=by[m.sym]; return r&&gfl.every(function(f){ return qmTest(r,f); }); }); };
+    if(gfl.length) cl=cl.filter(function(c){ return gpass(c).length>0; });
+    var gs=spec.gsort, gval=function(c){ if(!gs) return null; var v=c.members.map(function(m){ var r=by[m.sym]; return r?r[gs.f]:null; }).filter(qmNum); return v.length?v.reduce(function(a,b){ return a+b; },0)/v.length:null; };
     if(spec.focus){ var g=hxGroupOf(R,spec.focus);
       if(!g){ res.lead="<b>"+spec.focus+"</b> is in no Hidden Group at a link strength of "+qmN(spec.thr,2)+": its closest-peer link is weaker than that, and no other name picked it."; }
       else { res.lead="<b>"+spec.focus+"</b> is in Hidden Group #"+g.id+": <b>"+g.members.length+"</b> names across <b>"+g.nSec+"</b> "+(g.nSec===1?"sector":"sectors")+", mean link "+qmN(g.avgV,2)+".";
@@ -500,12 +511,18 @@ function hxRunLink(spec,ctx,res,t0){
           body:g.members.map(function(m){ var r=by[m.sym]||{}; return [m.sym,qmSecName(m.sec),r.ind||"",m.dir||"",r.peer||"",qmN(r.peerV,2)]; })};
         res.send={label:"hidden group #"+g.id,items:g.members.filter(function(m){ return by[m.sym]; }).map(function(m){ return {sym:m.sym,side:"long",w:null}; })}; }
     } else {
-      cl.sort(function(a,b){ return b.nSec-a.nSec||b.members.length-a.members.length||(b.avgV-a.avgV); });
+      if(gs){ cl.forEach(function(c){ c._gv=gval(c); }); cl=cl.filter(function(c){ return qmNum(c._gv); }); cl.sort(function(a,b){ return (gs.d==="asc"?a._gv-b._gv:b._gv-a._gv)||(a.id-b.id); }); }
+      else cl.sort(function(a,b){ return b.nSec-a.nSec||b.members.length-a.members.length||(b.avgV-a.avgV); });
       var out=cl.slice(0,spec.n);
-      res.lead=cl.length?("<b>"+cl.length+"</b> Hidden Groups cross sector lines at a link strength of "+qmN(spec.thr,2)+(spec.secIn.length||spec.secTarget.length?" and touch "+spec.secIn.concat(spec.secTarget).map(qmSecName).join(" and "):"")+". The "+out.length+" spanning the most sectors:"):("No Hidden Group crosses sector lines at a link strength of "+qmN(spec.thr,2)+". Try a lower strength, for example \u201Chidden groups that cross sectors at 0.5\u201D.");
-      res.table={head:["Group","Names","Sectors","Sector mix","Mean link","Improving / deteriorating","Members"],align:["r","r","r","l","r","l","l"],
+      res.lead=cl.length?("<b>"+cl.length+"</b> Hidden Groups cross sector lines at a link strength of "+qmN(spec.thr,2)+(spec.secIn.length||spec.secTarget.length?" and touch "+spec.secIn.concat(spec.secTarget).map(qmSecName).join(" and "):"")+(gfl.length?", with at least one member meeting: "+hxE(gfl.map(qmFT).join(" and ")):"")+". The "+out.length+(gs?" with the "+(gs.d==="asc"?"lowest":"highest")+" mean "+QM_SYM[gs.f].lab.toLowerCase()+":":" spanning the most sectors:")):("No Hidden Group crosses sector lines at a link strength of "+qmN(spec.thr,2)+". Try a lower strength, for example \u201Chidden groups that cross sectors at 0.5\u201D.");
+      var gh=["Group","Names","Sectors","Sector mix","Mean link","Improving / deteriorating"], ga=["r","r","r","l","r","l"];
+      if(gs){ gh.push("Mean "+QM_SYM[gs.f].lab.toLowerCase()); ga.push("r"); } if(gfl.length){ gh.push("Members passing"); ga.push("r"); } gh.push("Members"); ga.push("l");
+      res.table={head:gh,align:ga,
         body:out.map(function(c){ var mix=Object.keys(c.secs).sort(function(a,b){ return c.secs[b]-c.secs[a]||(a<b?-1:1); }).map(function(k){ return qmSecName(k)+" "+c.secs[k]; }).join(", ");
-          return ["#"+c.id,String(c.members.length),String(c.nSec),mix,qmN(c.avgV,2),c.imp+" / "+c.det,c.members.map(function(m){ return m.sym; }).join(" ")]; })};
+          var row=["#"+c.id,String(c.members.length),String(c.nSec),mix,qmN(c.avgV,2),c.imp+" / "+c.det]; if(gs) row.push(qmN(c._gv,QM_SYM[gs.f].d)); if(gfl.length) row.push(gpass(c).length+" of "+c.members.length);
+          row.push(c.members.map(function(m){ return m.sym; }).join(" ")); return row; })};
+      if(gfl.length) res.notes.push("Groups are kept when at least one member meets: "+gfl.map(qmFT).join(" and ")+"; the \u201CMembers passing\u201D column says how many.");
+      if(gs) res.notes.push("Ranked by the plain mean of the members\u2019 "+QM_SYM[gs.f].lab.toLowerCase()+", "+(gs.d==="asc"?"lowest":"highest")+" first. "+(gs.f==="vol"?QM_VOLDEF:""));
       var items=[]; out.forEach(function(c){ c.members.forEach(function(m){ if(by[m.sym]&&items.length<50) items.push({sym:m.sym,side:"long",w:null}); }); });
       if(items.length) res.send={label:"cross-sector hidden groups",items:items};
     }
@@ -574,6 +591,20 @@ function hxRunLink(spec,ctx,res,t0){
   res.notes.push(HX_SRC_NOTE+lvlW+(spec.src==="corr"?" (here only the return-correlation links were counted, as asked)":(spec.src==="prof"?" (here only the profile look-alikes were counted, as asked)":""))+". "+(X.hasCorr?"The price history is loaded, so full return correlations were used.":"The price history is not loaded, so return correlation comes only from each stock\u2019s single closest peer; load part E to add the five most correlated names over 60 and 252 bars.")+" A link shows co-movement, not a business relationship, and not that it will last.");
   res.cov=qmCovX(ctx,""); res.rows=res.table?res.table.body.length:0; res.qualifying=res.rows; res.ms=Date.now()-t0; return res;
 }
+
+/* ---------- tickers inside member and link columns open the tear sheet, like the Symbol column ---------- */
+var _qmCell=qmCell;
+qmCell=function(head,c){
+  var s=String(c);
+  try{
+    if(head==="Members"||head==="Look-alikes") return s.split(" ").map(function(w){ return qmIsTk(w)?qmTk(w):hxE(w); }).join(" ");
+    if(head==="Strongest link"||head==="Strongest cross link"||head==="Closest peer"){
+      var m=s.match(/^([A-Z][A-Z0-9.\-]*)(\s\u2013\s([A-Z][A-Z0-9.\-]*))?([\s\S]*)$/);
+      if(m&&qmIsTk(m[1])&&(!m[3]||qmIsTk(m[3]))) return qmTk(m[1])+(m[3]?" \u2013 "+qmTk(m[3]):"")+hxE(m[4]);
+    }
+  }catch(e){}
+  return _qmCell(head,c);
+};
 
 /* ---------- wrapping the engine ---------- */
 var _qmParseX=qmParseX;
