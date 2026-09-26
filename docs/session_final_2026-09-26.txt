@@ -1,0 +1,235 @@
+SECTOR ROTATION TERMINAL - EVERYTHING DONE IN THIS SESSION (26 Sep 2026)
+============================================================================
+Artifact: https://claude.ai/artifact/JBivgL88qHWeaCSsepr7cN
+Branch:   claude/artifact-access-question-f3s8rs
+          (page layers in artifact/layers/, RealTest files in realtest/, notes in docs/)
+
+
+PART 1. HOW TODAY'S CHANGES WERE KEPT SAFE
+------------------------------------------
+- The original page was never edited. Every new feature is a separate "layer" added on top, and every layer is
+  wrapped so that if it ever failed, the page would simply carry on without it.
+- After every change, three checks were run before anything was published:
+    1. 119 existing Ask questions: every answer must be word-for-word the same as before (it always was).
+    2. Every original tab and tear sheet: the original content must be identical, with and without the price
+       history loaded (it always was; only new blocks were added beside it).
+    3. No page errors in the browser.
+- New questions were also run against your real data before they were added as examples (over 200 examples, all working).
+
+
+PART 2. WHAT WAS BUILT TODAY
+----------------------------
+A. Part E: the price history
+   - A new RealTest script (part E) that exports 280 days of daily prices for all 575 symbols, and a double-click
+     launcher (.bat + .ps1) set up for C:\RealTest21_newerv2. Your run passed: 160,339 rows in about 6 seconds.
+   - Loaded into the page from Ask the terminal ("Load price history") and remembered.
+
+B. Header text
+   - "CROSS-SECTIONAL MASTER - RT SCAN"; "StepMA with Alex bands" now reads "StepMA".
+
+C. Tear sheets
+   - A "Price history (part E)" section: YTD and 1 to 12 month returns against RSP, drawdown, volatility,
+     beta and correlation to RSP, distance from the 52-week high, a small chart, and the 5 names that move most like it.
+
+D. Correlation matrix tab
+   - A real daily-return correlation matrix at the top (clustered or by sector, your own ticker list).
+   - Alex's hierarchical clusters map of every stock (YTD by default), with lime (rising) and orange (falling)
+     block outlines, Find, Reset view, block stepping and PNG export. Matches his figures (MU x SNDK 0.81).
+   - Colour legends on every matrix.
+
+E. Hidden Groups, Relationship map, Radar
+   - Groups checked against a year of prices; groups found directly from prices; the map's links checked against
+     price; a sector correlation matrix; stocks that trade like another sector; relationships breaking or forming;
+     lead-lag ideas; a second radar on price-history qualities.
+
+F. Ask the terminal (new kinds of question, all in plain English)
+   - Concepts: strong and improving, recovering, rolling over, breaking out or down, not extended, healthy or
+     steady uptrend, momentum leaders, leading or lagging its sector, signals converge.
+   - History filters and rankings: YTD, 1-12 month returns, drawdown, volatility, beta, correlation to RSP.
+   - Diagnostics: of a list, of a sector with all its subsectors, of one or several subsectors, of all sectors,
+     of rising or falling subsectors, of the rising or falling blocks.
+   - Pair test (Alex style): correlations, cointegration both ways, beta stability, half-life, z-score, verdict.
+     For two names, a list, "these", or a whole sector or subsector. Matches the statsmodels library exactly.
+   - Correlation numbers: a pair, a matrix, ranked pairs (in a group, between two sectors or two subsectors,
+     across sectors), two sectors, against the market; pairs that are also related (look-alike, same Hidden
+     Group, same price cluster, shared signal lenses).
+   - Clusters: blocks rising or falling together, which block a name is in, blocks that cross sectors.
+   - Portfolios: by risk level (as before), with low correlation between the names, one name per cluster,
+     the best name from each rising block (optionally inside one sector), where signals converge.
+   - Relationships: what moves with a name or a list, hedges for a name or a list, stocks that trade like
+     another sector, relationships breaking down or forming, lead-lag, price groups.
+   - Anomaly check: "Is PYPL an anomaly?" gives both anomaly readings (graph anomaly, and the scan anomaly that
+     drives the Attention A flag), ranks, subsector rank and context, and a Yes / Partly / No verdict.
+     Note: on the 25 Sep scan PYPL is "Partly" (scan anomaly above average, graph anomaly low); Alex's post is
+     from 26 Sep, a day after this scan, when PYPL rose 4.6%.
+   - Charts inside answers: prices, YTD return, relative strength against RSP, drawdown, rolling volatility,
+     rolling correlation, a pair's spread, sector baskets, the rising or falling blocks, or the previous answer.
+   - Subsector Web inside answers: "Show me the subsector web for Credit Services" draws it in the answer
+     (company dots open tear sheets) with a button to the fully interactive tab.
+   - 26 themed example tiles, over 200 questions, each with Run and Edit.
+   - Several wrong answers fixed (for example "correlation between NVDA and AMD", "least correlated with the
+     market", "relationships breaking down", "what leads Semiconductors", "two tickers from different sectors
+     with the highest correlation").
+
+G. Downloads and navigation
+   - "Save as PNG (3x)" under every chart, map, graph, matrix and process map, including charts in Ask answers.
+   - A jump-to-bottom arrow and a section menu for the open tab. Ask also sits in the Master theme after Industry Ledger.
+
+H. Process maps and the Guide
+   - New process maps explaining the part E additions and how Ask reads questions (the original maps untouched).
+   - A new Guide tab under Reference & AI, all in tables, with Open and Run buttons.
+
+
+PART 3. HOW THE REALTEST SCRIPTS AND THE .BAT FILES WORK - IN SIMPLE ENGLISH
+----------------------------------------------------------------------------
+
+3.1 The big picture
+   RealTest is the engine that reads market data and calculates things. The terminal page never talks to
+   RealTest directly: RealTest writes CSV files (plain tables), and the page reads those files. So the daily job
+   is "get RealTest to produce the right tables, check them, and hand them to the page".
+
+   Doing everything in one giant RealTest script would be slow and fragile, so the work is split into parts,
+   each a separate .rts script that produces its own CSV:
+
+     Part C  - "engine-free" columns (prices, trends, bands, clusters ...)            about 6 minutes
+     Part B  - the correlation family (who moves with whom)                          about 1 minute
+     Part A  - the heavy engines (the long one)                                       about 26 minutes
+     Part D  - optional engine diagnostics (only with -IncludeD)
+     Part E  - the optional price history for Ask the terminal (new today)            under a minute
+
+3.2 The shared data file: why only part C "imports"
+   Every part needs the same market data. Downloading it several times would be slow and could give each part
+   slightly different data. So:
+     - Part C runs with  -import -apply -scan : it downloads the data (import), saves it into one shared data
+       file (C:\RealTest21_newerv2\Data\alexaligned_unified_v7.rtd), then calculates (apply) and writes its
+       table (scan).
+     - Parts B, A, D and E run with  -apply -scan  only: they open that same saved data file and calculate from
+       it. They never download. That is why every part sees exactly the same bars and the same symbols.
+   The three switches, simply:  import = fetch data;  apply = work out the formulas;  scan = write the table.
+
+3.3 What "scan" means and why the rows line up
+   A scan asks RealTest: "for each symbol, write one row with these columns". Parts A, B and C use
+   NumBars 1, which means "just the latest bar", so each writes one row per symbol for the same date, all
+   from the same data file. Because every part has the same symbols on the same date, their tables line up
+   row for row, and can be joined side by side.
+
+3.4 The daily launcher: Run_AlexAligned_v7_Workflow.bat -> run_v7_workflow.ps1
+   The .bat file is only a doorway: double-clicking it starts PowerShell and runs run_v7_workflow.ps1, which
+   does the real work, step by step, and stops at the first problem:
+     1. Preflight: is RealTest already open? (Two RealTest jobs at once would fight over the data file, and an
+        open window blocks -import.) Are all the scripts present?
+     2. Runs part C, then B, then A (then D if asked), strictly one after the other, waiting for each to finish.
+     3. After each part it checks three things:
+          - RealTest's batchlog.txt says "OK" for import / apply / scan of that script;
+          - errorlog.txt did not get new error lines;
+          - a fresh CSV was written (newer than the start of that part) and it has rows.
+        If any check fails, it stops and tells you which part and why.
+     4. Merge: merge_v7_scans.py joins the part CSVs side by side into one file,
+        AlexAligned_Unified_v7_scan.csv (one row per symbol, all 480 columns). It refuses if the parts
+        disagree on rows or columns, so a half-finished part can never sneak into the merged file.
+     5. Terminal gate: terminal_payload_v7.js reads the merged CSV exactly the way the page will and builds the
+        payload the page loads. If the page could not read it, the gate fails and you are told not to load it.
+     6. It records the run in v7_last_run.json and tells you the next step: load the merged scan in the terminal
+        (Update or the newer-scan banner), then Save this run.
+
+3.5 Part E (new today): Run_AlexAligned_v7_History.bat -> run_v7_history.ps1
+   Part E is a copy of part C's setup that asks for history instead of today only:
+     - It is run with -apply -scan only (no import), so it reads the SAME shared data file the daily
+       workflow just used. That is why it must run after the daily workflow (or at least after part C).
+     - It uses NumBars 280, which means "give me the last 280 bars", and writes one row per symbol per day:
+       Date, Symbol, Open, High, Low, Close. That is about 575 x 280 = 161,000 rows.
+     - It writes its OWN file, AlexAligned_Unified_v7E_history.csv. It is never merged with A, B, C or D, so the
+       merge and the terminal gate are not affected at all. The daily workflow does not need it.
+   The launcher does the same kind of safety checks as the daily one:
+     - the .bat checks the three files (.bat, .ps1, .rts) are together in the Scripts folder, then starts the .ps1
+       and always pauses at the end so the window never flashes and disappears;
+     - the .ps1 refuses to start if RealTest is running (and shows which process), checks RealTest, the script and
+       the shared data file exist, runs RealTest with -apply -scan, then checks batchlog OK lines, no new error
+       lines, a fresh CSV, the right header, and at least 20,000 rows. Then it prints "PART E PASSED".
+
+3.6 How the page uses each file
+   - The merged scan (AlexAligned_Unified_v7_scan.csv): the page's main data. Every tab reads it. It is one
+     row per symbol for the latest bar.
+   - The history (AlexAligned_Unified_v7E_history.csv): loaded in Ask the terminal with "Load price history".
+     The page stores it and uses it for everything that needs more than one day: returns over months, drawdowns,
+     correlations, the clusters map, pair tests, charts.
+   - The two files are independent. If the history is older than the scan, the page says so in its notes; the
+     fix is simply to run part E again after the daily workflow.
+
+3.7 Your daily routine, in order
+   1. Double-click Run_AlexAligned_v7_Workflow.bat and wait for it to finish (about 35 minutes).
+   2. Double-click Run_AlexAligned_v7_History.bat (under a minute) and wait for "PART E PASSED".
+   3. In the terminal: load the new scan (Update), then Ask the terminal -> Load price history
+      -> Scripts\AlexAligned_Unified_v7E_history.csv.
+   4. Save this run. Start with the Guide tab or the example tiles in Ask the terminal.
+
+   If a launcher stops, read its last lines: they say which check failed. The most common one is "RealTest is
+   already running": close RealTest (or wait for the other job to finish) and double-click again.
+
+
+PART 4. WORTH KNOWING
+---------------------
+- Nothing here is a forecast or a backtest; every answer says what it counted and its data cutoff.
+- Questions that say "these" work on the previous answer, so ask for a list first.
+- Low-correlation and one-per-cluster portfolios need the rules to find more names than you ask for; the answer
+  says so when they cannot.
+- The clusters map finds fewer blocks than Alex's at the default cutoff (his exact settings are not public);
+  "Loose 0.35" finds more.
+- Lead-lag results are weak by nature and labelled as ideas to check.
+
+
+PART 5. ADDED LATER IN THE SESSION
+----------------------------------
+I. Maps inside Ask answers (new tile "Maps in Ask")
+   - "Relationship map of NVDA / of Credit Services / of Energy", "Signal convergence map of Financials",
+     "Correlation matrix of Semiconductors over 60 bars", "Hidden groups map for Financials", "All hidden groups map".
+     Works for one ticker, a subsector, a sector or everything; dots open tear sheets; each drawing saves as PNG;
+     a button opens the full tab.
+
+J. AF Approach (Subsector Web)
+   - A switch next to "Isolate" on the Subsector Web tab (off by default, so the normal view is unchanged).
+   - When on: inside each subsector the links become the strongest daily-return correlations (a "minimum spanning
+     tree" over 252 bars, which needs the part E history), drawn as purple chains like Alex's web
+     (for Credit Services: V-MA-AXP-COF with SYF and PYPL off COF). Dots are green (up on the day) or red (down).
+   - It also applies when the web is drawn inside an Ask answer.
+
+K. Alex-style colour-coded tables (new tile "Sentiment and breadth tables")
+   - "Overall sentiment" (strengthening / weakening, net and prior breadth, one-day breadth, direction),
+     "ETF SEW summary" (equity and non-equity), "Sentiment by sector", "Breadth by subsector in Financials",
+     "SEW summary for Energy", "Weakening stocks table in Financials". Green = good, amber = mixed, red = bad.
+
+L. Ask the terminal - comfort features
+   - "Show" switches for the Try chips, the part E price-history panel and "What you can ask" (remembered on this
+     device; all on by default; the tiles always stay).
+   - Every answer shows how long it took and when it was asked and answered (e.g. "45 ms - asked 12:01:27").
+   - Every answer has "Remove" (with Undo) and "PNG" buttons.
+   - "Download thread": the whole thread as a high-resolution PNG (2x) or a PDF (A4 pages, breaks between answers
+     where possible), keeping the colours and layout. The PDF pages are images, so their text is not selectable.
+
+Checks for these: 207 tile questions all answered with no errors; the original questions answer word for word as
+before (the only changes are the earlier deliberate fixes); tear sheets and original tab content identical.
+
+
+PART 6. CONCLUSION AND ANYTHING OUTSTANDING
+-------------------------------------------
+Status: everything asked for in this session is built, tested, published (artifact version 100) and saved to the
+branch claude/artifact-access-question-f3s8rs. Nothing that worked before was broken: the original Ask answers,
+tear sheets and tabs were checked against the original page after every change.
+
+Nothing is outstanding. A few things are worth knowing or could be done later if you want them:
+
+1. Checked only in your own browser (the test sandbox could not do these):
+   - Saving files (PNG, PDF, ZIP) in the published page goes through the page's download prompt; you confirm each save.
+   - Exported PNG/PDF files should use the page's IBM Plex fonts; the sandbox blocked Google Fonts, so its test
+     exports used a system font. If yours look slightly different from the screen, that is why.
+2. Known limits (by design, not faults):
+   - PDF pages are pictures of the thread, so their text cannot be selected or searched.
+   - A very long thread may be too tall for one PNG; the button then says so. Use PDF, or remove some answers first.
+   - The AF Approach links and all long-horizon answers need the part E price history loaded.
+   - The clusters map finds fewer blocks than Alex's at the default cutoff (his exact settings are not public);
+     "Loose 0.35" finds more.
+   - Lead-lag results are weak by nature and labelled as ideas to check.
+3. Daily habit: run part E after the daily workflow so the price history matches the scan date (the page warns you
+   if they do not line up).
+4. Optional housekeeping: the work is on its own branch; a pull request into the main branch can be opened whenever
+   you want it merged (not done, as it was not asked for).
