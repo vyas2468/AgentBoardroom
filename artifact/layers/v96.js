@@ -45,12 +45,16 @@ qmParseX=function(q){
     var t=qmT(q), C=QM_CTX||qmBuildCtx(), ii=C?qmIndMentions(t,C):[], ss=qmSecMentions(t).inn;
     var dirF=/\bweaken\w*\b/.test(t)?"weakening":(/\bstrength\w*\b/.test(t)&&!/\bstrengthening and weakening\b/.test(t)?"strengthening":(/\bimprov\w*\b/.test(t)?"improving":(/\bdeteriorat\w*\b/.test(t)?"deteriorating":(/\bstable\b|\bmixed\b/.test(t)?"stable/mixed":null))));
     var nm=t.match(/\b(?:top|first|show|list) (\d{1,3})\b/)||t.match(/\b(\d{1,3}) (?:stocks|names|etfs|rows)\b/), n=nm?Math.max(1,Math.min(200,+nm[1])):0;
-    if(/\boverall sentiment\b|\bmarket (?:breadth|sentiment)\b|\bbreadth (?:table|summary|overview)\b|\bsentiment (?:table|summary|overview)\b|\bone[- ]day breadth\b|\badvancing (?:and|vs\.?|versus) declining\b/.test(t)&&!ss.length&&!ii.length&&!/\bby (?:sector|subsector|industry)\b/.test(t))
+    var GRP=/\b(?:by|per|in|across|for|of|within|between)\s+(?:each|every|all|the|all the)?\s*(?:sectors?|sub ?-?sectors?|industr(?:y|ies))\b|\b(?:sector|sub ?-?sector|industry)(?:-| )?(?:level|breadth|sentiment)\b/;
+    if(/\boverall sentiment\b|\bmarket (?:breadth|sentiment)\b|\bbreadth (?:table|summary|overview)\b|\bsentiment (?:table|summary|overview)\b|\bone[- ]day breadth\b|\badvancing (?:and|vs\.?|versus) declining\b/.test(t)&&!ss.length&&!ii.length&&!/\bby (?:sector|subsector|industry)\b/.test(t)&&!GRP.test(t))
       return {kind:"htable",mode:"overall"};
     if(/\betfs?\b/.test(t)&&/\bsew\b|\bscores? (?:table|summary)\b|\bsummary\b|\btable\b|\bdirection\b|\b(?:improving|deteriorating|stable|strengthening|weakening) etfs?\b|\betfs? (?:that are )?(?:improving|deteriorating|strengthening|weakening)\b/.test(t))
       return {kind:"htable",mode:"etf",dir:dirF,grp:/\bnon[- ]?equity\b|\bbonds?\b|\bcommodit\w*\b|\brates?\b/.test(t)?"non":(/\bequity\b/.test(t)?"eq":"all"),n:n};
-    if(/\b(?:sentiment|breadth|strengthening and weakening|advancing and declining|sew)\b/.test(t)&&/\bby (?:sector|subsector|industry|industries)\b|\bper (?:sector|subsector)\b|\bsector (?:breadth|sentiment)\b|\bsubsector (?:breadth|sentiment)\b/.test(t))
-      return {kind:"htable",mode:"sector",level:/\bsub ?sector|\bindustr/.test(t)?"ind":"sec",secIn:ss.map(function(v){ return qmSecKey(v)||v; })};
+    if(/\b(?:sentiment|breadth|strengthening and weakening|advancing and declining|sew)\b/.test(t)&&/\bby (?:sector|subsector|industry|industries)\b|\bper (?:sector|subsector)\b|\bsector (?:breadth|sentiment)\b|\bsubsector (?:breadth|sentiment)\b/.test(t)||/\b(?:sentiment|breadth)\b/.test(t)&&GRP.test(t))
+      return {kind:"htable",mode:"sector",level:/\bsub ?-?sector|\bindustr/.test(t)?"ind":"sec",secIn:ss.map(function(v){ return qmSecKey(v)||v; })};
+    /* "which subsectors have weak breadth", "overall sentiment in the Energy sector": questions the page could not read before */
+    if(/\b(?:sentiment|breadth)\b/.test(t)&&!/\bsew\b|\bstocks? table\b|\bnames table\b/.test(t)&&(ss.length||/\b(?:sectors|sub ?-?sectors|industries)\b/.test(t)))
+      return {kind:"htable",mode:"sector",level:(ss.length||/\bsub ?-?sector|\bindustr/.test(t))?"ind":"sec",secIn:ss.map(function(v){ return qmSecKey(v)||v; }),asc:/\bweak(?:est|er)?\b|\bworst\b|\bnegative\b|\bpoor\b|\bbad\b/.test(t)};
     if(/\bsew (?:summary|table)\b|\b(?:stock|stocks) sew\b|\b(?:strengthening|weakening|improving|deteriorating) (?:stocks|names) (?:table|summary)\b|\bscores? table\b|\bsew\b/.test(t))
       return {kind:"htable",mode:"stock",dir:dirF,secIn:ss.map(function(v){ return qmSecKey(v)||v; }),ind:ii,n:n};
   }catch(e){}
@@ -110,8 +114,8 @@ qmRunX=function(spec,ctx,res,t0){
       if(h){ var a=0,d=0; m.forEach(function(r){ var c=h.syms[r.sym]; if(!c) return; var x=A.ret(c,L-1); if(x===null) return; if(x>0) a++; else if(x<0) d++; }); pa=a-d; }
       var bias=im*2>m.length?"improving":(de*2>m.length?"deteriorating":"stable/mixed");
       return {k:k,row:[spec.level==="ind"?k+" ("+qmSecName(m[0].sec)+")":qmSecName(k),String(m.length),String(st),String(wk),sg(st-wk),String(im),String(de),bias,String(ad),String(dc),sg(ad-dc),sg(pa),num(pa)?sg(ad-dc-pa):"–"],net:st-wk}; });
-    body.sort(function(p,q){ return q.net-p.net; });
-    res.lead="Sentiment and breadth by "+(spec.level==="ind"?"subsector":"sector")+(spec.secIn.length?" in "+spec.secIn.map(qmSecName).join(", "):"")+", bar "+date+", strongest net first.";
+    body.sort(function(p,q){ return spec.asc?p.net-q.net:q.net-p.net; });
+    res.lead="Sentiment and breadth by "+(spec.level==="ind"?"subsector":"sector")+(spec.secIn.length?" in "+spec.secIn.map(qmSecName).join(", "):"")+", bar "+date+(spec.asc?", weakest net first.":", strongest net first.");
     res.table={head:[spec.level==="ind"?"Subsector":"Sector","Names","Strengthening","Weakening","Net","Improving","Deteriorating","Direction","Advancing","Declining","Net 1D","Prior 1D","Change"],align:["l","r","r","r","r","r","r","l","r","r","r","r","r"],hxColor:{2:"pos",3:"neg",4:"sign",5:"pos",6:"neg",7:"dir",8:"pos",9:"neg",10:"sign",11:"sign",12:"sign"},body:body.map(function(x){ return x.row; })};
     res.notes.push("Strengthening / weakening: recent score above / below zero. Improving / deteriorating: Early Warning direction; Direction is the majority. Advancing / declining: up or down on the day; the prior day's net comes from the part E history ("+(pdate||"not loaded")+").");
     return fin(body.length);
