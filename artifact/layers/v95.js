@@ -151,7 +151,11 @@ qmParseX=function(q){
     if(kind){
       var C=ctxNow(), tk=A.tickers(q).filter(function(x){ return !new RegExp("\\b"+x.toLowerCase().replace(/[.\-]/g,"\\$&")+" sector\\b").test(t); }), ii=C?qmIndMentions(t,C):[], ss=qmSecMentions(t).inn;
       var tgt=tk.length===1?{t:"sym",v:tk[0]}:(ii.length?{t:"ind",v:ii[0]}:(ss.length?{t:"sec",v:qmSecKey(ss[0])||ss[0]}:(/\ball\b|\bevery\b|\bwhole\b/.test(t)||kind==="hg"?{t:"all"}:null)));
-      if(kind==="cm"&&tk.length>=2) return _qmParseX95(q);
+      /* a list of names: two or more tickers, or "these" (the previous answer) */
+      var last=A.last(), fol=!tk.length&&!ii.length&&!ss.length&&/\b(these|them|those|this list|that list|the list|this portfolio|that portfolio|the portfolio|the basket|this basket|that basket|the names above|the above)\b/.test(t)&&last&&last.syms&&last.syms.length;
+      if(kind==="cm"&&(tk.length>=2||fol)) return _qmParseX95(q);
+      if(tk.length>=2) tgt={t:"list",v:tk.slice(0,120),from:"named"};
+      else if(fol) tgt={t:"list",v:last.syms.slice(0,120),from:"last"};
       if(tgt) return {kind:"hview",view:kind,target:tgt,win:/\b60\b|\b3 months?\b/.test(t)?60:(/\b126\b|\b6 months?\b/.test(t)?126:252)};
       if(kind!=="hg") return {_err:"Name a ticker, a subsector or a sector, for example \u201Crelationship map of NVDA\u201D, \u201Csignal convergence map of Financials\u201D or \u201Ccorrelation matrix of Energy\u201D."};
     }
@@ -176,6 +180,10 @@ qmRunX=function(spec,ctx,res,t0){
   if(T.t==="sym"){ if(!by[T.v]){ res.lead=T.v+" is not in the loaded scan."; return fin(0); } label=T.v; }
   else if(T.t==="ind"){ members=ctx.rows.filter(function(r){ return r.ind===T.v; }).map(function(r){ return r.sym; }); label=T.v; }
   else if(T.t==="sec"){ members=ctx.rows.filter(function(r){ return r.sec===T.v; }).map(function(r){ return r.sym; }); label=qmSecName(T.v); }
+  else if(T.t==="list"){ members=T.v.filter(function(s,i,a){ return by[s]&&a.indexOf(s)===i; }); var miss=T.v.filter(function(s){ return !by[s]; });
+    label=T.from==="last"?"the previous answer's "+members.length+" names":(members.length<=6?members.join(", "):members.length+" named stocks");
+    if(miss.length) res.notes.push("Not in the loaded stock scan, so left out: "+miss.join(", ")+".");
+    if(!members.length){ res.lead="None of those names are in the loaded stock scan."; return fin(0); } }
   else label="all";
   var colS=secColor(ctx);
   var toTab={rel:"tab-ng",conv:"tab-cg",cm:"tab-cm",hg:"tab-hg"}[spec.view];
@@ -199,14 +207,14 @@ qmRunX=function(spec,ctx,res,t0){
     }
     if(T.t==="all"){ res.lead="The full relationship map has every stock; open the Relationship map tab, or ask for a sector, a subsector or a ticker (for example \u201Crelationship map of Energy\u201D)."; res.hxPlot=btn; return fin(0); }
     var inSet={}; members.forEach(function(s){ inSet[s]=1; });
-    var groups=[], gi={}; members.forEach(function(s){ var g=T.t==="sec"?by[s].ind:T.v; if(gi[g]===undefined){ gi[g]=groups.length; groups.push({id:g,label:g,r:T.t==="sec"?16:26}); } });
+    var groups=[], gi={}; members.forEach(function(s){ var g=T.t==="list"?qmSecName(by[s].sec):(T.t==="sec"?by[s].ind:T.v); if(gi[g]===undefined){ gi[g]=groups.length; groups.push({id:g,label:g,r:T.t==="sec"?16:(T.t==="list"?20:26)}); } });
     var outside={};
-    members.forEach(function(s){ nodes.push({id:s,group:T.t==="sec"?by[s].ind:T.v,c:colS(by[s].sec),r:7,tip:s+" \u2013 "+by[s].ind}); (NBm[s]||[]).forEach(function(o){ if(inSet[o]){ if(s<o||(NBm[o]||[]).indexOf(s)<0) edges.push({a:s,b:o,w:1.4,t:s+" and "+o+" behave alike"}); } else if(by[o]){ outside[o]=(outside[o]||[]).concat([s]); } }); });
+    members.forEach(function(s){ nodes.push({id:s,group:T.t==="list"?qmSecName(by[s].sec):(T.t==="sec"?by[s].ind:T.v),c:colS(by[s].sec),r:7,tip:s+" \u2013 "+by[s].ind}); (NBm[s]||[]).forEach(function(o){ if(inSet[o]){ if(s<o||(NBm[o]||[]).indexOf(s)<0) edges.push({a:s,b:o,w:1.4,t:s+" and "+o+" behave alike"}); } else if(by[o]){ outside[o]=(outside[o]||[]).concat([s]); } }); });
     if(T.t==="ind") Object.keys(outside).slice(0,24).forEach(function(o){ nodes.push({id:o,group:"__out",c:colS(by[o].sec),r:6,o:0.6,tip:o+" \u2013 "+qmSecName(by[o].sec)+" / "+by[o].ind+" (outside)"}); outside[o].forEach(function(s){ edges.push({a:s,b:o,c:"var(--ink-3)",dash:true,w:1,t:s+" behaves like "+o+" (outside "+T.v+")"}); }); });
     res.hxPlot=network({title:"Relationship map of "+label+" (behaviour look-alikes)",groups:groups,nodes:nodes,edges:edges,h:T.t==="sec"?700:600,legend:[{t:"Lines: two names behave alike (among each other's four closest on the nine scan features)"+(T.t==="ind"?"; dashed: look-alikes outside the subsector":""),c:"var(--ink-3)"}]})+btn;
     members.forEach(function(s){ var nbr=NBm[s]||[]; rows.push([s,by[s].ind,nbr.filter(function(o){ return inSet[o]; }).join(" ")||"\u2013",nbr.filter(function(o){ return !inSet[o]&&by[o]; }).map(function(o){ return o+" ("+qmSecName(by[o].sec)+")"; }).join(", ")||"\u2013"]); });
     var outN=members.filter(function(s){ return (NBm[s]||[]).some(function(o){ return !inSet[o]; }); }).length;
-    res.lead="Relationship map of <b>"+hE(label)+"</b>: "+members.length+" names; "+outN+" of them have look-alikes outside "+(T.t==="sec"?"the sector":"the subsector")+".";
+    res.lead="Relationship map of <b>"+hE(label)+"</b>: "+members.length+" names; "+outN+" of them have look-alikes outside "+(T.t==="sec"?"the sector":(T.t==="list"?"the list":"the subsector"))+".";
     res.table={head:["Symbol","Subsector","Look-alikes inside","Look-alikes outside"],align:["l","l","l","l"],body:rows};
     res.send=send(members,"relationship map of "+label); return fin(rows.length);
   }
@@ -214,9 +222,10 @@ qmRunX=function(spec,ctx,res,t0){
     var list2=T.t==="sym"?ctx.rows.filter(function(r){ return r.ind===by[T.v].ind; }).map(function(r){ return r.sym; }):(T.t==="all"?[]:members);
     if(T.t==="all"){ res.lead="The full Signal convergence map has every stock; open that tab, or ask for a sector, a subsector or a ticker."; res.hxPlot=btn; return fin(0); }
     var info=list2.map(function(s){ var c=conv(s); return {s:s,sc:c?c.score:0,fl:c?Object.keys(FL).filter(function(k){ return c.flags[k]; }).map(function(k){ return FL[k]; }):[]}; });
-    var groups2=[], gi2={}; info.forEach(function(x){ var g=T.t==="sec"?by[x.s].ind:by[x.s].ind; if(gi2[g]===undefined){ gi2[g]=groups2.length; var mem=info.filter(function(y){ return by[y.s].ind===g; }), avg=mem.reduce(function(a,y){ return a+y.sc; },0)/mem.length; groups2.push({id:g,label:g,r:T.t==="sec"?15+avg*3:26,inner:avg.toFixed(1),fill:convColor(Math.round(avg))}); } });
-    var nodes2=info.map(function(x){ return {id:x.s,group:by[x.s].ind,c:convColor(x.sc),r:5+x.sc*2.2,ring:x.s===T.v?"var(--accent)":null,tip:x.s+": "+x.sc+" of 6 lenses"+(x.fl.length?" ("+x.fl.join(", ")+")":"")}; });
-    res.hxPlot=network({title:"Signal convergence map of "+(T.t==="sym"?T.v+"'s subsector ("+by[T.v].ind+")":label)+": how many of the six lenses flag each name",groups:groups2,nodes:nodes2,edges:[],h:T.t==="sec"?680:560,legend:[{t:"Dot size and colour = lenses flagging (grey 0-1, yellow 2, orange 3, red 4+); the number in each subsector circle is its average",c:"var(--ink-3)"}]})+btn;
+    var groups2=[], gi2={}; function g2(s){ return T.t==="list"?qmSecName(by[s].sec):by[s].ind; }
+    info.forEach(function(x){ var g=g2(x.s); if(gi2[g]===undefined){ gi2[g]=groups2.length; var mem=info.filter(function(y){ return g2(y.s)===g; }), avg=mem.reduce(function(a,y){ return a+y.sc; },0)/mem.length; groups2.push({id:g,label:g,r:T.t==="sec"||T.t==="list"?15+avg*3:26,inner:avg.toFixed(1),fill:convColor(Math.round(avg))}); } });
+    var nodes2=info.map(function(x){ return {id:x.s,group:g2(x.s),c:convColor(x.sc),r:5+x.sc*2.2,ring:x.s===T.v?"var(--accent)":null,tip:x.s+": "+x.sc+" of 6 lenses"+(x.fl.length?" ("+x.fl.join(", ")+")":"")}; });
+    res.hxPlot=network({title:"Signal convergence map of "+(T.t==="sym"?T.v+"'s subsector ("+by[T.v].ind+")":label)+": how many of the six lenses flag each name",groups:groups2,nodes:nodes2,edges:[],h:T.t==="sec"?680:560,legend:[{t:"Dot size and colour = lenses flagging (grey 0-1, yellow 2, orange 3, red 4+); the number in each "+(T.t==="list"?"sector":"subsector")+" circle is its average",c:"var(--ink-3)"}]})+btn;
     info.sort(function(p,q2){ return q2.sc-p.sc; });
     var me2=T.t==="sym"?info.filter(function(x){ return x.s===T.v; })[0]:null;
     res.lead=T.t==="sym"?"<b>"+T.v+"</b>: "+me2.sc+" of the six Signal convergence lenses flag it"+(me2.fl.length?" ("+me2.fl.join(", ")+")":"")+". Its subsector "+by[T.v].ind+" is drawn around it for comparison.":"Signal convergence map of <b>"+hE(label)+"</b>: "+info.filter(function(x){ return x.sc>=3; }).length+" of "+info.length+" names have 3 or more lenses flagging (signals converge).";
@@ -243,7 +252,7 @@ qmRunX=function(spec,ctx,res,t0){
   if(spec.view==="hg"){
     var Rg=null; try{ Rg=relClusters("stocks",0.6); }catch(e){ Rg=null; }
     if(!Rg){ res.lead="Hidden Groups need the Unified v4 scan."; return fin(0); }
-    var cls=Rg.clusters.filter(function(c){ if(T.t==="all") return true; return c.members.some(function(r){ return T.t==="sym"?r.sym===T.v:(T.t==="ind"?r.ind===T.v:r.sec===T.v); }); });
+    var cls=Rg.clusters.filter(function(c){ if(T.t==="all") return true; return c.members.some(function(r){ return T.t==="sym"?r.sym===T.v:(T.t==="list"?members.indexOf(r.sym)>=0:(T.t==="ind"?r.ind===T.v:r.sec===T.v)); }); });
     if(!cls.length){ res.lead=(T.t==="sym"?T.v+" is in no Hidden Group":"No Hidden Group touches "+hE(label))+" at a link strength of 0.60."; res.hxPlot=btn; return fin(0); }
     var show=cls.slice(0,T.t==="all"?24:12), cols=3, cw=300, chh=240, rowsN=Math.ceil(show.length/cols), W4=cols*cw, H4=rowsN*chh+30;
     var s4=['<svg viewBox="0 0 '+W4+' '+H4+'" role="img" aria-label="Hidden groups" style="width:100%;height:auto;max-width:1000px;display:block;background:var(--surface)"><text x="12" y="18" font-size="13" font-weight="700" fill="var(--ink)">Hidden Groups '+(T.t==="all"?"(the first "+show.length+" of "+cls.length+")":"touching "+hE(label))+', links of 0.60 or more</text>'];
@@ -251,13 +260,13 @@ qmRunX=function(spec,ctx,res,t0){
       s4.push('<rect x="'+(col*cw+6)+'" y="'+(30+row*chh+2)+'" width="'+(cw-12)+'" height="'+(chh-8)+'" rx="10" fill="'+(c.nSec>1?"var(--accent-soft)":"var(--panel)")+'" stroke="'+(c.nSec>1?"var(--accent)":"var(--line-strong)")+'"/><text x="'+(col*cw+16)+'" y="'+(30+row*chh+20)+'" font-size="11" font-weight="600" fill="var(--ink)">Group '+c.id+': '+n+' names'+(c.nSec>1?", "+c.nSec+" sectors":"")+'</text>');
       c.members.forEach(function(r,j){ var th=-Math.PI/2+j*2*Math.PI/n; P4[r.sym]={x:gx+Rr*Math.cos(th),y:gy+Rr*Math.sin(th)}; });
       c.edges.forEach(function(e){ var a=P4[e.a], b=P4[e.b]; if(a&&b) s4.push('<line x1="'+a.x.toFixed(1)+'" y1="'+a.y.toFixed(1)+'" x2="'+b.x.toFixed(1)+'" y2="'+b.y.toFixed(1)+'" stroke="var(--ink-3)" stroke-width="'+(1+Math.max(0,e.v-0.4)*4).toFixed(1)+'" opacity=".6"/>'); });
-      c.members.forEach(function(r){ var p=P4[r.sym], me=T.t==="sym"&&r.sym===T.v; s4.push('<circle data-tear="'+hE(r.sym)+'" cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="'+(me?13:10)+'" fill="'+colS(r.sec)+'" stroke="'+(me?"var(--accent)":"var(--surface)")+'" stroke-width="'+(me?3:1)+'" style="cursor:pointer"><title>'+hE(r.sym+" \u2013 "+qmSecName(r.sec)+" / "+r.ind)+'</title></circle><text x="'+p.x.toFixed(1)+'" y="'+(p.y+3.5).toFixed(1)+'" text-anchor="middle" font-size="7.5" font-weight="700" fill="#fff" pointer-events="none">'+hE(r.sym.slice(0,4))+'</text>'); }); });
+      c.members.forEach(function(r){ var p=P4[r.sym], me=T.t==="sym"&&r.sym===T.v||T.t==="list"&&members.indexOf(r.sym)>=0; s4.push('<circle data-tear="'+hE(r.sym)+'" cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="'+(me?13:10)+'" fill="'+colS(r.sec)+'" stroke="'+(me?"var(--accent)":"var(--surface)")+'" stroke-width="'+(me?3:1)+'" style="cursor:pointer"><title>'+hE(r.sym+" \u2013 "+qmSecName(r.sec)+" / "+r.ind)+'</title></circle><text x="'+p.x.toFixed(1)+'" y="'+(p.y+3.5).toFixed(1)+'" text-anchor="middle" font-size="7.5" font-weight="700" fill="#fff" pointer-events="none">'+hE(r.sym.slice(0,4))+'</text>'); }); });
     s4.push('</svg>');
     res.hxPlot='<div class="chart-scroll hx94plot" style="margin:8px 0">'+s4.join("")+'</div>'+btn;
     res.lead=(T.t==="all"?"All Hidden Groups: <b>"+cls.length+"</b> groups, "+cls.filter(function(c){ return c.nSec>1; }).length+" crossing sectors.":"Hidden Groups touching <b>"+hE(label)+"</b>: "+cls.length+" group"+(cls.length===1?"":"s")+", "+cls.filter(function(c){ return c.nSec>1; }).length+" crossing sectors.")+" Each group joins names whose closest 60-day return peer links them (0.60 or more); dots are coloured by sector.";
     res.table={head:["Group","Members","Sectors","Type","Avg link"],align:["r","l","l","l","r"],body:cls.map(function(c){ return [String(c.id),c.members.map(function(r){ return r.sym; }).join(" "),Object.keys(c.secs).map(function(k){ return qmSecName(k)+" "+c.secs[k]; }).join(", "),c.nSec>1?"crosses sectors":"one sector",qmN(c.avgV,2)]; })};
     res.table.head[1]="Members";
-    var ss4=[]; cls.forEach(function(c){ c.members.forEach(function(r){ ss4.push(r.sym); }); }); res.send=send(ss4.filter(function(x,i,a4){ return a4.indexOf(x)===i; }),"hidden groups"); return fin(cls.length);
+    var ss4=[]; cls.forEach(function(c){ c.members.forEach(function(r){ ss4.push(r.sym); }); }); res.send=T.t==="list"?send(members,"hidden groups of "+label):send(ss4.filter(function(x,i,a4){ return a4.indexOf(x)===i; }),"hidden groups"); return fin(cls.length);
   }
   return fin(0);
 };

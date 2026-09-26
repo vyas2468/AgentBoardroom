@@ -84,7 +84,7 @@ var PC=[
  ["anom",/\banomal\w*\b|\bunusual\b/,"anomalous (graph anomaly 0.30 or more)",function(r){ return num(r.ga)&&r.ga>=0.3; }],
  ["conv",/\bsignals? (?:are )?converg\w*\b|\bsignal convergence\b|\bconverging signals?\b/,"where signals converge (3 or more lenses)",function(r){ return num(r.conv)&&r.conv>=3; }],
  ["notext",/\bnot (?:extended|stretched)\b|\bunextended\b/,"not extended (under 1 ATR above the trend line)",function(r){ return num(r.atr)&&r.atr<1; }],
- ["neartl",/\bnear (?:its |the )?trend ?line\b|\bpull ?backs?\b|\bdips?\b/,"near its trend line (within 0.5 ATR)",function(r){ return num(r.atr)&&Math.abs(r.atr)<=0.5; }],
+ ["neartl",/\bnear (?:its |the |their )?trend ?line\b|\bpull ?backs?\b|\bdips?\b/,"near its trend line (within 0.5 ATR)",function(r){ return num(r.atr)&&Math.abs(r.atr)<=0.5; }],
  ["notob",/\bnot overbought\b/,"not overbought",function(r){ return !r.obs; }],
  ["oversold",/\boversold\b/,"oversold",function(r){ return !!r.oss; }],
  ["hivol",/\bhigh vol\w*\b|\bvolatile\b/,"high volatility (score 67 or more)",function(r){ return num(r.vol)&&r.vol>=67; }],
@@ -315,6 +315,10 @@ function runSmart(spec,ctx,res){
     var s=0, w=0, parts=[]; Object.keys(W).forEach(function(k){ if(!W[k]||!num(f[k])) return; s+=W[k]*f[k]; w+=W[k]; parts.push([k,W[k]*f[k],f[k]]); });
     r._f=f; r._s=w?s/w*100:0; parts.sort(function(a,b){ return b[1]-a[1]; }); r._why=parts.slice(0,3).filter(function(p){ return p[2]>=0.55; }).map(function(p){ return (SHORT?{mom:"weak momentum",conv:"convergence "+(num(r.conv)?r.conv+"/6":""),dir:"deteriorating",rot:"falling subsector",sent:"weak SEW score",low:"low volatility"}:{mom:"momentum",conv:"convergence "+(num(r.conv)?r.conv+"/6":""),dir:"improving",rot:"rising subsector",sent:"SEW score",low:"low volatility"})[p[0]]; });
   });
+  /* "ranked / sorted by X": the named field sets the order (the diversification limits still apply) */
+  var rkm=t.match(/\b(?:ranked|sorted|ordered|rank|sort|order) (?:them |it |the portfolio )?by ([a-z0-9 ]+)/), rk=null;
+  if(rkm&&!etf){ try{ rk=qmRankX(rkm[1]); }catch(e){ rk=null; } if(rk&&(!QM_SYM[rk.f]||rk.f==="_nb")) rk=null; if(rk&&/^(?:risk|vol|volp|vol12|voly|beta)$/.test(rk.f)&&!/\b(?:most|highest|largest|biggest|top|riskiest|descending|high)\b/.test(rkm[1])) rk.d="asc"; }
+  if(rk){ var pR=pctRank(rows,function(r){ return r[rk.f]; }); rows.forEach(function(r){ var v=pR(r[rk.f]); r._s=num(v)?(rk.d==="asc"?1-v:v)*100:0; }); read.push(["Ranked by",QM_SYM[rk.f].lab+", "+(rk.d==="asc"?"lowest":"highest")+" first (the score column is its rank within the candidates)"]); }
   rows.sort(function(a,b){ return b._s-a._s; });
   /* constraints */
   var mx=t.match(/\b(?:max(?:imum)?|at most|no more than) (\d+) (?:per|in each|from each|from any|from one) sector\b/), maxSec=mx?+mx[1]:(/\bacross sectors\b|\bdiversif\w*\b|\bdifferent sectors\b/.test(t)?Math.max(1,Math.ceil(N/4)):Math.max(2,Math.ceil(N/3)));
@@ -322,6 +326,10 @@ function runSmart(spec,ctx,res){
   var maxHg=/\bhidden groups?\b/.test(t)?1:2, oneCl=/\bclusters?\b|\bhierarch\w*\b|\bdendrogram\b/.test(t);
   var lowCorr=/\blow(?:er)? correlat\w*\b|\buncorrelated\b|\bdiversif\w*\b|\bnot correlated\b|\bindependent\b|\bclusters?\b|\bhierarch\w*\b/.test(t), lam=lowCorr?3:1.2;
   if(th){ maxSec=Math.max(maxSec,Math.ceil(N/2)); maxInd=mxI?maxInd:Math.max(2,Math.ceil(N/3)); }
+  /* "can be in the same sector": no sector limit */
+  if(/\bcan (?:all )?(?:be|come) (?:in|from|part of) the same sector\b|\bsame sector (?:is |are )?(?:ok|okay|fine|allowed)\b|\bno (?:sector )?(?:limit|cap) (?:per|on) sectors?\b|\bno sector (?:limit|cap)\b/.test(t)){
+    if(mx||/\bacross sectors\b|\bdiversif\w*\b|\bdifferent sectors\b/.test(t)) notes.push("You asked both for a sector limit and for names in the same sector; the limit you named is kept.");
+    else maxSec=N; }
   var pick=[], cnt={sec:{},ind:{},hg:{},cl:{},grp:{}}, skipped={sec:0,ind:0,hg:0,cl:0,dup:0};
   for(var i=0;i<rows.length&&pick.length<N;i++){
     var best=null, bestV=-1e9;

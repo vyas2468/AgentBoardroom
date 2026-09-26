@@ -61,3 +61,7 @@ Kinds added this session: hxxx in v84-v99 (hcorr, hplot, hcport, hblocks, hview,
 - New spec fields must only appear when the words are present, or the "How this was computed" JSON changes.
 - Canvas/SVG exports: use `window.__svgPng` / `window.__canvasPng`; thread export in v97 (SVG foreignObject).
 - `downloads` go through `DLNS` (claude.use("downloads")); My tiles sync to the db doc `mytiles/main`.
+
+
+## Quick regression (v101+)
+Copy `artifact/tools/regress.sh` and `probe.sh` into the scratchpad next to harness.js; `./regress.sh TAG` runs all five suites against the saved baselines (r_new30, r_tiles30, r_bt, r_nd2, r_tall12) and prints any changed answers. Never `pkill -f harness.js`.
