@@ -332,3 +332,4 @@ Still to do: 7 (multi-condition group counts), 8 (never drop a phrase silently),
   line; stocks only). Tiles "Breakout screens" (6) and "Breakout portfolios" (6), tests artifact/tools/tests/q_botiles.json.
   Not yet read correctly (fix next session): "bullish trend flip" (becomes plain uptrend), "fast above slow" (dropped),
   "crossed above the DSP" (read as above, not a fresh cross), rising blocks + "fresh uptrend" over 60 bars returns none.
+- Smart portfolio builder (v98 runSmart) ignores an explicit "ranked / sorted by X" (e.g. trend strength -> trend length): when present, order candidates and set score-rank weights by that field (percentile), and say so; today it keeps the blended score while v100 prints a misleading "Read as" note.
