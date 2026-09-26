@@ -375,3 +375,8 @@ names from the previous answer). To add:
 8. RS vs own sector / sector ETF: "Plot relative strength of these vs their sector" - each name divided by its sector's
    equal-weight basket (or the sector ETF, e.g. XLK for IT), so leaders inside weak sectors show up.
 - Read "can be (in|part of) the same sector / subsector" as "no sector (subsector) limit"; if the question also says "N per sector", warn about the contradiction and say which one was applied.
+- "Show me every symbol in every sector and sub sector" is not read by the rules (Claude declined as too broad). Add a
+  "universe listing" answer: grouped table sector -> subsector -> symbols (with counts), optional filter words
+  ("... that are improving"), Copy as CSV; cap the on-screen table and point to the Symbols / Industry Ledger tabs.
+- The per-answer label (v97 + v98 `__qmHow`) is only set when a spec comes back; when Claude was tried but failed it
+  shows nothing - label it "tried Claude (no usable query)".
