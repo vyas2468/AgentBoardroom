@@ -1,0 +1,28 @@
+const { chromium } = require('playwright'); const fs=require('fs'),path=require('path'),http=require('http');
+const srv=http.createServer((q,r)=>{let p=q.url.split('?')[0];if(p=='/')p='/index.html';const f=path.join('site_new',p);if(!fs.existsSync(f)){r.writeHead(404);return r.end();}r.writeHead(200,{'content-type':'text/html'});fs.createReadStream(f).pipe(r);}).listen(0);
+(async()=>{const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome'});const pg=await b.newPage();const errs=[];pg.on('pageerror',e=>errs.push(e.message));
+await pg.goto('http://127.0.0.1:'+srv.address().port+'/'); const s=fs.readFileSync('db/live_scan.json','utf8');
+await pg.evaluate(s=>{localStorage.setItem('alexaligned.scan.v1',JSON.stringify({savedAt:'t',source:'device',scan:JSON.parse(s)}));localStorage.removeItem('alexaligned.tracker.v1');},s); await pg.reload(); await pg.waitForTimeout(1500); await pg.setInputFiles('#hxFile','real_hist.csv'); await pg.waitForTimeout(6000);
+await pg.evaluate(()=>document.querySelector('#tab-qry').click());
+const lastTile=await pg.evaluate(()=>{ const c=[...document.querySelectorAll('#hx93Tiles > div > div')]; const x=c[c.length-1]; return x?x.firstElementChild.textContent:'none'; }); console.log('LAST TILE GROUP:',lastTile);
+for(const q of JSON.parse(fs.readFileSync('q_trktile.json','utf8'))){ const n0=await pg.evaluate(()=>document.querySelectorAll('#qmThread .qm-turn').length);
+ await pg.evaluate(q=>{document.querySelector('#qmInput').value=q;document.querySelector('#qmGo').click();},q); await pg.waitForFunction(n=>document.querySelectorAll('#qmThread .qm-turn').length>n,n0);
+ const r=await pg.evaluate(()=>{ const a=document.querySelectorAll('#qmThread .qm-turn'); const x=a[a.length-1]; const bt=x.querySelector('[data-trk]'); if(!bt) return 'NO BUTTON: '+x.querySelector('.qm-a').innerText.slice(0,120); const t=bt.textContent; bt.click(); return t+' -> '+x.querySelector('.hx103').innerText.slice(0,110); }); console.log(q.slice(0,60),'|',r); }
+await pg.evaluate(()=>document.querySelector('#tab-ptk').click()); await pg.waitForTimeout(500);
+console.log('VIEW BTNS:',await pg.evaluate(()=>document.querySelectorAll('#pane-ptk [data-trksel]').length),'OPTIONS:',await pg.evaluate(()=>[...document.querySelectorAll('#hx103Sel option')].map(o=>o.textContent).join(' || ')));
+await pg.evaluate(()=>document.querySelectorAll('#pane-ptk [data-trksel]')[1].click()); await pg.waitForTimeout(300);
+console.log('SELECTED:',await pg.evaluate(()=>document.querySelector('#hx103Sel').selectedOptions[0].textContent+' / heading: '+document.querySelector('#pane-ptk h3:nth-of-type(2)').textContent));
+await pg.selectOption('#hx103Sel',{index:4}); await pg.waitForTimeout(300); console.log('AFTER SELECT:',await pg.evaluate(()=>document.querySelector('#pane-ptk h3:nth-of-type(2)').textContent));
+const sel0=await pg.evaluate(()=>document.querySelector('#hx103Sel').selectedOptions[0].textContent);
+await pg.evaluate(()=>document.querySelector('#pane-ptk [data-trkren]').click()); await pg.waitForTimeout(200);
+await pg.fill('#hx103Name','My dual momentum'); await pg.evaluate(()=>document.querySelector('[data-trkrensave]').click()); await pg.waitForTimeout(200);
+console.log('RENAMED:',await pg.evaluate(()=>window.__trk.state().ports.map(p=>p.name).filter(n=>/My dual/.test(n)).join()));
+await pg.evaluate(()=>document.querySelector('#pane-ptk [data-trkdel]').click()); await pg.waitForTimeout(200);
+console.log('ARMED:',await pg.evaluate(()=>document.querySelector('#pane-ptk [data-trkdel]').textContent), 'count', await pg.evaluate(()=>window.__trk.state().ports.length));
+await pg.evaluate(()=>document.querySelector('#pane-ptk [data-trkdel]').click()); await pg.waitForTimeout(200);
+console.log('AFTER DELETE count', await pg.evaluate(()=>window.__trk.state().ports.length), await pg.evaluate(()=>document.querySelector('#pane-ptk').innerText.match(/Deleted[^\n]*/)[0]));
+await pg.evaluate(()=>document.querySelector('[data-trkundo]').click()); await pg.waitForTimeout(200);
+console.log('AFTER UNDO count', await pg.evaluate(()=>window.__trk.state().ports.length));
+await pg.evaluate(()=>document.querySelector('#pane-ptk [data-trkdel]').click()); await pg.evaluate(()=>document.querySelector('[data-trkcancel]').click()); await pg.waitForTimeout(200);
+console.log('AFTER CANCEL count', await pg.evaluate(()=>window.__trk.state().ports.length), 'button:', await pg.evaluate(()=>document.querySelector('#pane-ptk [data-trkdel]').textContent));
+console.log('TRACKED:',await pg.evaluate(()=>window.__trk.state().ports.length),'errors',errs); await b.close(); srv.close(); })();

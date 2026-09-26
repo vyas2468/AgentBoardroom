@@ -1,6 +1,6 @@
 ============================================================================
 SECTOR ROTATION TERMINAL - FINAL HANDOFF (2026-09-26_2015UTC, end of session)
-Live page: https://claude.ai/artifact/JBivgL88qHWeaCSsepr7cN  (version 132)
+Live page: https://claude.ai/artifact/JBivgL88qHWeaCSsepr7cN  (version 134)
 Code: branch claude/artifact-access-question-f3s8rs, folder artifact/ (base page + layers v81-v102)
 Technical detail for the next session: docs/HANDOFF.md (start at the top section)
 ============================================================================
@@ -207,6 +207,16 @@ TESTED
    right reasons, the rest held, fills at the part E opens, same-date replace and older-scan refusal.
  - Regression: all 348 saved answers identical apart from the new Track button line.
  - Also fixed: "Plot the rolling correlation of every sector" now draws all 11 sectors against RSP.
+
+UPDATES AFTER PHASE 1 (versions 133-134)
+ - New tile group at the END of the tiles: "Portfolio Tracker: examples to track" (6 tested questions: smart
+   pullback portfolio, pullback list, fresh-uptrend low-correlation portfolio, long / short, dual momentum, top 2 per
+   sector). Ask one, then press "Track this portfolio / list".
+ - Tracker tab: "Show the details of:" is now a drop-down with full names, and each overview row has a
+   "View details" button (before: a row of truncated "Show:" buttons and an unexplained #id).
+ - Delete now works: first click asks "Yes, delete this portfolio" (or Cancel) inside the page, and an "Undo" appears
+   after deleting. Rename uses a text box with Save / Cancel. (The browser pop-ups used before are blocked on
+   claude.ai, which is why Delete and Rename did nothing.) Names keep up to 160 characters.
 
 NEXT (phase 2, in docs/TRACKER_PLAN_2026-09-26.txt): settings per portfolio (entry at close, costs, buffer, minimum
 hold, stop loss, time exit, weekly / monthly rebalance, answer weights), Compare and Combined views (allocations,

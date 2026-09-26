@@ -115,8 +115,8 @@ document.addEventListener("click",function(e){ var b=e.target&&e.target.closest?
   var d=scanDate(); if(!d){ b.textContent="No scan date: load a scan first"; return; }
   var turn=b.closest(".qm-turn"), q=turn&&turn.querySelector(".qm-q")?turn.querySelector(".qm-q").textContent.trim():"Tracked "+r.kind;
   var id="p"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-  ST.ports.push({id:id,name:q.slice(0,80),q:q,kind:r.kind,spec:r.spec,created:d,settings:{entry:"open",cost:10,notional:100000},ups:[{d:d,picks:r.picks,exits:{}}]}); save(); SEL=id; render();
-  var p=b.parentNode; p.innerHTML='Tracked as “'+hE(q.slice(0,80))+'” ('+r.picks.length+' names, signal '+d+'). <button type="button" class="btn ghost" data-trkgo="1">Open the Portfolio Tracker</button>'; });
+  ST.ports.push({id:id,name:q.slice(0,160),q:q,kind:r.kind,spec:r.spec,created:d,settings:{entry:"open",cost:10,notional:100000},ups:[{d:d,picks:r.picks,exits:{}}]}); save(); SEL=id; render();
+  var p=b.parentNode; p.innerHTML='Tracked as “'+hE(q.slice(0,160))+'” ('+r.picks.length+' names, signal '+d+'). <button type="button" class="btn ghost" data-trkgo="1">Open the Portfolio Tracker</button>'; });
 
 /* ================= update all ================= */
 function reasonFor(spec,ctx,s,N){ var r=ctx.bySym[s]; if(!r) return "missing from the scan";
@@ -139,7 +139,7 @@ function updateAll(){
 }
 
 /* ================= tab ================= */
-var SEL=null, LASTMSG=[];
+var SEL=null, LASTMSG=[], DELARM=null, RENAME=null, UNDO=null;
 function status(){ var el=document.getElementById("hx103Cloud"); if(el) el.textContent={local:"Saved in this browser",saving:"Saving to your account…",synced:"Saved to your account",error:"Account save failed (kept in this browser)"}[CLOUD]||""; }
 function tbl(head,align,body,hx){ var t={head:head,align:align,body:body}; if(hx) t.hxColor=hx; try{ return qmTableHtml(t); }catch(e){ return ""; } }
 function chart(E,title){ if(!E||E.length<2) return '<p class="mini">The equity curve starts once the first orders have filled (next open after the signal).</p>';
@@ -160,14 +160,18 @@ function render(){
   var R={}; ST.ports.forEach(function(p){ try{ R[p.id]=engine(p,hx,bench); }catch(e){ R[p.id]={error:e.message}; } });
   var h=['<h2 style="margin:4px 0 6px">Portfolio Tracker</h2><p class="mini" style="max-width:900px">Track portfolios and lists from Ask the terminal. Each day: load the new scan and the part E history, then press <b>Update all tracked</b>. Every portfolio re-runs its frozen rules on the new scan: new names are bought, names that no longer qualify are sold (with the reason), the rest are held. Fills at the next day’s open after the signal, 10 bp cost per side, equal weights, 100,000 start. Forward tracking only, not a backtest.</p>',
     '<p style="margin:6px 0"><button type="button" class="btn" data-trkupd="1">Update all tracked</button> <span class="mini">Loaded scan: <b>'+hE(d||"none")+'</b> · history: <b>'+hE(hx?hx.lastDate:"not loaded")+'</b> · <span id="hx103Cloud"></span></span></p>'];
+  if(UNDO) h.push('<p class="mini" style="margin:4px 0 8px;padding:6px 10px;border-left:3px solid var(--neg)">Deleted “'+hE(UNDO.p.name)+'”. <button type="button" class="btn ghost" data-trkundo="1">Undo</button></p>');
   if(LASTMSG.length) h.push('<div class="mini" style="margin:4px 0 8px;padding:6px 10px;border-left:3px solid var(--accent)">'+LASTMSG.map(hE).join("<br>")+'</div>');
   if(!ST.ports.length){ h.push('<p>Nothing is tracked yet. In Ask the terminal, build a portfolio (for example “Build a smart portfolio of 8 stocks in an uptrend, pulling back”) and press <b>📌 Track this portfolio</b> under the answer.</p>'); pane.innerHTML=h.join(""); status(); return; }
   h.push('<h3 style="margin:10px 0 4px">Overview</h3>');
   h.push(tbl(["Portfolio","Type","Started","Last update","Updates","Holdings","Value","Return","RSP","vs RSP","Max drawdown","Trades","Win rate",""],["l","l","l","l","r","r","r","r","r","r","r","r","r","l"],
-    ST.ports.map(function(p){ var r=R[p.id]||{}, st=r.stats; return [p.name,p.kind,p.created,p.ups[p.ups.length-1].d,String(p.ups.length),st?String(st.holdings):String(p.ups[p.ups.length-1].picks.length)+" (pending)",st?money(st.value):"–",st?pct(st.ret):"–",st?pct(st.bench):"–",st&&num(st.bench)?pct(st.ret-st.bench):"–",st?pct(st.mdd):"–",st?String(st.trades):"0",st&&num(st.win)?st.win.toFixed(0)+"%":"–","#"+p.id]; }),{7:"sign",9:"sign",10:"sign"}));
+    ST.ports.map(function(p){ var r=R[p.id]||{}, st=r.stats; return [p.name,p.kind,p.created,p.ups[p.ups.length-1].d,String(p.ups.length),st?String(st.holdings):String(p.ups[p.ups.length-1].picks.length)+" (pending)",st?money(st.value):"–",st?pct(st.ret):"–",st?pct(st.bench):"–",st&&num(st.bench)?pct(st.ret-st.bench):"–",st?pct(st.mdd):"–",st?String(st.trades):"0",st&&num(st.win)?st.win.toFixed(0)+"%":"–","__VIEW__"+p.id]; }),{7:"sign",9:"sign",10:"sign"}).replace(/__VIEW__([a-z0-9]+)/g,function(m,id){ return '<button type="button" class="btn ghost" data-trksel="'+id+'">View details</button>'; }));
   var p=ST.ports.filter(function(x){ return x.id===SEL; })[0]||ST.ports[ST.ports.length-1]; SEL=p.id; var r=R[p.id]||{};
-  h.push('<p style="margin:8px 0">Show: '+ST.ports.map(function(x){ return '<button type="button" class="btn'+(x.id===p.id?'':' ghost')+'" data-trksel="'+x.id+'" style="margin:2px">'+hE(x.name.slice(0,40))+'</button>'; }).join("")+'</p>');
-  h.push('<h3 style="margin:12px 0 4px">'+hE(p.name)+'</h3><p class="mini">Question: '+hE(p.q)+' · frozen query kind <b>'+hE(p.spec.kind)+'</b> · started '+hE(p.created)+' <button type="button" class="btn ghost" data-trkren="'+p.id+'">Rename</button> <button type="button" class="btn ghost" data-trkcsv="'+p.id+'">Download CSV</button> <button type="button" class="btn ghost" data-trkdel="'+p.id+'">Delete</button></p>');
+  h.push('<p style="margin:10px 0"><label><b>Show the details of:</b> <select id="hx103Sel" style="max-width:100%;font:inherit;padding:4px 6px">'+ST.ports.map(function(x){ return '<option value="'+x.id+'"'+(x.id===p.id?' selected':'')+'>'+hE(x.name)+'</option>'; }).join("")+'</select></label> <span class="mini">(or use “View details” in the overview)</span></p>');
+  h.push('<h3 style="margin:12px 0 4px">'+hE(p.name)+'</h3><p class="mini">Question: '+hE(p.q)+' · frozen query kind <b>'+hE(p.spec.kind)+'</b> · started '+hE(p.created)+' </p>');
+  h.push('<p style="margin:4px 0">'+(RENAME===p.id?'<input id="hx103Name" type="text" value="'+hE(p.name)+'" style="font:inherit;padding:4px 6px;min-width:320px;max-width:100%"> <button type="button" class="btn" data-trkrensave="'+p.id+'">Save name</button> <button type="button" class="btn ghost" data-trkcancel="1">Cancel</button>':'<button type="button" class="btn ghost" data-trkren="'+p.id+'">Rename</button>')+
+    ' <button type="button" class="btn ghost" data-trkcsv="'+p.id+'">Download CSV</button> '+
+    (DELARM===p.id?'<button type="button" class="btn" data-trkdel="'+p.id+'" style="background:var(--neg);border-color:var(--neg);color:#fff">Yes, delete this portfolio</button> <button type="button" class="btn ghost" data-trkcancel="1">Cancel</button>':'<button type="button" class="btn ghost" data-trkdel="'+p.id+'">Delete</button>')+'</p>');
   if(r.error) h.push('<p>Could not compute: '+hE(r.error)+'</p>');
   if(r.fillNote) h.push('<p class="mini">'+hE(r.fillNote)+'</p>');
   var st=r.stats; if(st) h.push(tbl(["Measure","Value"],["l","r"],[["Period",st.start+" to "+st.end+" ("+st.days+" bars)"],["Value (start 100,000)",money(st.value)],["Return",pct(st.ret)],["RSP over the same days",pct(st.bench)],["Max drawdown",pct(st.mdd)],["Annualised volatility",num(st.vol)?st.vol.toFixed(1)+"%":"\u2013"],["Sharpe-style ratio",num(st.sharpe)?st.sharpe.toFixed(2):"–"],["Closed trades / win rate",st.trades+" / "+(num(st.win)?st.win.toFixed(0)+"%":"–")],["Average win / loss",pct(st.avgWin)+" / "+pct(st.avgLoss)],["Average days held",num(st.avgDays)?st.avgDays.toFixed(1):"–"],["Turnover (traded / average value)",num(st.turnover)?st.turnover.toFixed(0)+"%":"–"]]));
@@ -188,13 +192,17 @@ function csvOf(p){ var r=engine(p,H(),(A.bench&&A.bench())||"RSP"), L=["type,dat
   return L.join("\n"); }
 function download(name,text){ try{ if(window.claude&&window.claude.use){ window.claude.use("downloads").then(function(dl){ if(dl&&dl.save) dl.save({filename:name,data:text}).catch(function(){}); else fallback(); },fallback); return; } }catch(e){} fallback();
   function fallback(){ try{ var a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([text],{type:"text/csv"})); a.download=name; document.body.appendChild(a); a.click(); a.remove(); }catch(e){} } }
-document.addEventListener("click",function(e){ var t=e.target&&e.target.closest?e.target.closest("[data-trkupd],[data-trksel],[data-trkren],[data-trkdel],[data-trkcsv],[data-trkgo]"):null; if(!t) return;
+document.addEventListener("change",function(e){ if(e.target&&e.target.id==="hx103Sel"){ SEL=e.target.value; render(); } });
+document.addEventListener("click",function(e){ var t=e.target&&e.target.closest?e.target.closest("[data-trkupd],[data-trksel],[data-trkren],[data-trkdel],[data-trkcsv],[data-trkgo],[data-trkrensave],[data-trkcancel],[data-trkundo]"):null; if(!t) return;
+  if(t.hasAttribute("data-trkcancel")){ DELARM=null; RENAME=null; render(); return; }
+  if(t.hasAttribute("data-trkundo")){ if(UNDO){ ST.ports.splice(Math.min(UNDO.i,ST.ports.length),0,UNDO.p); SEL=UNDO.p.id; UNDO=null; save(); render(); } return; }
+  if(t.hasAttribute("data-trkrensave")){ var pr=ST.ports.filter(function(x){ return x.id===t.getAttribute("data-trkrensave"); })[0], inp=document.getElementById("hx103Name"); if(pr&&inp&&inp.value.trim()){ pr.name=inp.value.trim().slice(0,160); save(); } RENAME=null; render(); return; }
   if(t.hasAttribute("data-trkgo")){ var tb=document.getElementById("tab-ptk"); if(tb){ try{ selectTab(tb); }catch(err){} window.scrollTo({top:0,behavior:"smooth"}); render(); } return; }
   if(t.hasAttribute("data-trkupd")){ LASTMSG=updateAll(); render(); return; }
-  if(t.hasAttribute("data-trksel")){ SEL=t.getAttribute("data-trksel"); render(); return; }
+  if(t.hasAttribute("data-trksel")){ SEL=t.getAttribute("data-trksel"); render(); try{ var dd=document.getElementById("hx103Sel"); if(dd) dd.scrollIntoView({behavior:"smooth",block:"start"}); }catch(err){} return; }
   var id=t.getAttribute("data-trkren")||t.getAttribute("data-trkdel")||t.getAttribute("data-trkcsv"), p=ST.ports.filter(function(x){ return x.id===id; })[0]; if(!p) return;
-  if(t.hasAttribute("data-trkren")){ var nm=null; try{ nm=window.prompt("New name",p.name); }catch(err){} if(nm&&nm.trim()){ p.name=nm.trim().slice(0,80); save(); render(); } return; }
-  if(t.hasAttribute("data-trkdel")){ var ok=false; try{ ok=window.confirm("Delete “"+p.name+"” and all its history? This cannot be undone."); }catch(err){} if(ok){ ST.ports=ST.ports.filter(function(x){ return x.id!==id; }); SEL=null; save(); render(); } return; }
+  if(t.hasAttribute("data-trkren")){ RENAME=id; DELARM=null; render(); try{ var ip=document.getElementById("hx103Name"); if(ip){ ip.focus(); ip.select(); } }catch(err){} return; }
+  if(t.hasAttribute("data-trkdel")){ if(DELARM!==id){ DELARM=id; RENAME=null; render(); return; } var ix=ST.ports.indexOf(p); UNDO={p:p,i:ix}; ST.ports=ST.ports.filter(function(x){ return x.id!==id; }); DELARM=null; SEL=null; save(); render(); return; }
   if(t.hasAttribute("data-trkcsv")) download("tracker_"+p.name.replace(/[^a-z0-9]+/gi,"_").slice(0,40)+".csv",csvOf(p)); });
 
 /* the tab (added like the Guide tab) */
