@@ -66,7 +66,7 @@ F. Ask the terminal (new kinds of question, all in plain English)
      rolling correlation, a pair's spread, sector baskets, the rising or falling blocks, or the previous answer.
    - Subsector Web inside answers: "Show me the subsector web for Credit Services" draws it in the answer
      (company dots open tear sheets) with a button to the fully interactive tab.
-   - 30 themed example tiles, about 240 questions, each with Run and Edit.
+   - 33 themed example tiles, about 260 questions, each with Run and Edit (plus your own My tiles).
    - Several wrong answers fixed (for example "correlation between NVDA and AMD", "least correlated with the
      market", "relationships breaking down", "what leads Semiconductors", "two tickers from different sectors
      with the highest correlation").
@@ -262,7 +262,7 @@ forecast; connection paths show co-movement, not cause.
 
 PART 8. FINAL STATUS (end of session, 26 Sep 2026)
 --------------------------------------------------
-Live page: https://claude.ai/artifact/JBivgL88qHWeaCSsepr7cN (version 106)
+Live page: https://claude.ai/artifact/JBivgL88qHWeaCSsepr7cN (version 107)
 Code:      branch claude/artifact-access-question-f3s8rs (layers v81 to v99 in artifact/layers, splice81.py builds the page)
 
 Your last checks, reviewed: all seven answers you pasted (smart 10-stock portfolio, themes strengthening, Credit Services
@@ -308,7 +308,7 @@ Note: saved tiles live in this browser only. Clearing site data, or a private wi
 "Copy all" backup of tiles you care about.
 
 
-PART 10. LAST CHANGES (version 106)
+PART 10. LAST CHANGES (version 107)
 -----------------------------------
 A. My tiles now persist properly
    - Every change is saved in this browser AND in your account's store for this page, so your tiles follow you to any
@@ -363,3 +363,29 @@ PART 11. VERSION 106
   "Which IT Sector stocks are connected to other sectors and improving / anomalous / falling?".
 - Outstanding: "in rising subsectors" inside a connections question is not yet applied (the answer covers the whole
   sector); the navy theme (next session).
+
+
+PART 12. THREE NEW TILES (version 107) AND END OF SESSION
+---------------------------------------------------------
+New tiles in Ask the terminal, every question tested and answering correctly:
+ 1. "Portfolios with conditions (combine them)" - 7 questions: strongest name per rising block + improving + signal
+    convergence; blocks + liquid + not overbought; smart builder with liquid / not extended / uptrend / near 52-week highs;
+    independent + low drawdown + beating the market; established uptrend + low beta + not deteriorating; anomalous +
+    improving + momentum with max 2 per sector; an improving-ETF portfolio weighted by inverse volatility.
+ 2. "Sector links with conditions" - 7 questions: IT Sector names linked to other sectors that are improving; linked to
+    Financials and falling; Industrials names linked to IT Sector that are anomalous; links from other subsectors to IT;
+    Semiconductors vs IT; bridges between Utilities and IT Sector; the NVDA to VST path.
+ 3. "Rotation, leaders and laggards" - 7 questions: software into semis rotation; leading and lagging sectors this month;
+    themes weakening; weakest names in the strongest subsectors; best stock in each rising subsector; best stock in
+    each theme; the rate-sensitive theme.
+Two small fixes found while testing them: "Which themes are weakening?" now says "Weakest:" in its first line, and
+"Best stock in each theme" now gives one name per theme (it showed the theme table before).
+
+Final checks (version 107): the 49 original questions, all 207 earlier tile questions and the 34 newer tile questions
+answer word for word as before; the 21 new questions all answer; no page errors.
+
+STILL OUTSTANDING (for a future session)
+ - Navy colour theme (needs every tab, chart and export checked in the new colours).
+ - "in rising subsectors" inside a connections question is not applied yet.
+ - A tidier AF layout for very large subsectors (everything is visible, but busy).
+ Nothing is broken or half-finished; all work is published, committed and pushed.

@@ -171,6 +171,9 @@ qmParseX=function(q){
       var th2=themesIn(rest); if(/\btheme/.test(t)||th2.some(function(k){ return k==="aiinfra"||k==="power"||k==="semis"; })) th2.forEach(function(k){ G.push({t:"theme",k:k}); var re=new RegExp(TH_BY[k].re.source,"g"); rest=rest.replace(re," "); });
       (qmSecMentions(rest).inn||[]).forEach(function(k){ var key=qmSecKey(k)||k; if(!G.some(function(g){ return g.t==="sec"&&g.k===key; })) G.push({t:"sec",k:key}); });
       if(G.length===2) return mark({kind:"hconn",mode:"groups",g:G}); }
+    /* ---- best name in each group ---- */
+    var EA=t.match(/\b(?:best|strongest|top|leading)(?: \d)? (?:stock|name|pick|company|ticker)s? (?:in|from|for|of) (?:each|every) (?:(rising|falling|improving|deteriorating|strong|weak) )?(sub ?sectors?|sectors?|themes?|hidden groups?|clusters?)\b/);
+    if(EA) return mark({kind:"hsmart",mode:"each",uni:"stocks",by:/sub/.test(EA[2])?"ind":(/sector/.test(EA[2])?"sec":(/theme/.test(EA[2])?"theme":(/hidden/.test(EA[2])?"hg":"cl"))),dir:EA[1]||null,t:t});
     /* ---- themes and rotation ---- */
     var THW=/\bthemes?\b|\bnarratives?\b/.test(t), ROT=/\brotat\w*\b|\bmoney (?:is )?(?:moving|flowing|going)\b|\bflows? (?:from|into)\b/.test(t);
     if(PORT&&th.length&&(THW||th[0]==="aiinfra"||th[0]==="power")) return mark({kind:"hsmart",uni:"stocks",n:nOf(t,10),theme:th[0],t:t});
@@ -188,9 +191,6 @@ qmParseX=function(q){
       if(th.length===1&&!/\bthemes\b|\ball themes\b|\bwhich themes?\b|\brank\b/.test(t)) return mark({kind:"htheme",mode:"detail",k:th[0]});
       return mark({kind:"htheme",mode:"list",win:winOf(t)||"m1",asc:/\bweak\w*\b|\blagging\b|\bworst\b|\bdeteriorat\w*\b/.test(t)&&!/\bstrong\w*\b/.test(t),by:/\bstrengthen\w*|\bimprov\w*/.test(t)?"sent":null}); }
     if(/\bshow (?:me )?the (.+?) (?:theme|basket)\b/.test(t)&&th.length===1) return mark({kind:"htheme",mode:"detail",k:th[0]});
-    /* ---- best name in each group ---- */
-    var EA=t.match(/\b(?:best|strongest|top|leading)(?: \d)? (?:stock|name|pick|company|ticker)s? (?:in|from|for|of) (?:each|every) (?:(rising|falling|improving|deteriorating|strong|weak) )?(sub ?sectors?|sectors?|themes?|hidden groups?|clusters?)\b/);
-    if(EA) return mark({kind:"hsmart",mode:"each",uni:"stocks",by:/sub/.test(EA[2])?"ind":(/sector/.test(EA[2])?"sec":(/theme/.test(EA[2])?"theme":(/hidden/.test(EA[2])?"hg":"cl"))),dir:EA[1]||null,t:t});
     /* ---- adaptive portfolio ---- */
     if(PORT&&!/\brisk level\b|\blong[ -]short\b|\bshort\b|\b(?:one|1) (?:stock |name )?(?:per|from each|in each|for each) (?:cluster|block|bloc)\b|\bfrom each (?:rising|falling) (?:block|cluster)\b|\b(?:each|every) (?:rising |falling |directional )?(?:block|bloc)s?\b|\bpairs?\b|\bhedg\w*\b/.test(t)){
       var ETF=/\betfs?\b|\bfunds\b|\bexchange traded\b/.test(t);
@@ -425,7 +425,7 @@ function runTheme(spec,ctx,res){
       res.extra=[{title:"Lagging (weakest first)",table:{head:head,align:head.map(function(x,i){ return i<2||i===13?"l":"r"; }),hxColor:col,body:lag.map(function(u,k){ return trim(rowOf(u,k)); })}}];
       res.notes.push("Ranked on the "+WL[win]+" equal-weight return, net sentiment and the share improving (average of their percentiles).");
       return U2.length; }
-    res.lead=(level==="theme"?"Cross-sector themes":"All "+lab+"s")+" ranked "+(spec.asc?"weakest":"strongest")+" first"+(spec.by==="sent"?" on sentiment (net strengthening and share improving)":" on "+WL[win]+" return, net sentiment and share improving")+", bar "+ctx.date+". Strongest: "+U2.slice(0,3).map(function(u){ return u.name; }).join(", ")+".";
+    res.lead=(level==="theme"?"Cross-sector themes":"All "+lab+"s")+" ranked "+(spec.asc?"weakest":"strongest")+" first"+(spec.by==="sent"?" on sentiment (net strengthening and share improving)":" on "+WL[win]+" return, net sentiment and share improving")+", bar "+ctx.date+". "+(spec.asc?"Weakest":"Strongest")+": "+U2.slice(0,3).map(function(u){ return u.name; }).join(", ")+".";
     res.table={head:head,align:head.map(function(x,i){ return i<2||i===13?"l":"r"; }),hxColor:col,body:U2.slice(0,level==="ind"?25:U2.length).map(function(u,k){ return trim(rowOf(u,k)); })};
     if(level==="theme") res.notes.push("Themes are fixed baskets of subsectors that cut across sectors (for example AI power = independent power producers, regulated electric utilities, electrical equipment, industrial machinery, engineering and data-centre REITs). Ask “show me the AI power theme” for its members, “is money rotating from growth into defensives?”, or “build a theme portfolio for AI infrastructure”. For themes found from prices instead, ask “blocks rising together”.");
     return U2.length;
