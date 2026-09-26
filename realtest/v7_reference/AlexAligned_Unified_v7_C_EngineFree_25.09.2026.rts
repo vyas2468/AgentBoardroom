@@ -1,0 +1,982 @@
+Notes:
+	AlexAligned Unified v7 split, part C, engine free columns, returns momentum breadth rotation. Run FIRST with import apply scan, it creates the shared data file.
+	Generated from the v6 script by gen_AlexAligned_Unified_v7_split.py. Every v6 scan column is in exactly one part.
+	Parts A B C and D share ONE data file, alexaligned_unified_v7.rtd, written by the import in part C.
+	Merge the scan CSVs with merge_v7_scans.py before the terminal Update.
+	The Import block below is identical in all parts and only runs when import is on the command line, so only part C is run with import.
+
+Import:
+	DataSource:	Yahoo
+	IncludeList:	APP, CHTR, CMCSA, DIS, ECHO, FOX, FOXA, GOOG, GOOGL, LYV, META, NFLX, NWS, NWSA, OMC, PSKY, RDDT, T, TKO, TMUS {"Comms"}
+	IncludeList:	TTWO, VZ, WBD {"Comms"}
+	IncludeList:	AMCR, AMZN, APTV, AVY, AZO, BALL, BBY, CASY, CMG, CVNA, DASH, DECK, DHI, DPZ, DRI, EBAY, F, GM, GPC, HAS {"ConsumerDisc"}
+	IncludeList:	HD, HLT, IP, LEN, LOW, LULU, LVS, MAR, MCD, MELI, MGM, NKE, NVR, ORLY, PDD, PHM, PKG, RL, ROL, ROST {"ConsumerDisc"}
+	IncludeList:	SBUX, SW, TJX, TPR, TSCO, TSLA, ULTA, WSM, WYNN, YUM {"ConsumerDisc"}
+	IncludeList:	ADM, BF-B, BG, CCEP, CHD, CL, CLX, COST, DG, DLTR, EL, GIS, HRL, HSY, KDP, KHC, KMB, KO, KR, KVUE {"ConsStaples"}
+	IncludeList:	MDLZ, MKC, MNST, MO, PEP, PG, PM, SJM, STZ, SYY, TGT, TSN, WMT {"ConsStaples"}
+	IncludeList:	APA, BKR, COP, CVX, DVN, EOG, EQT, EXE, FANG, HAL, KMI, MPC, OKE, OXY, PSX, SLB, TPL, TRGP, VLO, WMB {"Energy"}
+	IncludeList:	XOM {"Energy"}
+	IncludeList:	ACGL, AFL, AIG, AIZ, AJG, ALL, AMP, AON, APO, ARES, AXP, BAC, BEN, BLK, BNY, BRK-B, BRO, BX, C, CB {"Financials"}
+	IncludeList:	CBOE, CFG, CINF, CME, COF, COIN, EG, ERIE, FDS, FITB, GL, GS, HBAN, HIG, HOOD, IBKR, ICE, IVZ, JPM, KEY {"Financials"}
+	IncludeList:	KKR, L, MA, MCO, MET, MRSH, MS, MSCI, MTB, NDAQ, NTRS, PFG, PGR, PNC, PRU, PYPL, RF, RJF, SCHW, SPGI {"Financials"}
+	IncludeList:	STT, SYF, TFC, TROW, TRV, USB, V, WFC, WRB, WTW {"Financials"}
+	IncludeList:	A, ABBV, ABT, ALGN, ALNY, AMGN, BAX, BDX, BIIB, BMY, BSX, CAH, CI, CNC, COO, COR, CRL, CVS, DGX, DHR {"Healthcare"}
+	IncludeList:	DVA, DXCM, ELV, EW, GEHC, GILD, HCA, HSIC, HUM, IDXX, ILMN, INCY, IQV, ISRG, JNJ, LH, LLY, MCK, MDT, MRK {"Healthcare"}
+	IncludeList:	MRNA, MTD, PFE, PODD, REGN, RMD, RVTY, SOLV, STE, SYK, TECH, TMO, UHS, UNH, VEEV, VRTX, VTRS, WAT, WST, ZBH {"Healthcare"}
+	IncludeList:	ZTS {"Healthcare"}
+	IncludeList:	ABNB, ADP, ALLE, AME, AOS, AXON, BA, BE, BKNG, CARR, CAT, CCL, CHRW, CMI, CPRT, CSX, CTAS, DAL, DE, DOV {"Industrials"}
+	IncludeList:	EFX, EME, EMR, ETN, EXPD, EXPE, FAST, FDX, FDXF, FER, FERG, FIX, GD, GE, GEV, GNRC, GPN, GWW, HII, HON {"Industrials"}
+	IncludeList:	HONA, HUBB, HWM, IEX, IR, ITW, J, JBHT, JCI, LHX, LII, LMT, LUV, MAS, MMM, NCLH, NDSN, NOC, NSC, ODFL {"Industrials"}
+	IncludeList:	OTIS, PAYX, PCAR, PH, PNR, PWR, RCL, RKLB, ROK, RSG, RTX, SNA, SPCX, SWK, TDG, TRI, TT, TXT, UAL, UNP {"Industrials"}
+	IncludeList:	UPS, URI, VLTO, VRSK, VRT, WAB, WM, XYL {"Industrials"}
+	IncludeList:	AAPL, ACN, ADBE, ADI, ADSK, AKAM, ALAB, AMAT, AMD, ANET, APH, ARM, ASML, AVGO, BR, CDNS, CDW, CIEN, COHR, CPAY {"ITSector"}
+	IncludeList:	CRM, CRWD, CRWV, CSCO, CTSH, DDOG, DELL, FFIV, FICO, FIS, FISV, FLEX, FSLR, FTNT, FTV, GDDY, GEN, GLW, GRMN, HPE {"ITSector"}
+	IncludeList:	HPQ, IBM, INTC, INTU, IT, JBL, JKHY, KEYS, KLAC, LDOS, LITE, LRCX, MCHP, MPWR, MRVL, MSFT, MSI, MSTR, MU, NBIS {"ITSector"}
+	IncludeList:	NOW, NTAP, NVDA, NXPI, ON, ORCL, P, PANW, PLTR, PTC, Q, QCOM, ROP, SHOP, SMCI, SNDK, SNPS, STX, SWKS, TDY {"ITSector"}
+	IncludeList:	TEL, TER, TRMB, TXN, TYL, UBER, VRSN, WDAY, WDC, XYZ, ZBRA {"ITSector"}
+	IncludeList:	ALB, APD, CF, CRH, CTVA, DD, DOW, ECL, FCX, IFF, LIN, LYB, MLM, MOS, NEM, NUE, PPG, SHW, STLD, VMC {"Materials"}
+	IncludeList:	AEE, AEP, AES, ATO, AWK, CEG, CMS, CNP, D, DTE, DUK, ED, EIX, ES, ETR, EVRG, EXC, FE, LNT, NEE {"Utilities"}
+	IncludeList:	NI, NRG, PCG, PEG, PNW, PPL, SO, SRE, VST, WEC, XEL {"Utilities"}
+	IncludeList:	AMT, ARE, BXP, CBRE, CCI, CPT, CSGP, DLR, DOC, EQIX, ESS, EXR, FRT, HST, INVH, IRM, KIM, MAA, O, PLD {"RealEstate"}
+	IncludeList:	PSA, REG, SBAC, SPG, UDR, VICI, VMRK, VTR, WELL, WY {"RealEstate"}
+	IncludeList:	AAPL, MSFT, NVDA, AMZN, GOOGL, META, AVGO, TSLA, NFLX, AMD {"Generals"}
+	IncludeList:	SPY {"Benchmark"}
+	IncludeList:	APP, CHTR, CMCSA, DIS, ECHO, FOX, FOXA, GOOG, GOOGL, LYV, META, NFLX, NWS, NWSA, OMC {"AllEQ"}
+	IncludeList:	PSKY, RDDT, T, TKO, TMUS, TTWO, VZ, WBD, AMCR, AMZN, APTV, AVY, AZO, BALL, BBY {"AllEQ"}
+	IncludeList:	CASY, CMG, CVNA, DASH, DECK, DHI, DPZ, DRI, EBAY, F, GM, GPC, HAS, HD, HLT {"AllEQ"}
+	IncludeList:	IP, LEN, LOW, LULU, LVS, MAR, MCD, MELI, MGM, NKE, NVR, ORLY, PDD, PHM, PKG {"AllEQ"}
+	IncludeList:	RL, ROL, ROST, SBUX, SW, TJX, TPR, TSCO, TSLA, ULTA, WSM, WYNN, YUM, ADM, BF-B {"AllEQ"}
+	IncludeList:	BG, CCEP, CHD, CL, CLX, COST, DG, DLTR, EL, GIS, HRL, HSY, KDP, KHC, KMB {"AllEQ"}
+	IncludeList:	KO, KR, KVUE, MDLZ, MKC, MNST, MO, PEP, PG, PM, SJM, STZ, SYY, TGT, TSN {"AllEQ"}
+	IncludeList:	WMT, APA, BKR, COP, CVX, DVN, EOG, EQT, EXE, FANG, HAL, KMI, MPC, OKE, OXY {"AllEQ"}
+	IncludeList:	PSX, SLB, TPL, TRGP, VLO, WMB, XOM, ACGL, AFL, AIG, AIZ, AJG, ALL, AMP, AON {"AllEQ"}
+	IncludeList:	APO, ARES, AXP, BAC, BEN, BLK, BNY, BRK-B, BRO, BX, C, CB, CBOE, CFG, CINF {"AllEQ"}
+	IncludeList:	CME, COF, COIN, EG, ERIE, FDS, FITB, GL, GS, HBAN, HIG, HOOD, IBKR, ICE, IVZ {"AllEQ"}
+	IncludeList:	JPM, KEY, KKR, L, MA, MCO, MET, MRSH, MS, MSCI, MTB, NDAQ, NTRS, PFG, PGR {"AllEQ"}
+	IncludeList:	PNC, PRU, PYPL, RF, RJF, SCHW, SPGI, STT, SYF, TFC, TROW, TRV, USB, V, WFC {"AllEQ"}
+	IncludeList:	WRB, WTW, A, ABBV, ABT, ALGN, ALNY, AMGN, BAX, BDX, BIIB, BMY, BSX, CAH, CI {"AllEQ"}
+	IncludeList:	CNC, COO, COR, CRL, CVS, DGX, DHR, DVA, DXCM, ELV, EW, GEHC, GILD, HCA, HSIC {"AllEQ"}
+	IncludeList:	HUM, IDXX, ILMN, INCY, IQV, ISRG, JNJ, LH, LLY, MCK, MDT, MRK, MRNA, MTD, PFE {"AllEQ"}
+	IncludeList:	PODD, REGN, RMD, RVTY, SOLV, STE, SYK, TECH, TMO, UHS, UNH, VEEV, VRTX, VTRS, WAT {"AllEQ"}
+	IncludeList:	WST, ZBH, ZTS, ABNB, ADP, ALLE, AME, AOS, AXON, BA, BE, BKNG, CARR, CAT, CCL {"AllEQ"}
+	IncludeList:	CHRW, CMI, CPRT, CSX, CTAS, DAL, DE, DOV, EFX, EME, EMR, ETN, EXPD, EXPE, FAST {"AllEQ"}
+	IncludeList:	FDX, FDXF, FER, FERG, FIX, GD, GE, GEV, GNRC, GPN, GWW, HII, HON, HONA, HUBB {"AllEQ"}
+	IncludeList:	HWM, IEX, IR, ITW, J, JBHT, JCI, LHX, LII, LMT, LUV, MAS, MMM, NCLH, NDSN {"AllEQ"}
+	IncludeList:	NOC, NSC, ODFL, OTIS, PAYX, PCAR, PH, PNR, PWR, RCL, RKLB, ROK, RSG, RTX, SNA {"AllEQ"}
+	IncludeList:	SPCX, SWK, TDG, TRI, TT, TXT, UAL, UNP, UPS, URI, VLTO, VRSK, VRT, WAB, WM {"AllEQ"}
+	IncludeList:	XYL, AAPL, ACN, ADBE, ADI, ADSK, AKAM, ALAB, AMAT, AMD, ANET, APH, ARM, ASML, AVGO {"AllEQ"}
+	IncludeList:	BR, CDNS, CDW, CIEN, COHR, CPAY, CRM, CRWD, CRWV, CSCO, CTSH, DDOG, DELL, FFIV, FICO {"AllEQ"}
+	IncludeList:	FIS, FISV, FLEX, FSLR, FTNT, FTV, GDDY, GEN, GLW, GRMN, HPE, HPQ, IBM, INTC, INTU {"AllEQ"}
+	IncludeList:	IT, JBL, JKHY, KEYS, KLAC, LDOS, LITE, LRCX, MCHP, MPWR, MRVL, MSFT, MSI, MSTR, MU {"AllEQ"}
+	IncludeList:	NBIS, NOW, NTAP, NVDA, NXPI, ON, ORCL, P, PANW, PLTR, PTC, Q, QCOM, ROP, SHOP {"AllEQ"}
+	IncludeList:	SMCI, SNDK, SNPS, STX, SWKS, TDY, TEL, TER, TRMB, TXN, TYL, UBER, VRSN, WDAY, WDC {"AllEQ"}
+	IncludeList:	XYZ, ZBRA, ALB, APD, CF, CRH, CTVA, DD, DOW, ECL, FCX, IFF, LIN, LYB, MLM {"AllEQ"}
+	IncludeList:	MOS, NEM, NUE, PPG, SHW, STLD, VMC, AEE, AEP, AES, ATO, AWK, CEG, CMS, CNP {"AllEQ"}
+	IncludeList:	D, DTE, DUK, ED, EIX, ES, ETR, EVRG, EXC, FE, LNT, NEE, NI, NRG, PCG {"AllEQ"}
+	IncludeList:	PEG, PNW, PPL, SO, SRE, VST, WEC, XEL, AMT, ARE, BXP, CBRE, CCI, CPT, CSGP {"AllEQ"}
+	IncludeList:	DLR, DOC, EQIX, ESS, EXR, FRT, HST, INVH, IRM, KIM, MAA, O, PLD, PSA, REG {"AllEQ"}
+	IncludeList:	SBAC, SPG, UDR, VICI, VMRK, VTR, WELL, WY {"AllEQ"}
+	IncludeList:	XLC, XLY, XRT, XHB, XLP, XLE, XOP, OIH, USO, XLF, KRE, XLV {"ETF"}
+	IncludeList:	XBI, XLI, ITA, IYT, XLK, SMH, XLB, GDX, XLU, XLRE, TLT, HYG {"ETF"}
+	IncludeList:	LQD, QQQ, DIA, IWM, RSP, SOXX, VGT, VUG, IWF, MTUM, SPYG, ARKK {"ETF"}
+	IncludeList:	VWO, EEM, IEMG, VOO, IVV, VTI, ACWI, FXI, EWT, IJR, IJS, IJH {"ETF"}
+	IncludeList:	MDY, SCHD, IYR, IYM, XME, MAGS, VTV, IWD {"ETF"}
+	IncludeList:	AEE, AEP, CMS, CNP, D, DTE, DUK, ED, EIX, ES, ETR, EVRG, EXC, FE, LNT, NEE, PCG, PEG, PNW, PPL, SO, WEC, XEL {"Ind_UtilitiesRegulatedElectr"}
+	IncludeList:	AKAM, CPAY, CRWD, CRWV, FFIV, FISV, FTNT, GDDY, GEN, MSFT, NTAP, ORCL, PANW, PLTR, SNPS, VRSN, XYZ {"Ind_SoftwareInfrastructure"}
+	IncludeList:	AME, AOS, CMI, DOV, EMR, ETN, GEV, GNRC, IEX, IR, ITW, NDSN, OTIS, PH, PNR, ROK, XYL {"Ind_SpecialtyIndustrialMachi"}
+	IncludeList:	ADI, ALAB, AMD, ARM, AVGO, INTC, MCHP, MPWR, MRVL, MU, NVDA, NXPI, ON, QCOM, SWKS, TXN {"Ind_Semiconductors"}
+	IncludeList:	AXON, BA, GD, GE, HII, HONA, HWM, LHX, LMT, NOC, RKLB, RTX, SPCX, TDG, TXT {"Ind_AerospaceDefense"}
+	IncludeList:	ADBE, ADSK, CDNS, CRM, DDOG, FICO, INTU, MSTR, NOW, PTC, ROP, SHOP, TYL, UBER, WDAY {"Ind_SoftwareApplication"}
+	IncludeList:	AMP, APO, ARES, BEN, BLK, BX, IVZ, KKR, NTRS, PFG, RJF, STT, TROW {"Ind_AssetManagement"}
+	IncludeList:	A, CRL, DGX, DHR, IDXX, ILMN, IQV, LH, MTD, RVTY, TMO, WAT {"Ind_DiagnosticsResearch"}
+	IncludeList:	DIS, FOX, FOXA, LYV, NFLX, NWS, NWSA, PSKY, TKO, WBD {"Ind_Entertainment"}
+	IncludeList:	ABT, BSX, DXCM, EW, GEHC, MDT, PODD, STE, SYK, ZBH {"Ind_MedicalDevices"}
+	IncludeList:	CFG, FITB, HBAN, KEY, MTB, PNC, RF, TFC, USB {"Ind_BanksRegional"}
+	IncludeList:	ABBV, AMGN, BIIB, BMY, GILD, JNJ, LLY, MRK, PFE {"Ind_DrugManufacturersGeneral"}
+	IncludeList:	CBOE, CME, COIN, FDS, ICE, MCO, MSCI, NDAQ, SPGI {"Ind_FinancialDataStockExchan"}
+	IncludeList:	ACN, BR, CDW, CTSH, FIS, IBM, IT, JKHY, LDOS {"Ind_InformationTechnologySer"}
+	IncludeList:	APA, COP, DVN, EOG, EQT, EXE, FANG, OXY, TPL {"Ind_OilGasEP"}
+	IncludeList:	ALB, APD, DD, ECL, IFF, LIN, LYB, PPG, SHW {"Ind_SpecialtyChemicals"}
+	IncludeList:	ANET, DELL, HPQ, P, SMCI, SNDK, STX, WDC {"Ind_ComputerHardware"}
+	IncludeList:	AIZ, ALL, CB, CINF, L, PGR, TRV, WRB {"Ind_InsurancePropertyCasualt"}
+	IncludeList:	ALGN, BAX, BDX, COO, ISRG, RMD, SOLV, WST {"Ind_MedicalInstrumentsSuppli"}
+	IncludeList:	CHD, CL, CLX, EL, KMB, KVUE, PG {"Ind_HouseholdPersonalProduct"}
+	IncludeList:	AMT, CCI, DLR, EQIX, IRM, SBAC, WY {"Ind_ReitSpecialty"}
+	IncludeList:	ALNY, INCY, MRNA, REGN, TECH, VRTX {"Ind_Biotechnology"}
+	IncludeList:	CIEN, CSCO, HPE, LITE, MSI, ZBRA {"Ind_CommunicationEquipment"}
+	IncludeList:	AXP, COF, MA, PYPL, SYF, V {"Ind_CreditServices"}
+	IncludeList:	CI, CNC, CVS, ELV, HUM, UNH {"Ind_HealthcarePlans"}
+	IncludeList:	AJG, AON, BRO, ERIE, MRSH, WTW {"Ind_InsuranceBrokers"}
+	IncludeList:	CHRW, EXPD, FDX, FDXF, JBHT, UPS {"Ind_IntegratedFreightLogisti"}
+	IncludeList:	AMCR, AVY, BALL, IP, PKG, SW {"Ind_PackagingContainers"}
+	IncludeList:	CPT, ESS, INVH, MAA, UDR, VMRK {"Ind_ReitResidential"}
+	IncludeList:	CMG, DPZ, DRI, MCD, SBUX, YUM {"Ind_Restaurants"}
+	IncludeList:	COHR, FTV, GRMN, KEYS, TDY, TRMB {"Ind_ScientificTechnicalInstr"}
+	IncludeList:	AMAT, ASML, KLAC, LRCX, Q, TER {"Ind_SemiconductorEquipmentMa"}
+	IncludeList:	CHTR, CMCSA, ECHO, T, TMUS, VZ {"Ind_TelecomServices"}
+	IncludeList:	ABNB, BKNG, CCL, EXPE, NCLH, RCL {"Ind_TravelServices"}
+	IncludeList:	BAC, BNY, C, JPM, WFC {"Ind_BanksDiversified"}
+	IncludeList:	CCEP, KDP, KO, MNST, PEP {"Ind_BeveragesNonAlcoholic"}
+	IncludeList:	CARR, JCI, LII, MAS, TT {"Ind_BuildingProductsEquipmen"}
+	IncludeList:	GS, HOOD, IBKR, MS, SCHW {"Ind_CapitalMarkets"}
+	IncludeList:	COST, DG, DLTR, TGT, WMT {"Ind_DiscountStores"}
+	IncludeList:	APH, FLEX, GLW, JBL, TEL {"Ind_ElectronicComponents"}
+	IncludeList:	EME, FER, FIX, J, PWR {"Ind_EngineeringConstruction"}
+	IncludeList:	GOOG, GOOGL, META, NBIS, RDDT {"Ind_InternetContentInformati"}
+	IncludeList:	AMZN, DASH, EBAY, MELI, PDD {"Ind_InternetRetail"}
+	IncludeList:	GIS, HRL, KHC, MKC, SJM {"Ind_PackagedFoods"}
+	IncludeList:	FRT, KIM, O, REG, SPG {"Ind_ReitRetail"}
+	IncludeList:	BBY, CASY, TSCO, ULTA, WSM {"Ind_SpecialtyRetail"}
+	IncludeList:	APTV, AZO, GPC, ORLY {"Ind_AutoParts"}
+	IncludeList:	ACGL, AIG, BRK-B, HIG {"Ind_InsuranceDiversified"}
+	IncludeList:	AFL, GL, MET, PRU {"Ind_InsuranceLife"}
+	IncludeList:	CAH, COR, HSIC, MCK {"Ind_MedicalDistribution"}
+	IncludeList:	KMI, OKE, TRGP, WMB {"Ind_OilGasMidstream"}
+	IncludeList:	CSX, NSC, UNP, WAB {"Ind_Railroads"}
+	IncludeList:	DHI, LEN, NVR, PHM {"Ind_ResidentialConstruction"}
+	IncludeList:	CPRT, CTAS, GPN, TRI {"Ind_SpecialtyBusinessService"}
+	IncludeList:	CF, CTVA, MOS {"Ind_AgriculturalInputs"}
+	IncludeList:	DAL, LUV, UAL {"Ind_Airlines"}
+	IncludeList:	LULU, ROST, TJX {"Ind_ApparelRetail"}
+	IncludeList:	F, GM, TSLA {"Ind_AutoManufacturers"}
+	IncludeList:	CRH, MLM, VMC {"Ind_BuildingMaterials"}
+	IncludeList:	BE, HUBB, VRT {"Ind_ElectricalEquipmentParts"}
+	IncludeList:	CAT, DE, PCAR {"Ind_FarmHeavyConstructionMac"}
+	IncludeList:	ADM, BG, TSN {"Ind_FarmProducts"}
+	IncludeList:	FAST, FERG, GWW {"Ind_IndustrialDistribution"}
+	IncludeList:	DVA, HCA, UHS {"Ind_MedicalCareFacilities"}
+	IncludeList:	BKR, HAL, SLB {"Ind_OilGasEquipmentServices"}
+	IncludeList:	MPC, PSX, VLO {"Ind_OilGasRefiningMarketing"}
+	IncludeList:	DOC, VTR, WELL {"Ind_ReitHealthcareFacilities"}
+	IncludeList:	EXR, PLD, PSA {"Ind_ReitIndustrial"}
+	IncludeList:	LVS, MGM, WYNN {"Ind_ResortsCasinos"}
+	IncludeList:	CEG, NRG, VST {"Ind_UtilitiesIndependentPowe"}
+	IncludeList:	APP, OMC {"Ind_AdvertisingAgencies"}
+	IncludeList:	HSY, MDLZ {"Ind_Confectioners"}
+	IncludeList:	HON, MMM {"Ind_Conglomerates"}
+	IncludeList:	EFX, VRSK {"Ind_ConsultingServices"}
+	IncludeList:	VTRS, ZTS {"Ind_DrugManufacturersSpecial"}
+	IncludeList:	DECK, NKE {"Ind_FootwearAccessories"}
+	IncludeList:	HD, LOW {"Ind_HomeImprovementRetail"}
+	IncludeList:	HLT, MAR {"Ind_Lodging"}
+	IncludeList:	CVX, XOM {"Ind_OilGasIntegrated"}
+	IncludeList:	CBRE, CSGP {"Ind_RealEstateServices"}
+	IncludeList:	ARE, BXP {"Ind_ReitOffice"}
+	IncludeList:	ADP, PAYX {"Ind_StaffingEmploymentServic"}
+	IncludeList:	NUE, STLD {"Ind_Steel"}
+	IncludeList:	MO, PM {"Ind_Tobacco"}
+	IncludeList:	SNA, SWK {"Ind_ToolsAccessories"}
+	IncludeList:	AES, SRE {"Ind_UtilitiesDiversified"}
+	IncludeList:	ATO, NI {"Ind_UtilitiesRegulatedGas"}
+	IncludeList:	RSG, WM {"Ind_WasteManagement"}
+	IncludeList:	RL {"Ind_ApparelManufacturing"}
+	IncludeList:	CVNA {"Ind_AutoTruckDealerships"}
+	IncludeList:	STZ {"Ind_BeveragesBrewers"}
+	IncludeList:	BF-B {"Ind_BeveragesWineriesDistill"}
+	IncludeList:	DOW {"Ind_Chemicals"}
+	IncludeList:	AAPL {"Ind_ConsumerElectronics"}
+	IncludeList:	FCX {"Ind_Copper"}
+	IncludeList:	TTWO {"Ind_ElectronicGamingMultimed"}
+	IncludeList:	SYY {"Ind_FoodDistribution"}
+	IncludeList:	NEM {"Ind_Gold"}
+	IncludeList:	KR {"Ind_GroceryStores"}
+	IncludeList:	VEEV {"Ind_HealthInformationService"}
+	IncludeList:	EG {"Ind_InsuranceReinsurance"}
+	IncludeList:	HAS {"Ind_Leisure"}
+	IncludeList:	TPR {"Ind_LuxuryGoods"}
+	IncludeList:	ROL {"Ind_PersonalServices"}
+	IncludeList:	VLTO {"Ind_PollutionTreatmentContro"}
+	IncludeList:	VICI {"Ind_ReitDiversified"}
+	IncludeList:	HST {"Ind_ReitHotelMotel"}
+	IncludeList:	URI {"Ind_RentalLeasingServices"}
+	IncludeList:	ALLE {"Ind_SecurityProtectionServic"}
+	IncludeList:	FSLR {"Ind_Solar"}
+	IncludeList:	ODFL {"Ind_Trucking"}
+	IncludeList:	AWK {"Ind_UtilitiesRegulatedWater"}
+	StartDate:	2015-01-01
+	EndDate:	Latest
+	// Yahoo-only. Strips a symbol's newest bar ONLY if its own exchange
+	// session had not completed at import time -- documented as safe to
+	// leave on for pre-open runs. NOT plain True, which blindly strips
+	// every symbol's latest bar whether complete or not.
+	RemoveLatest:	Partial
+	SaveAs:	C:\RealTest21_newerv2\Data\alexaligned_unified_v7.rtd
+
+
+Settings:
+	DataFile:	C:\RealTest21_newerv2\Data\alexaligned_unified_v7.rtd
+	BarSize:	Daily
+	EndDate:	Latest
+	AccountSize:	100000
+	UseAvailableBars:	False
+	SaveScanAs:	?scriptpath?\AlexAligned_Unified_v7C_scan.csv
+
+	// StartDate lives HERE and never in the shared Settings block above.
+	// A StartDate in Settings corrupts the ScanSettings EndDate Latest
+	// plus NumBars anchoring, which silently dumps the entire imported
+	// history instead of the latest bar. Confirmed RealTest bug,
+	// acknowledged by Marsten Parker 13.09.2026, fix due 2.0.32.8.
+TestSettings:
+	StartDate:	Earliest
+
+
+Parameters:
+	// === momentum horizons: his confirmed 5 / 20 / 60 day set ===
+	MomShort:	from 3 to 20 step 1 def 5
+	MomMed:	from 10 to 40 step 1 def 20
+	MomLong:	from 40 to 120 step 5 def 60
+	AccelLen:	from 5 to 60 step 5 def 21
+	MoveLen:	from 5 to 20 step 1 def 10
+
+	// === T-3 diff engine. DiffLen 3 is his confirmed window and should
+	// not be changed casually -- every tag he publishes is a T-3 diff. ===
+	DiffLen:	from 1 to 10 step 1 def 3
+	SevCap:	100
+	SevTrendW:	from 5 to 40 step 5 def 25
+	SevDspW:	from 5 to 40 step 5 def 20
+	SevCluW:	from 5 to 40 step 5 def 20
+	SevCluDistW:	from 0 to 20 step 5 def 10
+	SevStateW:	from 0 to 20 step 5 def 10
+	SevRankW:	from 0 to 30 step 5 def 15
+	SevBandW:	from 0 to 20 step 5 def 10
+	SevPriceW:	from 0 to 20 step 5 def 10
+	SevCandleW:	from 0 to 20 step 5 def 10
+	SevRankScale:	from 0.2 to 3.0 step 0.1 def 1.0
+	SevActThr:	from 5 to 50 step 5 def 20
+
+	// === composite cross-sectional score weights. These are a
+	// transparent deterministic blend, NOT a fitted model. ===
+	WgtRelMom:	from 0 to 40 step 5 def 25
+	WgtAccel:	from 0 to 40 step 5 def 20
+	WgtMedMom:	from 0 to 40 step 5 def 15
+	WgtStruct:	from 0 to 40 step 5 def 15
+	WgtCluBal:	from 0 to 40 step 5 def 15
+	WgtDsp:	from 0 to 40 step 5 def 10
+	LongPctl:	from 60 to 95 step 5 def 80
+	ShortPctl:	from 5 to 40 step 5 def 20
+	BasketN:	from 5 to 30 step 1 def 10
+	RankSpread:	from 0.0 to 1.5 step 0.1 def 0.6
+
+	// === state classifier and attention thresholds. Calibrate before
+	// trusting the labels -- none of these is reverse-engineered from a
+	// screenshot, they are reasonable starting points. ===
+	TrendRunMin:	from 3 to 40 step 1 def 10
+	NearClustPct:	from 0.005 to 0.05 step 0.005 def 0.015
+	// Lowered from v2.3's 0.5: the observed universe-wide abnScore max
+	// was 0.5293, so 0.5 was very nearly unreachable.
+	AbnScoreHi:	from 0.1 to 1.0 step 0.05 def 0.35
+	// Coherence now reads the RANK-2 cycle's relative power. The old
+	// rank-1 relPower is 1.0 by construction and measured nothing.
+	Rank2DomMax:	from 0.2 to 0.95 step 0.05 def 0.60
+	MoverPctl:	from 70 to 98 step 2 def 90
+	AnomHiPctl:	from 60 to 95 step 5 def 80
+	WeakCloseMax:	from 0.2 to 0.5 step 0.05 def 0.35
+	RunLook:	500
+
+	// === case 232 StepMA V3.5.2 plus Alex bands ===
+	StepMA_MinLen:	from 4 to 20 step 1 def 8
+	StepMA_MaxLen:	from 20 to 100 step 5 def 40
+	StepMA_BandK:	from 1.0 to 4.0 step 0.1 def 2.2
+	// 3, not v2.3's 2: at 2 the ring-3 outputs return NaN on every bar,
+	// which is why BandUp3 and BandLo3 were dead in the 18.09.2026 run.
+	StepMA_BandCount:	2, 3 def 3
+	StepMA_AbnMode:	1, 3 def 1
+	StepMA_AE_Latent:	1, 2, 3 def 2
+	StepMA_AE_Decay:	from 0.90 to 0.99 step 0.01 def 0.97
+	StepMA_AE_Refresh:	from 1 to 20 step 1 def 5
+
+	// === FIR band instance 1, slow. His DSP long term average. ===
+	FIRBand_CycleUpperBound:	from 60 to 200 step 10 def 120
+	FIRBand_FilterType:	1, 2, 3, 4, 5, 6, 7 def 1
+	FIRBand_AnalysisBars:	from 200 to 500 step 20 def 360
+
+	// === FIR band instance 2, fast. The short cycle read. ===
+	FIRBand2_CycleLowerBound:	from 5 to 20 step 1 def 8
+	FIRBand2_CycleUpperBound:	from 20 to 80 step 5 def 45
+	FIRBand2_AnalysisBars:	from 60 to 250 step 10 def 130
+	FIRBand2_AROrder:	from 20 to 100 step 5 def 60
+	FIRBand2_FilterType:	1, 2, 3, 4, 5, 6, 7 def 1
+
+	// === case 233 RMESA Burg spectrum ===
+	RMESA_AnalysisBars:	from 100 to 400 step 20 def 200
+	RMESA_AROrder:	from 30 to 150 step 10 def 150
+	RMESA_MaxPeriod:	from 60 to 200 step 10 def 120
+
+	// === case 237 KalmanEO ===
+	KEO_QRatio:	from 0.005 to 0.20 step 0.005 def 0.05
+	KEO_OscMode:	1, 2, 3 def 1
+	KEO_VMaxMult:	from 1.0 to 10.0 step 0.5 def 3.0
+
+	// === DVCWP v3.5.0 cases 244 and 247. Values verbatim from the
+	// production DVCWP350_QQQ_Daily config, matching the live MC chart.
+	// Args 3 through 45 MUST be identical for 244 and 247 -- differing
+	// core args silently desynchronise the two cluster histories. ===
+	PriceSrc:	6
+	ClustSize:	6
+	WinSize:	12
+	Lookback:	39
+	DecayF:	0.98
+	NumClust:	30
+	MergeMult:	1.0
+	MinTick:	0.0
+	PersistLock:	1
+	VolAdaptM:	1
+	VolAdaptShortLen:	12
+	VolAdaptBlend:	0.15
+	VolAdaptHoldBnds:	3
+	VolAdaptLookMin:	20
+	VolAdaptLookMax:	80
+	VolAdaptDecMin:	0.90
+	VolAdaptDecMax:	0.995
+	AdaptSizeM:	1
+	AdaptBasisM:	3
+	AdaptWarmup:	250
+	AdaptClustMin:	3
+	AdaptClustMax:	60
+	AdaptWinMin:	4
+	AdaptWinMax:	120
+	AdaptLookMin:	15
+	AdaptLookMax:	600
+	AdaptStepHold:	4
+	AdaptStepMove:	1
+	MergeWMaxMult:	2.0
+	DecayModelM:	1
+	DecayRpMinT:	20
+	DecayRpMaxSh:	0.7
+	DirBiasTopN:	30
+	RegLookback:	1000
+	RegTouchBand:	0.40
+	RegCrossBand:	0.0
+	RegScanEvery:	1
+	RegMR:	2.5
+	RegBO:	1.3
+	RegMinCross:	8
+	RegLowTouch:	300
+	RegForceScan:	60
+	ShowRegime:	1
+	TopNClusters:	8
+	// --- case 247 follow-line tail. FollowMode 0 is PL's frozen default.
+	FollowAnchor:	0
+	FollowMode:	0
+	FollowCont:	0
+	FollowMaxBars:	120
+	FollowEMA:	0.20
+	SMlegacyE:	0
+	SMfilter:	2.0
+	SMcycles:	4.0
+	SMminLen:	8
+	SMmaxLen:	40
+	SMvolMult:	2.5
+	SMflip:	1.6
+	SMevDecay:	0.85
+	SMflatLam:	1.25
+	SMflatConf:	0.65
+	SMshape:	1
+	SMshapeCap:	0.35
+	SMwarmup:	50
+
+
+	// === Master Basket Strategy additive layer (23.09.2026) ===
+	BBMode:	1, 2 def 1
+	BasketBN:	from 3 to 25 step 1 def 10
+	BBSectorCap:	from 1 to 10 step 1 def 3
+	CGBasketN:	from 3 to 20 step 1 def 8
+	NGBasketN:	from 3 to 20 step 1 def 8
+	CorrWindow:	from 20 to 120 step 1 def 63
+	CorrThreshold:	from 0.3 to 0.95 step 0.05 def 0.75
+
+	// === Sleeve capital allocation and exposure discipline (23.09.2026) ===
+	// Every Alloc below is a percent of TOTAL account equity that the sleeve may
+	// have invested at most. Position size and the sleeve MaxExposure are both
+	// derived from it, so a sleeve can never exceed its own allocation. Run one
+	// sleeve on its own at 100. To run several together make the ones you enable
+	// sum to 100 or less; the Combined block enforces a hard 100 in any case.
+	MBAlloc:	100
+	BBAlloc:	100
+	CGAlloc:	100
+	NGAlloc:	100
+	// Size positions to (100 - ExpBuffer) percent of the sleeve allocation. Orders
+	// are sized at the signal close but fill at the next open, so a gap up costs
+	// more than was budgeted; the buffer absorbs that so cash cannot go negative.
+	ExpBuffer:	from 0 to 10 step 1 def 3
+	MBPositions:	from 3 to 30 step 1 def 20
+	// === v2 rebalance / turnover controls (23.09.2026) ===
+	// RebalMode 0 = every day (exactly v1 behaviour), 1 = weekly, 2 = monthly. On a
+	// rebalance day only, entries are allowed and exits are allowed. Between
+	// rebalance days the book is frozen.
+	RebalMode:	from 0 to 2 step 1 def 1
+	// 1 = new entries only on rebalance days, 0 = fill any free slot daily.
+	MBEntryOnRebal:	0, 1 def 1
+	// Exit hysteresis: a held name is kept while it is still in the Master union OR its
+	// composite percentile is still at or above MBHoldPctl. 101 switches the buffer off (v1).
+	MBHoldPctl:	from 40 to 101 step 5 def 60
+	// Minimum bars held before any exit is considered.
+	MBMinHold:	from 0 to 40 step 1 def 0
+	// Minimum number of the 3 methods that must agree for a name to be a candidate. 1 = v1.
+	MBMinAgree:	from 1 to 3 step 1 def 1
+	// Slippage per fill, percent of fill price. 0 = v1. Try 0.05 to 0.10 for a realistic read.
+	SlipPct:	from 0 to 0.5 step 0.05 def 0
+	// ================= v4 parameters =================
+	MinHistBars:	252
+	SplitJumpPct:	35
+	DirBand:	15
+	MASTopN:	600
+	GraphHiPct:	0.30
+	VolWin:	252
+	CorrShort:	20
+	CorrMid:	60
+	CorrLong:	120
+
+
+Data:
+	// ================= LAYER 0: raw price =================
+	closev:	C
+	openv:	O
+	highv:	H
+	lowv:	L
+	// ================= LAYER 0b: sector membership =================
+	// Defined up here, not further down, because the per-sector
+	// selectors in the attention and composite layers reference it and
+	// Data items are evaluated strictly in definition order.
+	SectorCodeRaw:	IF(InList("Comms"), 1,
+		IF(InList("ConsumerDisc"), 2,
+		IF(InList("ConsStaples"), 3,
+		IF(InList("Energy"), 4,
+		IF(InList("Financials"), 5,
+		IF(InList("Healthcare"), 6,
+		IF(InList("Industrials"), 7,
+		IF(InList("ITSector"), 8,
+		IF(InList("Materials"), 9,
+		IF(InList("Utilities"), 10,
+		IF(InList("RealEstate"), 11,
+		IF(InList("Benchmark"), 12,
+		IF(InList("ETF"), 13, 0)))))))))))))
+	momReady:	closev[MomLong + AccelLen] > 0
+	diffReady:	momReady and closev[MomLong + AccelLen + DiffLen] > 0
+	// ================= LAYER 3: multi-horizon momentum =================
+	// 5 / 20 / 60 are his confirmed horizons.
+	momS:	IF(momReady, closev / closev[MomShort] - 1, NaN)
+	momM:	IF(momReady, closev / closev[MomMed] - 1, NaN)
+	mom:	IF(momReady, closev / closev[MomLong] - 1, NaN)
+	momAccel:	IF(momReady, mom - mom[AccelLen], NaN)
+	moveAbs:	IF(momReady, Abs(closev / closev[MoveLen] - 1), NaN)
+	// Breadth ops must be the WHOLE formula of their own item -- they
+	// can never be nested inside IF() or arithmetic. Everything derived
+	// from them below is plain arithmetic referencing the named item.
+	momUniverseAvg:	#Avg IF(InList("AllEQ") and momReady, mom, NaN)
+	relMom:	IF(momReady, mom - momUniverseAvg, NaN)
+	relMomRank:	#Rank IF(InList("AllEQ") and momReady, relMom, NaN)
+	relMomPctl:	#PercentRank IF(InList("AllEQ") and momReady, relMom, NaN)
+	accelRank:	#Rank IF(InList("AllEQ") and momReady, momAccel, NaN)
+	accelPctl:	#PercentRank IF(InList("AllEQ") and momReady, momAccel, NaN)
+	movePctl:	#PercentRank IF(InList("AllEQ") and momReady, moveAbs, NaN)
+	// ================= LAYER 10: pure-OHLC 3-day micro features ========
+	// These back his INTRADAY_SELLING_3D, BEARISH_CANDLE_BREADTH_3D and
+	// WEAK_CLOSE_LOCATION_3D tags. Close Location Value is where the
+	// close sits inside the bar's own range: 1 at the high, 0 at the low.
+	// No indicator library involved, just OHLC.
+	barRange:	highv - lowv
+	clv:	IF(barRange > 0, (closev - lowv) / barRange, 0.5)
+	clv3:	(clv + clv[1] + clv[2]) / 3
+	bearCandle:	closev < openv
+	bearCandle3:	bearCandle + bearCandle[1] + bearCandle[2]
+	weakClose3:	clv3 <= WeakCloseMax
+	intradaySell3:	clv3 <= WeakCloseMax and bearCandle3 >= 2
+	decline3:	momReady and closev < closev[3]
+	decline5:	momReady and closev < closev[5]
+	advance3:	momReady and closev > closev[3]
+	PriceTagCode:	IF(momReady and decline5 = 1 and decline3 = 1, 1,
+		IF(momReady and decline3 = 1, 2,
+		IF(momReady and advance3 = 1, 3, 0)))
+	CandleTagCode:	IF(intradaySell3 = 1, 1,
+		IF(bearCandle3 >= 2, 2,
+		IF(weakClose3 = 1, 3, 0)))
+	// Rank 1 is the STRONGEST in RealTest, so a falling rank number is
+	// an improvement. The sign here is deliberate, not a transcription
+	// slip.
+	rankDelta:	IF(diffReady and momReady and not IsNaN(relMomRank) and not IsNaN(relMomRank[DiffLen]), relMomRank[DiffLen] - relMomRank, NaN)
+	sevRank:	IF(IsNaN(rankDelta), 0, Max(0 - SevRankW, Min(SevRankW, rankDelta * SevRankScale)))
+	sevPrice:	IF(momReady,
+		IF(advance3 = 1, SevPriceW, IF(decline3 = 1, 0 - SevPriceW, 0)), 0)
+	sevCandle:	IF(intradaySell3 = 1, 0 - SevCandleW,
+		IF(weakClose3 = 1, 0 - SevCandleW / 2, IF(clv3 >= 0.65, SevCandleW / 2, 0)))
+	attnM:	IF(momReady and not IsNaN(movePctl), movePctl >= MoverPctl, 0)
+	// ================= LAYER 17: breadth condition flags =================
+	// NaN, not 0, while unready -- so an unwarmed symbol is silently
+	// EXCLUDED from every #Count rather than miscounted as a false.
+	momPos:	IF(momReady, mom > 0, NaN)
+	accelPos:	IF(momReady, momAccel > 0, NaN)
+	relMomPos:	IF(momReady, relMom > 0, NaN)
+	cnt_Comms_TotMom:	#Count IF(InList("Comms") and momReady, 1, NaN)
+	cnt_Comms_MomP:	#Count IF(InList("Comms") and momPos = 1, 1, NaN)
+	cnt_Comms_MomN:	#Count IF(InList("Comms") and momPos = 0, 1, NaN)
+	brd_Comms_Mom:	100 * (NoNan(cnt_Comms_MomP, 0) - NoNan(cnt_Comms_MomN, 0)) / Max(1, NoNan(cnt_Comms_TotMom, 0))
+	cnt_Comms_AccelP:	#Count IF(InList("Comms") and accelPos = 1, 1, NaN)
+	cnt_Comms_AccelN:	#Count IF(InList("Comms") and accelPos = 0, 1, NaN)
+	brd_Comms_Accel:	100 * (NoNan(cnt_Comms_AccelP, 0) - NoNan(cnt_Comms_AccelN, 0)) / Max(1, NoNan(cnt_Comms_TotMom, 0))
+	cnt_Comms_RelMomP:	#Count IF(InList("Comms") and relMomPos = 1, 1, NaN)
+	cnt_Comms_RelMomN:	#Count IF(InList("Comms") and relMomPos = 0, 1, NaN)
+	brd_Comms_RelMom:	100 * (NoNan(cnt_Comms_RelMomP, 0) - NoNan(cnt_Comms_RelMomN, 0)) / Max(1, NoNan(cnt_Comms_TotMom, 0))
+	avg_Comms_RelMom:	#Avg IF(InList("Comms") and momReady, relMom, NaN)
+	cnt_ConsumerDisc_TotMom:	#Count IF(InList("ConsumerDisc") and momReady, 1, NaN)
+	cnt_ConsumerDisc_MomP:	#Count IF(InList("ConsumerDisc") and momPos = 1, 1, NaN)
+	cnt_ConsumerDisc_MomN:	#Count IF(InList("ConsumerDisc") and momPos = 0, 1, NaN)
+	brd_ConsumerDisc_Mom:	100 * (NoNan(cnt_ConsumerDisc_MomP, 0) - NoNan(cnt_ConsumerDisc_MomN, 0)) / Max(1, NoNan(cnt_ConsumerDisc_TotMom, 0))
+	cnt_ConsumerDisc_AccelP:	#Count IF(InList("ConsumerDisc") and accelPos = 1, 1, NaN)
+	cnt_ConsumerDisc_AccelN:	#Count IF(InList("ConsumerDisc") and accelPos = 0, 1, NaN)
+	brd_ConsumerDisc_Accel:	100 * (NoNan(cnt_ConsumerDisc_AccelP, 0) - NoNan(cnt_ConsumerDisc_AccelN, 0)) / Max(1, NoNan(cnt_ConsumerDisc_TotMom, 0))
+	cnt_ConsumerDisc_RelMomP:	#Count IF(InList("ConsumerDisc") and relMomPos = 1, 1, NaN)
+	cnt_ConsumerDisc_RelMomN:	#Count IF(InList("ConsumerDisc") and relMomPos = 0, 1, NaN)
+	brd_ConsumerDisc_RelMom:	100 * (NoNan(cnt_ConsumerDisc_RelMomP, 0) - NoNan(cnt_ConsumerDisc_RelMomN, 0)) / Max(1, NoNan(cnt_ConsumerDisc_TotMom, 0))
+	avg_ConsumerDisc_RelMom:	#Avg IF(InList("ConsumerDisc") and momReady, relMom, NaN)
+	cnt_ConsStaples_TotMom:	#Count IF(InList("ConsStaples") and momReady, 1, NaN)
+	cnt_ConsStaples_MomP:	#Count IF(InList("ConsStaples") and momPos = 1, 1, NaN)
+	cnt_ConsStaples_MomN:	#Count IF(InList("ConsStaples") and momPos = 0, 1, NaN)
+	brd_ConsStaples_Mom:	100 * (NoNan(cnt_ConsStaples_MomP, 0) - NoNan(cnt_ConsStaples_MomN, 0)) / Max(1, NoNan(cnt_ConsStaples_TotMom, 0))
+	cnt_ConsStaples_AccelP:	#Count IF(InList("ConsStaples") and accelPos = 1, 1, NaN)
+	cnt_ConsStaples_AccelN:	#Count IF(InList("ConsStaples") and accelPos = 0, 1, NaN)
+	brd_ConsStaples_Accel:	100 * (NoNan(cnt_ConsStaples_AccelP, 0) - NoNan(cnt_ConsStaples_AccelN, 0)) / Max(1, NoNan(cnt_ConsStaples_TotMom, 0))
+	cnt_ConsStaples_RelMomP:	#Count IF(InList("ConsStaples") and relMomPos = 1, 1, NaN)
+	cnt_ConsStaples_RelMomN:	#Count IF(InList("ConsStaples") and relMomPos = 0, 1, NaN)
+	brd_ConsStaples_RelMom:	100 * (NoNan(cnt_ConsStaples_RelMomP, 0) - NoNan(cnt_ConsStaples_RelMomN, 0)) / Max(1, NoNan(cnt_ConsStaples_TotMom, 0))
+	avg_ConsStaples_RelMom:	#Avg IF(InList("ConsStaples") and momReady, relMom, NaN)
+	cnt_Energy_TotMom:	#Count IF(InList("Energy") and momReady, 1, NaN)
+	cnt_Energy_MomP:	#Count IF(InList("Energy") and momPos = 1, 1, NaN)
+	cnt_Energy_MomN:	#Count IF(InList("Energy") and momPos = 0, 1, NaN)
+	brd_Energy_Mom:	100 * (NoNan(cnt_Energy_MomP, 0) - NoNan(cnt_Energy_MomN, 0)) / Max(1, NoNan(cnt_Energy_TotMom, 0))
+	cnt_Energy_AccelP:	#Count IF(InList("Energy") and accelPos = 1, 1, NaN)
+	cnt_Energy_AccelN:	#Count IF(InList("Energy") and accelPos = 0, 1, NaN)
+	brd_Energy_Accel:	100 * (NoNan(cnt_Energy_AccelP, 0) - NoNan(cnt_Energy_AccelN, 0)) / Max(1, NoNan(cnt_Energy_TotMom, 0))
+	cnt_Energy_RelMomP:	#Count IF(InList("Energy") and relMomPos = 1, 1, NaN)
+	cnt_Energy_RelMomN:	#Count IF(InList("Energy") and relMomPos = 0, 1, NaN)
+	brd_Energy_RelMom:	100 * (NoNan(cnt_Energy_RelMomP, 0) - NoNan(cnt_Energy_RelMomN, 0)) / Max(1, NoNan(cnt_Energy_TotMom, 0))
+	avg_Energy_RelMom:	#Avg IF(InList("Energy") and momReady, relMom, NaN)
+	cnt_Financials_TotMom:	#Count IF(InList("Financials") and momReady, 1, NaN)
+	cnt_Financials_MomP:	#Count IF(InList("Financials") and momPos = 1, 1, NaN)
+	cnt_Financials_MomN:	#Count IF(InList("Financials") and momPos = 0, 1, NaN)
+	brd_Financials_Mom:	100 * (NoNan(cnt_Financials_MomP, 0) - NoNan(cnt_Financials_MomN, 0)) / Max(1, NoNan(cnt_Financials_TotMom, 0))
+	cnt_Financials_AccelP:	#Count IF(InList("Financials") and accelPos = 1, 1, NaN)
+	cnt_Financials_AccelN:	#Count IF(InList("Financials") and accelPos = 0, 1, NaN)
+	brd_Financials_Accel:	100 * (NoNan(cnt_Financials_AccelP, 0) - NoNan(cnt_Financials_AccelN, 0)) / Max(1, NoNan(cnt_Financials_TotMom, 0))
+	cnt_Financials_RelMomP:	#Count IF(InList("Financials") and relMomPos = 1, 1, NaN)
+	cnt_Financials_RelMomN:	#Count IF(InList("Financials") and relMomPos = 0, 1, NaN)
+	brd_Financials_RelMom:	100 * (NoNan(cnt_Financials_RelMomP, 0) - NoNan(cnt_Financials_RelMomN, 0)) / Max(1, NoNan(cnt_Financials_TotMom, 0))
+	avg_Financials_RelMom:	#Avg IF(InList("Financials") and momReady, relMom, NaN)
+	cnt_Healthcare_TotMom:	#Count IF(InList("Healthcare") and momReady, 1, NaN)
+	cnt_Healthcare_MomP:	#Count IF(InList("Healthcare") and momPos = 1, 1, NaN)
+	cnt_Healthcare_MomN:	#Count IF(InList("Healthcare") and momPos = 0, 1, NaN)
+	brd_Healthcare_Mom:	100 * (NoNan(cnt_Healthcare_MomP, 0) - NoNan(cnt_Healthcare_MomN, 0)) / Max(1, NoNan(cnt_Healthcare_TotMom, 0))
+	cnt_Healthcare_AccelP:	#Count IF(InList("Healthcare") and accelPos = 1, 1, NaN)
+	cnt_Healthcare_AccelN:	#Count IF(InList("Healthcare") and accelPos = 0, 1, NaN)
+	brd_Healthcare_Accel:	100 * (NoNan(cnt_Healthcare_AccelP, 0) - NoNan(cnt_Healthcare_AccelN, 0)) / Max(1, NoNan(cnt_Healthcare_TotMom, 0))
+	cnt_Healthcare_RelMomP:	#Count IF(InList("Healthcare") and relMomPos = 1, 1, NaN)
+	cnt_Healthcare_RelMomN:	#Count IF(InList("Healthcare") and relMomPos = 0, 1, NaN)
+	brd_Healthcare_RelMom:	100 * (NoNan(cnt_Healthcare_RelMomP, 0) - NoNan(cnt_Healthcare_RelMomN, 0)) / Max(1, NoNan(cnt_Healthcare_TotMom, 0))
+	avg_Healthcare_RelMom:	#Avg IF(InList("Healthcare") and momReady, relMom, NaN)
+	cnt_Industrials_TotMom:	#Count IF(InList("Industrials") and momReady, 1, NaN)
+	cnt_Industrials_MomP:	#Count IF(InList("Industrials") and momPos = 1, 1, NaN)
+	cnt_Industrials_MomN:	#Count IF(InList("Industrials") and momPos = 0, 1, NaN)
+	brd_Industrials_Mom:	100 * (NoNan(cnt_Industrials_MomP, 0) - NoNan(cnt_Industrials_MomN, 0)) / Max(1, NoNan(cnt_Industrials_TotMom, 0))
+	cnt_Industrials_AccelP:	#Count IF(InList("Industrials") and accelPos = 1, 1, NaN)
+	cnt_Industrials_AccelN:	#Count IF(InList("Industrials") and accelPos = 0, 1, NaN)
+	brd_Industrials_Accel:	100 * (NoNan(cnt_Industrials_AccelP, 0) - NoNan(cnt_Industrials_AccelN, 0)) / Max(1, NoNan(cnt_Industrials_TotMom, 0))
+	cnt_Industrials_RelMomP:	#Count IF(InList("Industrials") and relMomPos = 1, 1, NaN)
+	cnt_Industrials_RelMomN:	#Count IF(InList("Industrials") and relMomPos = 0, 1, NaN)
+	brd_Industrials_RelMom:	100 * (NoNan(cnt_Industrials_RelMomP, 0) - NoNan(cnt_Industrials_RelMomN, 0)) / Max(1, NoNan(cnt_Industrials_TotMom, 0))
+	avg_Industrials_RelMom:	#Avg IF(InList("Industrials") and momReady, relMom, NaN)
+	cnt_ITSector_TotMom:	#Count IF(InList("ITSector") and momReady, 1, NaN)
+	cnt_ITSector_MomP:	#Count IF(InList("ITSector") and momPos = 1, 1, NaN)
+	cnt_ITSector_MomN:	#Count IF(InList("ITSector") and momPos = 0, 1, NaN)
+	brd_ITSector_Mom:	100 * (NoNan(cnt_ITSector_MomP, 0) - NoNan(cnt_ITSector_MomN, 0)) / Max(1, NoNan(cnt_ITSector_TotMom, 0))
+	cnt_ITSector_AccelP:	#Count IF(InList("ITSector") and accelPos = 1, 1, NaN)
+	cnt_ITSector_AccelN:	#Count IF(InList("ITSector") and accelPos = 0, 1, NaN)
+	brd_ITSector_Accel:	100 * (NoNan(cnt_ITSector_AccelP, 0) - NoNan(cnt_ITSector_AccelN, 0)) / Max(1, NoNan(cnt_ITSector_TotMom, 0))
+	cnt_ITSector_RelMomP:	#Count IF(InList("ITSector") and relMomPos = 1, 1, NaN)
+	cnt_ITSector_RelMomN:	#Count IF(InList("ITSector") and relMomPos = 0, 1, NaN)
+	brd_ITSector_RelMom:	100 * (NoNan(cnt_ITSector_RelMomP, 0) - NoNan(cnt_ITSector_RelMomN, 0)) / Max(1, NoNan(cnt_ITSector_TotMom, 0))
+	avg_ITSector_RelMom:	#Avg IF(InList("ITSector") and momReady, relMom, NaN)
+	cnt_Materials_TotMom:	#Count IF(InList("Materials") and momReady, 1, NaN)
+	cnt_Materials_MomP:	#Count IF(InList("Materials") and momPos = 1, 1, NaN)
+	cnt_Materials_MomN:	#Count IF(InList("Materials") and momPos = 0, 1, NaN)
+	brd_Materials_Mom:	100 * (NoNan(cnt_Materials_MomP, 0) - NoNan(cnt_Materials_MomN, 0)) / Max(1, NoNan(cnt_Materials_TotMom, 0))
+	cnt_Materials_AccelP:	#Count IF(InList("Materials") and accelPos = 1, 1, NaN)
+	cnt_Materials_AccelN:	#Count IF(InList("Materials") and accelPos = 0, 1, NaN)
+	brd_Materials_Accel:	100 * (NoNan(cnt_Materials_AccelP, 0) - NoNan(cnt_Materials_AccelN, 0)) / Max(1, NoNan(cnt_Materials_TotMom, 0))
+	cnt_Materials_RelMomP:	#Count IF(InList("Materials") and relMomPos = 1, 1, NaN)
+	cnt_Materials_RelMomN:	#Count IF(InList("Materials") and relMomPos = 0, 1, NaN)
+	brd_Materials_RelMom:	100 * (NoNan(cnt_Materials_RelMomP, 0) - NoNan(cnt_Materials_RelMomN, 0)) / Max(1, NoNan(cnt_Materials_TotMom, 0))
+	avg_Materials_RelMom:	#Avg IF(InList("Materials") and momReady, relMom, NaN)
+	cnt_Utilities_TotMom:	#Count IF(InList("Utilities") and momReady, 1, NaN)
+	cnt_Utilities_MomP:	#Count IF(InList("Utilities") and momPos = 1, 1, NaN)
+	cnt_Utilities_MomN:	#Count IF(InList("Utilities") and momPos = 0, 1, NaN)
+	brd_Utilities_Mom:	100 * (NoNan(cnt_Utilities_MomP, 0) - NoNan(cnt_Utilities_MomN, 0)) / Max(1, NoNan(cnt_Utilities_TotMom, 0))
+	cnt_Utilities_AccelP:	#Count IF(InList("Utilities") and accelPos = 1, 1, NaN)
+	cnt_Utilities_AccelN:	#Count IF(InList("Utilities") and accelPos = 0, 1, NaN)
+	brd_Utilities_Accel:	100 * (NoNan(cnt_Utilities_AccelP, 0) - NoNan(cnt_Utilities_AccelN, 0)) / Max(1, NoNan(cnt_Utilities_TotMom, 0))
+	cnt_Utilities_RelMomP:	#Count IF(InList("Utilities") and relMomPos = 1, 1, NaN)
+	cnt_Utilities_RelMomN:	#Count IF(InList("Utilities") and relMomPos = 0, 1, NaN)
+	brd_Utilities_RelMom:	100 * (NoNan(cnt_Utilities_RelMomP, 0) - NoNan(cnt_Utilities_RelMomN, 0)) / Max(1, NoNan(cnt_Utilities_TotMom, 0))
+	avg_Utilities_RelMom:	#Avg IF(InList("Utilities") and momReady, relMom, NaN)
+	cnt_RealEstate_TotMom:	#Count IF(InList("RealEstate") and momReady, 1, NaN)
+	cnt_RealEstate_MomP:	#Count IF(InList("RealEstate") and momPos = 1, 1, NaN)
+	cnt_RealEstate_MomN:	#Count IF(InList("RealEstate") and momPos = 0, 1, NaN)
+	brd_RealEstate_Mom:	100 * (NoNan(cnt_RealEstate_MomP, 0) - NoNan(cnt_RealEstate_MomN, 0)) / Max(1, NoNan(cnt_RealEstate_TotMom, 0))
+	cnt_RealEstate_AccelP:	#Count IF(InList("RealEstate") and accelPos = 1, 1, NaN)
+	cnt_RealEstate_AccelN:	#Count IF(InList("RealEstate") and accelPos = 0, 1, NaN)
+	brd_RealEstate_Accel:	100 * (NoNan(cnt_RealEstate_AccelP, 0) - NoNan(cnt_RealEstate_AccelN, 0)) / Max(1, NoNan(cnt_RealEstate_TotMom, 0))
+	cnt_RealEstate_RelMomP:	#Count IF(InList("RealEstate") and relMomPos = 1, 1, NaN)
+	cnt_RealEstate_RelMomN:	#Count IF(InList("RealEstate") and relMomPos = 0, 1, NaN)
+	brd_RealEstate_RelMom:	100 * (NoNan(cnt_RealEstate_RelMomP, 0) - NoNan(cnt_RealEstate_RelMomN, 0)) / Max(1, NoNan(cnt_RealEstate_TotMom, 0))
+	avg_RealEstate_RelMom:	#Avg IF(InList("RealEstate") and momReady, relMom, NaN)
+	cnt_AllEQ_TotMom:	#Count IF(InList("AllEQ") and momReady, 1, NaN)
+	cnt_AllEQ_MomP:	#Count IF(InList("AllEQ") and momPos = 1, 1, NaN)
+	cnt_AllEQ_MomN:	#Count IF(InList("AllEQ") and momPos = 0, 1, NaN)
+	brd_AllEQ_Mom:	100 * (NoNan(cnt_AllEQ_MomP, 0) - NoNan(cnt_AllEQ_MomN, 0)) / Max(1, NoNan(cnt_AllEQ_TotMom, 0))
+	cnt_AllEQ_AccelP:	#Count IF(InList("AllEQ") and accelPos = 1, 1, NaN)
+	cnt_AllEQ_AccelN:	#Count IF(InList("AllEQ") and accelPos = 0, 1, NaN)
+	brd_AllEQ_Accel:	100 * (NoNan(cnt_AllEQ_AccelP, 0) - NoNan(cnt_AllEQ_AccelN, 0)) / Max(1, NoNan(cnt_AllEQ_TotMom, 0))
+	cnt_AllEQ_RelMomP:	#Count IF(InList("AllEQ") and relMomPos = 1, 1, NaN)
+	cnt_AllEQ_RelMomN:	#Count IF(InList("AllEQ") and relMomPos = 0, 1, NaN)
+	brd_AllEQ_RelMom:	100 * (NoNan(cnt_AllEQ_RelMomP, 0) - NoNan(cnt_AllEQ_RelMomN, 0)) / Max(1, NoNan(cnt_AllEQ_TotMom, 0))
+	avg_AllEQ_RelMom:	#Avg IF(InList("AllEQ") and momReady, relMom, NaN)
+	cnt_Generals_TotMom:	#Count IF(InList("Generals") and momReady, 1, NaN)
+	cnt_Generals_MomP:	#Count IF(InList("Generals") and momPos = 1, 1, NaN)
+	cnt_Generals_MomN:	#Count IF(InList("Generals") and momPos = 0, 1, NaN)
+	brd_Generals_Mom:	100 * (NoNan(cnt_Generals_MomP, 0) - NoNan(cnt_Generals_MomN, 0)) / Max(1, NoNan(cnt_Generals_TotMom, 0))
+	cnt_Generals_AccelP:	#Count IF(InList("Generals") and accelPos = 1, 1, NaN)
+	cnt_Generals_AccelN:	#Count IF(InList("Generals") and accelPos = 0, 1, NaN)
+	brd_Generals_Accel:	100 * (NoNan(cnt_Generals_AccelP, 0) - NoNan(cnt_Generals_AccelN, 0)) / Max(1, NoNan(cnt_Generals_TotMom, 0))
+	cnt_Generals_RelMomP:	#Count IF(InList("Generals") and relMomPos = 1, 1, NaN)
+	cnt_Generals_RelMomN:	#Count IF(InList("Generals") and relMomPos = 0, 1, NaN)
+	brd_Generals_RelMom:	100 * (NoNan(cnt_Generals_RelMomP, 0) - NoNan(cnt_Generals_RelMomN, 0)) / Max(1, NoNan(cnt_Generals_TotMom, 0))
+	avg_Generals_RelMom:	#Avg IF(InList("Generals") and momReady, relMom, NaN)
+	// ================= LAYER 19: this symbol's own sector context ======
+	// Plain selection over already-computed #Avg items. A breadth
+	// operator is never placed inline here.
+	mySectorRelMom:	if(SectorCodeRaw = 1, avg_Comms_RelMom,
+		if(SectorCodeRaw = 2, avg_ConsumerDisc_RelMom,
+		if(SectorCodeRaw = 3, avg_ConsStaples_RelMom,
+		if(SectorCodeRaw = 4, avg_Energy_RelMom,
+		if(SectorCodeRaw = 5, avg_Financials_RelMom,
+		if(SectorCodeRaw = 6, avg_Healthcare_RelMom,
+		if(SectorCodeRaw = 7, avg_Industrials_RelMom,
+		if(SectorCodeRaw = 8, avg_ITSector_RelMom,
+		if(SectorCodeRaw = 9, avg_Materials_RelMom,
+		if(SectorCodeRaw = 10, avg_Utilities_RelMom,
+		if(SectorCodeRaw = 11, avg_RealEstate_RelMom, NaN)))))))))))
+	// ================================================================
+	// ================= v4 LAYERS (appended, nothing above changed) ==
+	// ================================================================
+	// ---- LAYER 30: Alex DataView columns, computed for every symbol ----
+	ret1:	IF(closev[1] > 0, 100 * (closev / closev[1] - 1), NaN)
+	ret5:	IF(closev[5] > 0, 100 * (closev / closev[5] - 1), NaN)
+	ret10:	IF(closev[10] > 0, 100 * (closev / closev[10] - 1), NaN)
+	turnover:	closev * V
+	turn20:	Avg(turnover, 20)
+	histOK:	BarNum >= MinHistBars
+	splitJump:	IF(closev[1] > 0, Abs(closev / closev[1] - 1) * 100 > SplitJumpPct, 0)
+	splitRecent:	CountTrue(splitJump, 60) > 0
+	badData:	IF(not histOK or splitRecent, 1, 0)
+	eqTotal:	#Count IF(InList("AllEQ"), 1, NaN)
+	eqAdv1:	#Count IF(InList("AllEQ") and histOK and ret1 > 0, 1, NaN)
+	eqDec1:	#Count IF(InList("AllEQ") and histOK and ret1 < 0, 1, NaN)
+	eqNet1:	NoNan(eqAdv1, 0) - NoNan(eqDec1, 0)
+	etfTotal:	#Count IF(InList("ETF"), 1, NaN)
+	etfAdv1:	#Count IF(InList("ETF") and histOK and ret1 > 0, 1, NaN)
+	etfDec1:	#Count IF(InList("ETF") and histOK and ret1 < 0, 1, NaN)
+	etfNet1:	NoNan(etfAdv1, 0) - NoNan(etfDec1, 0)
+	// ---- LAYER 32: ETF rotation table (Recent, Previous, Delta, Direction) ----
+	etfMomAvg:	#Avg IF(InList("ETF") and momReady, mom, NaN)
+	etfRelMom:	IF(InList("ETF") and momReady, mom - etfMomAvg, NaN)
+	// ---- LAYER 33: turnover rank and Mean Anomaly Score over the top MASTopN by turnover ----
+	turnRank:	#Rank IF(InList("AllEQ") and histOK and not IsNaN(turn20), turn20, NaN)
+	etfTurnRank:	#Rank IF(InList("ETF") and histOK and not IsNaN(turn20), turn20, NaN)
+	indN_UtilitiesRegulatedElectr:	#Count IF(InList("Ind_UtilitiesRegulatedElectr") and histOK, 1, NaN)
+	indN_SoftwareInfrastructure:	#Count IF(InList("Ind_SoftwareInfrastructure") and histOK, 1, NaN)
+	indN_SpecialtyIndustrialMachi:	#Count IF(InList("Ind_SpecialtyIndustrialMachi") and histOK, 1, NaN)
+	indN_Semiconductors:	#Count IF(InList("Ind_Semiconductors") and histOK, 1, NaN)
+	indN_AerospaceDefense:	#Count IF(InList("Ind_AerospaceDefense") and histOK, 1, NaN)
+	indN_SoftwareApplication:	#Count IF(InList("Ind_SoftwareApplication") and histOK, 1, NaN)
+	indN_AssetManagement:	#Count IF(InList("Ind_AssetManagement") and histOK, 1, NaN)
+	indN_DiagnosticsResearch:	#Count IF(InList("Ind_DiagnosticsResearch") and histOK, 1, NaN)
+	indN_Entertainment:	#Count IF(InList("Ind_Entertainment") and histOK, 1, NaN)
+	indN_MedicalDevices:	#Count IF(InList("Ind_MedicalDevices") and histOK, 1, NaN)
+	indN_BanksRegional:	#Count IF(InList("Ind_BanksRegional") and histOK, 1, NaN)
+	indN_DrugManufacturersGeneral:	#Count IF(InList("Ind_DrugManufacturersGeneral") and histOK, 1, NaN)
+	indN_FinancialDataStockExchan:	#Count IF(InList("Ind_FinancialDataStockExchan") and histOK, 1, NaN)
+	indN_InformationTechnologySer:	#Count IF(InList("Ind_InformationTechnologySer") and histOK, 1, NaN)
+	indN_OilGasEP:	#Count IF(InList("Ind_OilGasEP") and histOK, 1, NaN)
+	indN_SpecialtyChemicals:	#Count IF(InList("Ind_SpecialtyChemicals") and histOK, 1, NaN)
+	indN_ComputerHardware:	#Count IF(InList("Ind_ComputerHardware") and histOK, 1, NaN)
+	indN_InsurancePropertyCasualt:	#Count IF(InList("Ind_InsurancePropertyCasualt") and histOK, 1, NaN)
+	indN_MedicalInstrumentsSuppli:	#Count IF(InList("Ind_MedicalInstrumentsSuppli") and histOK, 1, NaN)
+	indN_HouseholdPersonalProduct:	#Count IF(InList("Ind_HouseholdPersonalProduct") and histOK, 1, NaN)
+	indN_ReitSpecialty:	#Count IF(InList("Ind_ReitSpecialty") and histOK, 1, NaN)
+	indN_Biotechnology:	#Count IF(InList("Ind_Biotechnology") and histOK, 1, NaN)
+	indN_CommunicationEquipment:	#Count IF(InList("Ind_CommunicationEquipment") and histOK, 1, NaN)
+	indN_CreditServices:	#Count IF(InList("Ind_CreditServices") and histOK, 1, NaN)
+	indN_HealthcarePlans:	#Count IF(InList("Ind_HealthcarePlans") and histOK, 1, NaN)
+	indN_InsuranceBrokers:	#Count IF(InList("Ind_InsuranceBrokers") and histOK, 1, NaN)
+	indN_IntegratedFreightLogisti:	#Count IF(InList("Ind_IntegratedFreightLogisti") and histOK, 1, NaN)
+	indN_PackagingContainers:	#Count IF(InList("Ind_PackagingContainers") and histOK, 1, NaN)
+	indN_ReitResidential:	#Count IF(InList("Ind_ReitResidential") and histOK, 1, NaN)
+	indN_Restaurants:	#Count IF(InList("Ind_Restaurants") and histOK, 1, NaN)
+	indN_ScientificTechnicalInstr:	#Count IF(InList("Ind_ScientificTechnicalInstr") and histOK, 1, NaN)
+	indN_SemiconductorEquipmentMa:	#Count IF(InList("Ind_SemiconductorEquipmentMa") and histOK, 1, NaN)
+	indN_TelecomServices:	#Count IF(InList("Ind_TelecomServices") and histOK, 1, NaN)
+	indN_TravelServices:	#Count IF(InList("Ind_TravelServices") and histOK, 1, NaN)
+	indN_BanksDiversified:	#Count IF(InList("Ind_BanksDiversified") and histOK, 1, NaN)
+	indN_BeveragesNonAlcoholic:	#Count IF(InList("Ind_BeveragesNonAlcoholic") and histOK, 1, NaN)
+	indN_BuildingProductsEquipmen:	#Count IF(InList("Ind_BuildingProductsEquipmen") and histOK, 1, NaN)
+	indN_CapitalMarkets:	#Count IF(InList("Ind_CapitalMarkets") and histOK, 1, NaN)
+	indN_DiscountStores:	#Count IF(InList("Ind_DiscountStores") and histOK, 1, NaN)
+	indN_ElectronicComponents:	#Count IF(InList("Ind_ElectronicComponents") and histOK, 1, NaN)
+	indN_EngineeringConstruction:	#Count IF(InList("Ind_EngineeringConstruction") and histOK, 1, NaN)
+	indN_InternetContentInformati:	#Count IF(InList("Ind_InternetContentInformati") and histOK, 1, NaN)
+	indN_InternetRetail:	#Count IF(InList("Ind_InternetRetail") and histOK, 1, NaN)
+	indN_PackagedFoods:	#Count IF(InList("Ind_PackagedFoods") and histOK, 1, NaN)
+	indN_ReitRetail:	#Count IF(InList("Ind_ReitRetail") and histOK, 1, NaN)
+	indN_SpecialtyRetail:	#Count IF(InList("Ind_SpecialtyRetail") and histOK, 1, NaN)
+	indN_AutoParts:	#Count IF(InList("Ind_AutoParts") and histOK, 1, NaN)
+	indN_InsuranceDiversified:	#Count IF(InList("Ind_InsuranceDiversified") and histOK, 1, NaN)
+	indN_InsuranceLife:	#Count IF(InList("Ind_InsuranceLife") and histOK, 1, NaN)
+	indN_MedicalDistribution:	#Count IF(InList("Ind_MedicalDistribution") and histOK, 1, NaN)
+	indN_OilGasMidstream:	#Count IF(InList("Ind_OilGasMidstream") and histOK, 1, NaN)
+	indN_Railroads:	#Count IF(InList("Ind_Railroads") and histOK, 1, NaN)
+	indN_ResidentialConstruction:	#Count IF(InList("Ind_ResidentialConstruction") and histOK, 1, NaN)
+	indN_SpecialtyBusinessService:	#Count IF(InList("Ind_SpecialtyBusinessService") and histOK, 1, NaN)
+	indN_AgriculturalInputs:	#Count IF(InList("Ind_AgriculturalInputs") and histOK, 1, NaN)
+	indN_Airlines:	#Count IF(InList("Ind_Airlines") and histOK, 1, NaN)
+	indN_ApparelRetail:	#Count IF(InList("Ind_ApparelRetail") and histOK, 1, NaN)
+	indN_AutoManufacturers:	#Count IF(InList("Ind_AutoManufacturers") and histOK, 1, NaN)
+	indN_BuildingMaterials:	#Count IF(InList("Ind_BuildingMaterials") and histOK, 1, NaN)
+	indN_ElectricalEquipmentParts:	#Count IF(InList("Ind_ElectricalEquipmentParts") and histOK, 1, NaN)
+	indN_FarmHeavyConstructionMac:	#Count IF(InList("Ind_FarmHeavyConstructionMac") and histOK, 1, NaN)
+	indN_FarmProducts:	#Count IF(InList("Ind_FarmProducts") and histOK, 1, NaN)
+	indN_IndustrialDistribution:	#Count IF(InList("Ind_IndustrialDistribution") and histOK, 1, NaN)
+	indN_MedicalCareFacilities:	#Count IF(InList("Ind_MedicalCareFacilities") and histOK, 1, NaN)
+	indN_OilGasEquipmentServices:	#Count IF(InList("Ind_OilGasEquipmentServices") and histOK, 1, NaN)
+	indN_OilGasRefiningMarketing:	#Count IF(InList("Ind_OilGasRefiningMarketing") and histOK, 1, NaN)
+	indN_ReitHealthcareFacilities:	#Count IF(InList("Ind_ReitHealthcareFacilities") and histOK, 1, NaN)
+	indN_ReitIndustrial:	#Count IF(InList("Ind_ReitIndustrial") and histOK, 1, NaN)
+	indN_ResortsCasinos:	#Count IF(InList("Ind_ResortsCasinos") and histOK, 1, NaN)
+	indN_UtilitiesIndependentPowe:	#Count IF(InList("Ind_UtilitiesIndependentPowe") and histOK, 1, NaN)
+	indN_AdvertisingAgencies:	#Count IF(InList("Ind_AdvertisingAgencies") and histOK, 1, NaN)
+	indN_Confectioners:	#Count IF(InList("Ind_Confectioners") and histOK, 1, NaN)
+	indN_Conglomerates:	#Count IF(InList("Ind_Conglomerates") and histOK, 1, NaN)
+	indN_ConsultingServices:	#Count IF(InList("Ind_ConsultingServices") and histOK, 1, NaN)
+	indN_DrugManufacturersSpecial:	#Count IF(InList("Ind_DrugManufacturersSpecial") and histOK, 1, NaN)
+	indN_FootwearAccessories:	#Count IF(InList("Ind_FootwearAccessories") and histOK, 1, NaN)
+	indN_HomeImprovementRetail:	#Count IF(InList("Ind_HomeImprovementRetail") and histOK, 1, NaN)
+	indN_Lodging:	#Count IF(InList("Ind_Lodging") and histOK, 1, NaN)
+	indN_OilGasIntegrated:	#Count IF(InList("Ind_OilGasIntegrated") and histOK, 1, NaN)
+	indN_RealEstateServices:	#Count IF(InList("Ind_RealEstateServices") and histOK, 1, NaN)
+	indN_ReitOffice:	#Count IF(InList("Ind_ReitOffice") and histOK, 1, NaN)
+	indN_StaffingEmploymentServic:	#Count IF(InList("Ind_StaffingEmploymentServic") and histOK, 1, NaN)
+	indN_Steel:	#Count IF(InList("Ind_Steel") and histOK, 1, NaN)
+	indN_Tobacco:	#Count IF(InList("Ind_Tobacco") and histOK, 1, NaN)
+	indN_ToolsAccessories:	#Count IF(InList("Ind_ToolsAccessories") and histOK, 1, NaN)
+	indN_UtilitiesDiversified:	#Count IF(InList("Ind_UtilitiesDiversified") and histOK, 1, NaN)
+	indN_UtilitiesRegulatedGas:	#Count IF(InList("Ind_UtilitiesRegulatedGas") and histOK, 1, NaN)
+	indN_WasteManagement:	#Count IF(InList("Ind_WasteManagement") and histOK, 1, NaN)
+	indN_ApparelManufacturing:	#Count IF(InList("Ind_ApparelManufacturing") and histOK, 1, NaN)
+	indN_AutoTruckDealerships:	#Count IF(InList("Ind_AutoTruckDealerships") and histOK, 1, NaN)
+	indN_BeveragesBrewers:	#Count IF(InList("Ind_BeveragesBrewers") and histOK, 1, NaN)
+	indN_BeveragesWineriesDistill:	#Count IF(InList("Ind_BeveragesWineriesDistill") and histOK, 1, NaN)
+	indN_Chemicals:	#Count IF(InList("Ind_Chemicals") and histOK, 1, NaN)
+	indN_ConsumerElectronics:	#Count IF(InList("Ind_ConsumerElectronics") and histOK, 1, NaN)
+	indN_Copper:	#Count IF(InList("Ind_Copper") and histOK, 1, NaN)
+	indN_ElectronicGamingMultimed:	#Count IF(InList("Ind_ElectronicGamingMultimed") and histOK, 1, NaN)
+	indN_FoodDistribution:	#Count IF(InList("Ind_FoodDistribution") and histOK, 1, NaN)
+	indN_Gold:	#Count IF(InList("Ind_Gold") and histOK, 1, NaN)
+	indN_GroceryStores:	#Count IF(InList("Ind_GroceryStores") and histOK, 1, NaN)
+	indN_HealthInformationService:	#Count IF(InList("Ind_HealthInformationService") and histOK, 1, NaN)
+	indN_InsuranceReinsurance:	#Count IF(InList("Ind_InsuranceReinsurance") and histOK, 1, NaN)
+	indN_Leisure:	#Count IF(InList("Ind_Leisure") and histOK, 1, NaN)
+	indN_LuxuryGoods:	#Count IF(InList("Ind_LuxuryGoods") and histOK, 1, NaN)
+	indN_PersonalServices:	#Count IF(InList("Ind_PersonalServices") and histOK, 1, NaN)
+	indN_PollutionTreatmentContro:	#Count IF(InList("Ind_PollutionTreatmentContro") and histOK, 1, NaN)
+	indN_ReitDiversified:	#Count IF(InList("Ind_ReitDiversified") and histOK, 1, NaN)
+	indN_ReitHotelMotel:	#Count IF(InList("Ind_ReitHotelMotel") and histOK, 1, NaN)
+	indN_RentalLeasingServices:	#Count IF(InList("Ind_RentalLeasingServices") and histOK, 1, NaN)
+	indN_SecurityProtectionServic:	#Count IF(InList("Ind_SecurityProtectionServic") and histOK, 1, NaN)
+	indN_Solar:	#Count IF(InList("Ind_Solar") and histOK, 1, NaN)
+	indN_Trucking:	#Count IF(InList("Ind_Trucking") and histOK, 1, NaN)
+	indN_UtilitiesRegulatedWater:	#Count IF(InList("Ind_UtilitiesRegulatedWater") and histOK, 1, NaN)
+	indCode:	IF(InList("Ind_UtilitiesRegulatedElectr"), 1, IF(InList("Ind_SoftwareInfrastructure"), 2, IF(InList("Ind_SpecialtyIndustrialMachi"), 3, IF(InList("Ind_Semiconductors"), 4, IF(InList("Ind_AerospaceDefense"), 5, IF(InList("Ind_SoftwareApplication"), 6, IF(InList("Ind_AssetManagement"), 7, IF(InList("Ind_DiagnosticsResearch"), 8, IF(InList("Ind_Entertainment"), 9, IF(InList("Ind_MedicalDevices"), 10, IF(InList("Ind_BanksRegional"), 11, IF(InList("Ind_DrugManufacturersGeneral"), 12, IF(InList("Ind_FinancialDataStockExchan"), 13, IF(InList("Ind_InformationTechnologySer"), 14, IF(InList("Ind_OilGasEP"), 15, IF(InList("Ind_SpecialtyChemicals"), 16, IF(InList("Ind_ComputerHardware"), 17, IF(InList("Ind_InsurancePropertyCasualt"), 18, IF(InList("Ind_MedicalInstrumentsSuppli"), 19, IF(InList("Ind_HouseholdPersonalProduct"), 20, IF(InList("Ind_ReitSpecialty"), 21, IF(InList("Ind_Biotechnology"), 22, IF(InList("Ind_CommunicationEquipment"), 23, IF(InList("Ind_CreditServices"), 24, IF(InList("Ind_HealthcarePlans"), 25, IF(InList("Ind_InsuranceBrokers"), 26, IF(InList("Ind_IntegratedFreightLogisti"), 27, IF(InList("Ind_PackagingContainers"), 28, IF(InList("Ind_ReitResidential"), 29, IF(InList("Ind_Restaurants"), 30, IF(InList("Ind_ScientificTechnicalInstr"), 31, IF(InList("Ind_SemiconductorEquipmentMa"), 32, IF(InList("Ind_TelecomServices"), 33, IF(InList("Ind_TravelServices"), 34, IF(InList("Ind_BanksDiversified"), 35, IF(InList("Ind_BeveragesNonAlcoholic"), 36, IF(InList("Ind_BuildingProductsEquipmen"), 37, IF(InList("Ind_CapitalMarkets"), 38, IF(InList("Ind_DiscountStores"), 39, IF(InList("Ind_ElectronicComponents"), 40, IF(InList("Ind_EngineeringConstruction"), 41, IF(InList("Ind_InternetContentInformati"), 42, IF(InList("Ind_InternetRetail"), 43, IF(InList("Ind_PackagedFoods"), 44, IF(InList("Ind_ReitRetail"), 45, IF(InList("Ind_SpecialtyRetail"), 46, IF(InList("Ind_AutoParts"), 47, IF(InList("Ind_InsuranceDiversified"), 48, IF(InList("Ind_InsuranceLife"), 49, IF(InList("Ind_MedicalDistribution"), 50, IF(InList("Ind_OilGasMidstream"), 51, IF(InList("Ind_Railroads"), 52, IF(InList("Ind_ResidentialConstruction"), 53, IF(InList("Ind_SpecialtyBusinessService"), 54, IF(InList("Ind_AgriculturalInputs"), 55, IF(InList("Ind_Airlines"), 56, IF(InList("Ind_ApparelRetail"), 57, IF(InList("Ind_AutoManufacturers"), 58, IF(InList("Ind_BuildingMaterials"), 59, IF(InList("Ind_ElectricalEquipmentParts"), 60, IF(InList("Ind_FarmHeavyConstructionMac"), 61, IF(InList("Ind_FarmProducts"), 62, IF(InList("Ind_IndustrialDistribution"), 63, IF(InList("Ind_MedicalCareFacilities"), 64, IF(InList("Ind_OilGasEquipmentServices"), 65, IF(InList("Ind_OilGasRefiningMarketing"), 66, IF(InList("Ind_ReitHealthcareFacilities"), 67, IF(InList("Ind_ReitIndustrial"), 68, IF(InList("Ind_ResortsCasinos"), 69, IF(InList("Ind_UtilitiesIndependentPowe"), 70, IF(InList("Ind_AdvertisingAgencies"), 71, IF(InList("Ind_Confectioners"), 72, IF(InList("Ind_Conglomerates"), 73, IF(InList("Ind_ConsultingServices"), 74, IF(InList("Ind_DrugManufacturersSpecial"), 75, IF(InList("Ind_FootwearAccessories"), 76, IF(InList("Ind_HomeImprovementRetail"), 77, IF(InList("Ind_Lodging"), 78, IF(InList("Ind_OilGasIntegrated"), 79, IF(InList("Ind_RealEstateServices"), 80, IF(InList("Ind_ReitOffice"), 81, IF(InList("Ind_StaffingEmploymentServic"), 82, IF(InList("Ind_Steel"), 83, IF(InList("Ind_Tobacco"), 84, IF(InList("Ind_ToolsAccessories"), 85, IF(InList("Ind_UtilitiesDiversified"), 86, IF(InList("Ind_UtilitiesRegulatedGas"), 87, IF(InList("Ind_WasteManagement"), 88, IF(InList("Ind_ApparelManufacturing"), 89, IF(InList("Ind_AutoTruckDealerships"), 90, IF(InList("Ind_BeveragesBrewers"), 91, IF(InList("Ind_BeveragesWineriesDistill"), 92, IF(InList("Ind_Chemicals"), 93, IF(InList("Ind_ConsumerElectronics"), 94, IF(InList("Ind_Copper"), 95, IF(InList("Ind_ElectronicGamingMultimed"), 96, IF(InList("Ind_FoodDistribution"), 97, IF(InList("Ind_Gold"), 98, IF(InList("Ind_GroceryStores"), 99, IF(InList("Ind_HealthInformationService"), 100, IF(InList("Ind_InsuranceReinsurance"), 101, IF(InList("Ind_Leisure"), 102, IF(InList("Ind_LuxuryGoods"), 103, IF(InList("Ind_PersonalServices"), 104, IF(InList("Ind_PollutionTreatmentContro"), 105, IF(InList("Ind_ReitDiversified"), 106, IF(InList("Ind_ReitHotelMotel"), 107, IF(InList("Ind_RentalLeasingServices"), 108, IF(InList("Ind_SecurityProtectionServic"), 109, IF(InList("Ind_Solar"), 110, IF(InList("Ind_Trucking"), 111, IF(InList("Ind_UtilitiesRegulatedWater"), 112, 0))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
+	indNOwn:	IF(indCode = 1, indN_UtilitiesRegulatedElectr, IF(indCode = 2, indN_SoftwareInfrastructure, IF(indCode = 3, indN_SpecialtyIndustrialMachi, IF(indCode = 4, indN_Semiconductors, IF(indCode = 5, indN_AerospaceDefense, IF(indCode = 6, indN_SoftwareApplication, IF(indCode = 7, indN_AssetManagement, IF(indCode = 8, indN_DiagnosticsResearch, IF(indCode = 9, indN_Entertainment, IF(indCode = 10, indN_MedicalDevices, IF(indCode = 11, indN_BanksRegional, IF(indCode = 12, indN_DrugManufacturersGeneral, IF(indCode = 13, indN_FinancialDataStockExchan, IF(indCode = 14, indN_InformationTechnologySer, IF(indCode = 15, indN_OilGasEP, IF(indCode = 16, indN_SpecialtyChemicals, IF(indCode = 17, indN_ComputerHardware, IF(indCode = 18, indN_InsurancePropertyCasualt, IF(indCode = 19, indN_MedicalInstrumentsSuppli, IF(indCode = 20, indN_HouseholdPersonalProduct, IF(indCode = 21, indN_ReitSpecialty, IF(indCode = 22, indN_Biotechnology, IF(indCode = 23, indN_CommunicationEquipment, IF(indCode = 24, indN_CreditServices, IF(indCode = 25, indN_HealthcarePlans, IF(indCode = 26, indN_InsuranceBrokers, IF(indCode = 27, indN_IntegratedFreightLogisti, IF(indCode = 28, indN_PackagingContainers, IF(indCode = 29, indN_ReitResidential, IF(indCode = 30, indN_Restaurants, IF(indCode = 31, indN_ScientificTechnicalInstr, IF(indCode = 32, indN_SemiconductorEquipmentMa, IF(indCode = 33, indN_TelecomServices, IF(indCode = 34, indN_TravelServices, IF(indCode = 35, indN_BanksDiversified, IF(indCode = 36, indN_BeveragesNonAlcoholic, IF(indCode = 37, indN_BuildingProductsEquipmen, IF(indCode = 38, indN_CapitalMarkets, IF(indCode = 39, indN_DiscountStores, IF(indCode = 40, indN_ElectronicComponents, IF(indCode = 41, indN_EngineeringConstruction, IF(indCode = 42, indN_InternetContentInformati, IF(indCode = 43, indN_InternetRetail, IF(indCode = 44, indN_PackagedFoods, IF(indCode = 45, indN_ReitRetail, IF(indCode = 46, indN_SpecialtyRetail, IF(indCode = 47, indN_AutoParts, IF(indCode = 48, indN_InsuranceDiversified, IF(indCode = 49, indN_InsuranceLife, IF(indCode = 50, indN_MedicalDistribution, IF(indCode = 51, indN_OilGasMidstream, IF(indCode = 52, indN_Railroads, IF(indCode = 53, indN_ResidentialConstruction, IF(indCode = 54, indN_SpecialtyBusinessService, IF(indCode = 55, indN_AgriculturalInputs, IF(indCode = 56, indN_Airlines, IF(indCode = 57, indN_ApparelRetail, IF(indCode = 58, indN_AutoManufacturers, IF(indCode = 59, indN_BuildingMaterials, IF(indCode = 60, indN_ElectricalEquipmentParts, IF(indCode = 61, indN_FarmHeavyConstructionMac, IF(indCode = 62, indN_FarmProducts, IF(indCode = 63, indN_IndustrialDistribution, IF(indCode = 64, indN_MedicalCareFacilities, IF(indCode = 65, indN_OilGasEquipmentServices, IF(indCode = 66, indN_OilGasRefiningMarketing, IF(indCode = 67, indN_ReitHealthcareFacilities, IF(indCode = 68, indN_ReitIndustrial, IF(indCode = 69, indN_ResortsCasinos, IF(indCode = 70, indN_UtilitiesIndependentPowe, IF(indCode = 71, indN_AdvertisingAgencies, IF(indCode = 72, indN_Confectioners, IF(indCode = 73, indN_Conglomerates, IF(indCode = 74, indN_ConsultingServices, IF(indCode = 75, indN_DrugManufacturersSpecial, IF(indCode = 76, indN_FootwearAccessories, IF(indCode = 77, indN_HomeImprovementRetail, IF(indCode = 78, indN_Lodging, IF(indCode = 79, indN_OilGasIntegrated, IF(indCode = 80, indN_RealEstateServices, IF(indCode = 81, indN_ReitOffice, IF(indCode = 82, indN_StaffingEmploymentServic, IF(indCode = 83, indN_Steel, IF(indCode = 84, indN_Tobacco, IF(indCode = 85, indN_ToolsAccessories, IF(indCode = 86, indN_UtilitiesDiversified, IF(indCode = 87, indN_UtilitiesRegulatedGas, IF(indCode = 88, indN_WasteManagement, IF(indCode = 89, indN_ApparelManufacturing, IF(indCode = 90, indN_AutoTruckDealerships, IF(indCode = 91, indN_BeveragesBrewers, IF(indCode = 92, indN_BeveragesWineriesDistill, IF(indCode = 93, indN_Chemicals, IF(indCode = 94, indN_ConsumerElectronics, IF(indCode = 95, indN_Copper, IF(indCode = 96, indN_ElectronicGamingMultimed, IF(indCode = 97, indN_FoodDistribution, IF(indCode = 98, indN_Gold, IF(indCode = 99, indN_GroceryStores, IF(indCode = 100, indN_HealthInformationService, IF(indCode = 101, indN_InsuranceReinsurance, IF(indCode = 102, indN_Leisure, IF(indCode = 103, indN_LuxuryGoods, IF(indCode = 104, indN_PersonalServices, IF(indCode = 105, indN_PollutionTreatmentContro, IF(indCode = 106, indN_ReitDiversified, IF(indCode = 107, indN_ReitHotelMotel, IF(indCode = 108, indN_RentalLeasingServices, IF(indCode = 109, indN_SecurityProtectionServic, IF(indCode = 110, indN_Solar, IF(indCode = 111, indN_Trucking, IF(indCode = 112, indN_UtilitiesRegulatedWater, NaN))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
+	// ---- LAYER 36: ROTATION MOTION, the Rotation tab quadrant done inside RealTest ----
+	// The terminal plots each sector at X = level of relative momentum and Y = median T-3 severity,
+	// and a baseline shows where it has MOVED. Here the baseline is simply N bars ago on the same series.
+	// Both axes are turned into 0..100 ranks AMONG THE 11 SECTORS so that X and Y are comparable and
+	// distance moved means something. Motion is then computed on the OWN sector only, then ranked
+	// against the other ten sectors. Sector items repeat on every member row, as with avg_ and med_.
+	xr_Comms:	100 * (IF(avg_ConsumerDisc_RelMom < avg_Comms_RelMom, 1, 0) + IF(avg_ConsStaples_RelMom < avg_Comms_RelMom, 1, 0) + IF(avg_Energy_RelMom < avg_Comms_RelMom, 1, 0) + IF(avg_Financials_RelMom < avg_Comms_RelMom, 1, 0) + IF(avg_Healthcare_RelMom < avg_Comms_RelMom, 1, 0) + IF(avg_Industrials_RelMom < avg_Comms_RelMom, 1, 0) + IF(avg_ITSector_RelMom < avg_Comms_RelMom, 1, 0) + IF(avg_Materials_RelMom < avg_Comms_RelMom, 1, 0) + IF(avg_Utilities_RelMom < avg_Comms_RelMom, 1, 0) + IF(avg_RealEstate_RelMom < avg_Comms_RelMom, 1, 0)) / 10
+	xr_ConsumerDisc:	100 * (IF(avg_Comms_RelMom < avg_ConsumerDisc_RelMom, 1, 0) + IF(avg_ConsStaples_RelMom < avg_ConsumerDisc_RelMom, 1, 0) + IF(avg_Energy_RelMom < avg_ConsumerDisc_RelMom, 1, 0) + IF(avg_Financials_RelMom < avg_ConsumerDisc_RelMom, 1, 0) + IF(avg_Healthcare_RelMom < avg_ConsumerDisc_RelMom, 1, 0) + IF(avg_Industrials_RelMom < avg_ConsumerDisc_RelMom, 1, 0) + IF(avg_ITSector_RelMom < avg_ConsumerDisc_RelMom, 1, 0) + IF(avg_Materials_RelMom < avg_ConsumerDisc_RelMom, 1, 0) + IF(avg_Utilities_RelMom < avg_ConsumerDisc_RelMom, 1, 0) + IF(avg_RealEstate_RelMom < avg_ConsumerDisc_RelMom, 1, 0)) / 10
+	xr_ConsStaples:	100 * (IF(avg_Comms_RelMom < avg_ConsStaples_RelMom, 1, 0) + IF(avg_ConsumerDisc_RelMom < avg_ConsStaples_RelMom, 1, 0) + IF(avg_Energy_RelMom < avg_ConsStaples_RelMom, 1, 0) + IF(avg_Financials_RelMom < avg_ConsStaples_RelMom, 1, 0) + IF(avg_Healthcare_RelMom < avg_ConsStaples_RelMom, 1, 0) + IF(avg_Industrials_RelMom < avg_ConsStaples_RelMom, 1, 0) + IF(avg_ITSector_RelMom < avg_ConsStaples_RelMom, 1, 0) + IF(avg_Materials_RelMom < avg_ConsStaples_RelMom, 1, 0) + IF(avg_Utilities_RelMom < avg_ConsStaples_RelMom, 1, 0) + IF(avg_RealEstate_RelMom < avg_ConsStaples_RelMom, 1, 0)) / 10
+	xr_Energy:	100 * (IF(avg_Comms_RelMom < avg_Energy_RelMom, 1, 0) + IF(avg_ConsumerDisc_RelMom < avg_Energy_RelMom, 1, 0) + IF(avg_ConsStaples_RelMom < avg_Energy_RelMom, 1, 0) + IF(avg_Financials_RelMom < avg_Energy_RelMom, 1, 0) + IF(avg_Healthcare_RelMom < avg_Energy_RelMom, 1, 0) + IF(avg_Industrials_RelMom < avg_Energy_RelMom, 1, 0) + IF(avg_ITSector_RelMom < avg_Energy_RelMom, 1, 0) + IF(avg_Materials_RelMom < avg_Energy_RelMom, 1, 0) + IF(avg_Utilities_RelMom < avg_Energy_RelMom, 1, 0) + IF(avg_RealEstate_RelMom < avg_Energy_RelMom, 1, 0)) / 10
+	xr_Financials:	100 * (IF(avg_Comms_RelMom < avg_Financials_RelMom, 1, 0) + IF(avg_ConsumerDisc_RelMom < avg_Financials_RelMom, 1, 0) + IF(avg_ConsStaples_RelMom < avg_Financials_RelMom, 1, 0) + IF(avg_Energy_RelMom < avg_Financials_RelMom, 1, 0) + IF(avg_Healthcare_RelMom < avg_Financials_RelMom, 1, 0) + IF(avg_Industrials_RelMom < avg_Financials_RelMom, 1, 0) + IF(avg_ITSector_RelMom < avg_Financials_RelMom, 1, 0) + IF(avg_Materials_RelMom < avg_Financials_RelMom, 1, 0) + IF(avg_Utilities_RelMom < avg_Financials_RelMom, 1, 0) + IF(avg_RealEstate_RelMom < avg_Financials_RelMom, 1, 0)) / 10
+	xr_Healthcare:	100 * (IF(avg_Comms_RelMom < avg_Healthcare_RelMom, 1, 0) + IF(avg_ConsumerDisc_RelMom < avg_Healthcare_RelMom, 1, 0) + IF(avg_ConsStaples_RelMom < avg_Healthcare_RelMom, 1, 0) + IF(avg_Energy_RelMom < avg_Healthcare_RelMom, 1, 0) + IF(avg_Financials_RelMom < avg_Healthcare_RelMom, 1, 0) + IF(avg_Industrials_RelMom < avg_Healthcare_RelMom, 1, 0) + IF(avg_ITSector_RelMom < avg_Healthcare_RelMom, 1, 0) + IF(avg_Materials_RelMom < avg_Healthcare_RelMom, 1, 0) + IF(avg_Utilities_RelMom < avg_Healthcare_RelMom, 1, 0) + IF(avg_RealEstate_RelMom < avg_Healthcare_RelMom, 1, 0)) / 10
+	xr_Industrials:	100 * (IF(avg_Comms_RelMom < avg_Industrials_RelMom, 1, 0) + IF(avg_ConsumerDisc_RelMom < avg_Industrials_RelMom, 1, 0) + IF(avg_ConsStaples_RelMom < avg_Industrials_RelMom, 1, 0) + IF(avg_Energy_RelMom < avg_Industrials_RelMom, 1, 0) + IF(avg_Financials_RelMom < avg_Industrials_RelMom, 1, 0) + IF(avg_Healthcare_RelMom < avg_Industrials_RelMom, 1, 0) + IF(avg_ITSector_RelMom < avg_Industrials_RelMom, 1, 0) + IF(avg_Materials_RelMom < avg_Industrials_RelMom, 1, 0) + IF(avg_Utilities_RelMom < avg_Industrials_RelMom, 1, 0) + IF(avg_RealEstate_RelMom < avg_Industrials_RelMom, 1, 0)) / 10
+	xr_ITSector:	100 * (IF(avg_Comms_RelMom < avg_ITSector_RelMom, 1, 0) + IF(avg_ConsumerDisc_RelMom < avg_ITSector_RelMom, 1, 0) + IF(avg_ConsStaples_RelMom < avg_ITSector_RelMom, 1, 0) + IF(avg_Energy_RelMom < avg_ITSector_RelMom, 1, 0) + IF(avg_Financials_RelMom < avg_ITSector_RelMom, 1, 0) + IF(avg_Healthcare_RelMom < avg_ITSector_RelMom, 1, 0) + IF(avg_Industrials_RelMom < avg_ITSector_RelMom, 1, 0) + IF(avg_Materials_RelMom < avg_ITSector_RelMom, 1, 0) + IF(avg_Utilities_RelMom < avg_ITSector_RelMom, 1, 0) + IF(avg_RealEstate_RelMom < avg_ITSector_RelMom, 1, 0)) / 10
+	xr_Materials:	100 * (IF(avg_Comms_RelMom < avg_Materials_RelMom, 1, 0) + IF(avg_ConsumerDisc_RelMom < avg_Materials_RelMom, 1, 0) + IF(avg_ConsStaples_RelMom < avg_Materials_RelMom, 1, 0) + IF(avg_Energy_RelMom < avg_Materials_RelMom, 1, 0) + IF(avg_Financials_RelMom < avg_Materials_RelMom, 1, 0) + IF(avg_Healthcare_RelMom < avg_Materials_RelMom, 1, 0) + IF(avg_Industrials_RelMom < avg_Materials_RelMom, 1, 0) + IF(avg_ITSector_RelMom < avg_Materials_RelMom, 1, 0) + IF(avg_Utilities_RelMom < avg_Materials_RelMom, 1, 0) + IF(avg_RealEstate_RelMom < avg_Materials_RelMom, 1, 0)) / 10
+	xr_Utilities:	100 * (IF(avg_Comms_RelMom < avg_Utilities_RelMom, 1, 0) + IF(avg_ConsumerDisc_RelMom < avg_Utilities_RelMom, 1, 0) + IF(avg_ConsStaples_RelMom < avg_Utilities_RelMom, 1, 0) + IF(avg_Energy_RelMom < avg_Utilities_RelMom, 1, 0) + IF(avg_Financials_RelMom < avg_Utilities_RelMom, 1, 0) + IF(avg_Healthcare_RelMom < avg_Utilities_RelMom, 1, 0) + IF(avg_Industrials_RelMom < avg_Utilities_RelMom, 1, 0) + IF(avg_ITSector_RelMom < avg_Utilities_RelMom, 1, 0) + IF(avg_Materials_RelMom < avg_Utilities_RelMom, 1, 0) + IF(avg_RealEstate_RelMom < avg_Utilities_RelMom, 1, 0)) / 10
+	xr_RealEstate:	100 * (IF(avg_Comms_RelMom < avg_RealEstate_RelMom, 1, 0) + IF(avg_ConsumerDisc_RelMom < avg_RealEstate_RelMom, 1, 0) + IF(avg_ConsStaples_RelMom < avg_RealEstate_RelMom, 1, 0) + IF(avg_Energy_RelMom < avg_RealEstate_RelMom, 1, 0) + IF(avg_Financials_RelMom < avg_RealEstate_RelMom, 1, 0) + IF(avg_Healthcare_RelMom < avg_RealEstate_RelMom, 1, 0) + IF(avg_Industrials_RelMom < avg_RealEstate_RelMom, 1, 0) + IF(avg_ITSector_RelMom < avg_RealEstate_RelMom, 1, 0) + IF(avg_Materials_RelMom < avg_RealEstate_RelMom, 1, 0) + IF(avg_Utilities_RelMom < avg_RealEstate_RelMom, 1, 0)) / 10
+	rotX:	IF(SectorCodeRaw = 1, xr_Comms, IF(SectorCodeRaw = 2, xr_ConsumerDisc, IF(SectorCodeRaw = 3, xr_ConsStaples, IF(SectorCodeRaw = 4, xr_Energy, IF(SectorCodeRaw = 5, xr_Financials, IF(SectorCodeRaw = 6, xr_Healthcare, IF(SectorCodeRaw = 7, xr_Industrials, IF(SectorCodeRaw = 8, xr_ITSector, IF(SectorCodeRaw = 9, xr_Materials, IF(SectorCodeRaw = 10, xr_Utilities, IF(SectorCodeRaw = 11, xr_RealEstate, NaN)))))))))))
+	rotXRaw:	IF(SectorCodeRaw = 1, avg_Comms_RelMom, IF(SectorCodeRaw = 2, avg_ConsumerDisc_RelMom, IF(SectorCodeRaw = 3, avg_ConsStaples_RelMom, IF(SectorCodeRaw = 4, avg_Energy_RelMom, IF(SectorCodeRaw = 5, avg_Financials_RelMom, IF(SectorCodeRaw = 6, avg_Healthcare_RelMom, IF(SectorCodeRaw = 7, avg_Industrials_RelMom, IF(SectorCodeRaw = 8, avg_ITSector_RelMom, IF(SectorCodeRaw = 9, avg_Materials_RelMom, IF(SectorCodeRaw = 10, avg_Utilities_RelMom, IF(SectorCodeRaw = 11, avg_RealEstate_RelMom, NaN)))))))))))
+	rotDx3:	rotX - rotX[3]
+	rotDx5:	rotX - rotX[5]
+	rotDx10:	rotX - rotX[10]
+	// ---- LAYER 37: per-symbol acceleration, his 3D / 5D / Intraday 3D / Gap 3D columns ----
+	ret3:	IF(closev[3] > 0, 100 * (closev / closev[3] - 1), NaN)
+	intra3:	100 * Sum(closev / openv - 1, 3)
+	gap3:	100 * Sum(openv / closev[1] - 1, 3)
+	momAccel3:	IF(momReady and not IsNaN(mom[3]), (mom - mom[3]) * 100, NaN)
+	// ---- LAYER 38: ATR-unit trend position, DISPLAY ONLY, his Trend Filter position column ----
+	// Nothing in the engine reads these. They only mirror his published Below -1.45 ATR style read.
+	trueRng:	Max(highv, closev[1]) - Min(lowv, closev[1])
+	atr14:	Avg(trueRng, 14)
+	intra3Atr:	IF(atr14 > 0, Sum(closev - openv, 3) / atr14, NaN)
+	gap3Atr:	IF(atr14 > 0, Sum(openv - closev[1], 3) / atr14, NaN)
+
+ScanSettings:
+	EndDate:	Latest
+	// Latest bar only. Without this the scan writes one row per symbol
+	// PER BAR across the whole imported history.
+	NumBars:	1
+
+
+Scan:
+	// Every Scan column name below is deliberately DIFFERENT from the
+	// Data item it reads. RealTest treats Scan columns as named items too
+	// and rejects a name already used in Data, case-insensitively.
+	// ---- identity ----
+	// Every Scan column name below is deliberately DIFFERENT from the
+	// Data item it reads. RealTest treats Scan columns as named items too
+	// and rejects a name already used in Data, case-insensitively.
+	// ---- identity ----
+	Price:	closev
+	Sector:	{?}	IF(SectorCodeRaw = 1, "Comms",
+		IF(SectorCodeRaw = 2, "ConsumerDisc",
+		IF(SectorCodeRaw = 3, "ConsStaples",
+		IF(SectorCodeRaw = 4, "Energy",
+		IF(SectorCodeRaw = 5, "Financials",
+		IF(SectorCodeRaw = 6, "Healthcare",
+		IF(SectorCodeRaw = 7, "Industrials",
+		IF(SectorCodeRaw = 8, "ITSector",
+		IF(SectorCodeRaw = 9, "Materials",
+		IF(SectorCodeRaw = 10, "Utilities",
+		IF(SectorCodeRaw = 11, "RealEstate",
+		IF(SectorCodeRaw = 12, "Benchmark", IF(SectorCodeRaw = 13, "ETF", "Unclassified")))))))))))))
+	SevRankPart:	sevRank
+	SevPricePart:	sevPrice
+	SevCandlePart:	sevCandle
+	RankChg:	rankDelta
+	PriceEvent:	{?}	IF(PriceTagCode = 1, "PRICE_DECLINE_5D",
+		IF(PriceTagCode = 2, "PRICE_DECLINE_3D",
+		IF(PriceTagCode = 3, "PRICE_ADVANCE_3D", "")))
+	CandleEvent:	{?}	IF(CandleTagCode = 1, "INTRADAY_SELLING_3D",
+		IF(CandleTagCode = 2, "BEARISH_CANDLE_BREADTH_3D",
+		IF(CandleTagCode = 3, "WEAK_CLOSE_LOCATION_3D", "")))
+	// ---- attention set, his M A G E S legend. NON-DIRECTIONAL. ----
+	AttnMover:	attnM
+	// ---- momentum and rotation ----
+	MomShortPct:	momS
+	MomMedPct:	momM
+	MomLongPct:	mom
+	MomAccelerate:	momAccel
+	RelMomentum:	relMom
+	RankRelMom:	relMomRank
+	PctlRelMom:	relMomPctl
+	// Named Delta rather than Accel so these never collide case-
+	// insensitively with the accelRank / accelPctl Data items.
+	DeltaRank:	accelRank
+	DeltaPctl:	accelPctl
+	PctlMove:	movePctl
+	SectorRelMom:	mySectorRelMom
+	sbCommsMom:	brd_Comms_Mom
+	sbCommsAccel:	brd_Comms_Accel
+	sbCommsRelMom:	brd_Comms_RelMom
+	srmComms:	avg_Comms_RelMom
+	sbConsumerDiscMom:	brd_ConsumerDisc_Mom
+	sbConsumerDiscAccel:	brd_ConsumerDisc_Accel
+	sbConsumerDiscRelMom:	brd_ConsumerDisc_RelMom
+	srmConsumerDisc:	avg_ConsumerDisc_RelMom
+	sbConsStaplesMom:	brd_ConsStaples_Mom
+	sbConsStaplesAccel:	brd_ConsStaples_Accel
+	sbConsStaplesRelMom:	brd_ConsStaples_RelMom
+	srmConsStaples:	avg_ConsStaples_RelMom
+	sbEnergyMom:	brd_Energy_Mom
+	sbEnergyAccel:	brd_Energy_Accel
+	sbEnergyRelMom:	brd_Energy_RelMom
+	srmEnergy:	avg_Energy_RelMom
+	sbFinancialsMom:	brd_Financials_Mom
+	sbFinancialsAccel:	brd_Financials_Accel
+	sbFinancialsRelMom:	brd_Financials_RelMom
+	srmFinancials:	avg_Financials_RelMom
+	sbHealthcareMom:	brd_Healthcare_Mom
+	sbHealthcareAccel:	brd_Healthcare_Accel
+	sbHealthcareRelMom:	brd_Healthcare_RelMom
+	srmHealthcare:	avg_Healthcare_RelMom
+	sbIndustrialsMom:	brd_Industrials_Mom
+	sbIndustrialsAccel:	brd_Industrials_Accel
+	sbIndustrialsRelMom:	brd_Industrials_RelMom
+	srmIndustrials:	avg_Industrials_RelMom
+	sbITSectorMom:	brd_ITSector_Mom
+	sbITSectorAccel:	brd_ITSector_Accel
+	sbITSectorRelMom:	brd_ITSector_RelMom
+	srmITSector:	avg_ITSector_RelMom
+	sbMaterialsMom:	brd_Materials_Mom
+	sbMaterialsAccel:	brd_Materials_Accel
+	sbMaterialsRelMom:	brd_Materials_RelMom
+	srmMaterials:	avg_Materials_RelMom
+	sbUtilitiesMom:	brd_Utilities_Mom
+	sbUtilitiesAccel:	brd_Utilities_Accel
+	sbUtilitiesRelMom:	brd_Utilities_RelMom
+	srmUtilities:	avg_Utilities_RelMom
+	sbRealEstateMom:	brd_RealEstate_Mom
+	sbRealEstateAccel:	brd_RealEstate_Accel
+	sbRealEstateRelMom:	brd_RealEstate_RelMom
+	srmRealEstate:	avg_RealEstate_RelMom
+	sbAllEQMom:	brd_AllEQ_Mom
+	sbAllEQAccel:	brd_AllEQ_Accel
+	sbAllEQRelMom:	brd_AllEQ_RelMom
+	srmAllEQ:	avg_AllEQ_RelMom
+	sbGeneralsMom:	brd_Generals_Mom
+	sbGeneralsAccel:	brd_Generals_Accel
+	sbGeneralsRelMom:	brd_Generals_RelMom
+	srmGenerals:	avg_Generals_RelMom
+	// ================= v4 scan columns =================
+	UniverseTag:	{?}	IF(SectorCodeRaw = 13, "ETF", "Stock")
+	Industry:	{?}	IF(indCode = 1, "Utilities - Regulated Electric", IF(indCode = 2, "Software - Infrastructure", IF(indCode = 3, "Specialty Industrial Machinery", IF(indCode = 4, "Semiconductors", IF(indCode = 5, "Aerospace & Defense", IF(indCode = 6, "Software - Application", IF(indCode = 7, "Asset Management", IF(indCode = 8, "Diagnostics & Research", IF(indCode = 9, "Entertainment", IF(indCode = 10, "Medical Devices", IF(indCode = 11, "Banks - Regional", IF(indCode = 12, "Drug Manufacturers - General", IF(indCode = 13, "Financial Data & Stock Exchanges", IF(indCode = 14, "Information Technology Services", IF(indCode = 15, "Oil & Gas E&P", IF(indCode = 16, "Specialty Chemicals", IF(indCode = 17, "Computer Hardware", IF(indCode = 18, "Insurance - Property & Casualty", IF(indCode = 19, "Medical Instruments & Supplies", IF(indCode = 20, "Household & Personal Products", IF(indCode = 21, "REIT - Specialty", IF(indCode = 22, "Biotechnology", IF(indCode = 23, "Communication Equipment", IF(indCode = 24, "Credit Services", IF(indCode = 25, "Healthcare Plans", IF(indCode = 26, "Insurance Brokers", IF(indCode = 27, "Integrated Freight & Logistics", IF(indCode = 28, "Packaging & Containers", IF(indCode = 29, "REIT - Residential", IF(indCode = 30, "Restaurants", IF(indCode = 31, "Scientific & Technical Instruments", IF(indCode = 32, "Semiconductor Equipment & Materials", IF(indCode = 33, "Telecom Services", IF(indCode = 34, "Travel Services", IF(indCode = 35, "Banks - Diversified", IF(indCode = 36, "Beverages - Non-Alcoholic", IF(indCode = 37, "Building Products & Equipment", IF(indCode = 38, "Capital Markets", IF(indCode = 39, "Discount Stores", IF(indCode = 40, "Electronic Components", IF(indCode = 41, "Engineering & Construction", IF(indCode = 42, "Internet Content & Information", IF(indCode = 43, "Internet Retail", IF(indCode = 44, "Packaged Foods", IF(indCode = 45, "REIT - Retail", IF(indCode = 46, "Specialty Retail", IF(indCode = 47, "Auto Parts", IF(indCode = 48, "Insurance - Diversified", IF(indCode = 49, "Insurance - Life", IF(indCode = 50, "Medical Distribution", IF(indCode = 51, "Oil & Gas Midstream", IF(indCode = 52, "Railroads", IF(indCode = 53, "Residential Construction", IF(indCode = 54, "Specialty Business Services", IF(indCode = 55, "Agricultural Inputs", IF(indCode = 56, "Airlines", IF(indCode = 57, "Apparel Retail", IF(indCode = 58, "Auto Manufacturers", IF(indCode = 59, "Building Materials", IF(indCode = 60, "Electrical Equipment & Parts", IF(indCode = 61, "Farm & Heavy Construction Machinery", IF(indCode = 62, "Farm Products", IF(indCode = 63, "Industrial Distribution", IF(indCode = 64, "Medical Care Facilities", IF(indCode = 65, "Oil & Gas Equipment & Services", IF(indCode = 66, "Oil & Gas Refining & Marketing", IF(indCode = 67, "REIT - Healthcare Facilities", IF(indCode = 68, "REIT - Industrial", IF(indCode = 69, "Resorts & Casinos", IF(indCode = 70, "Utilities - Independent Power Producers", IF(indCode = 71, "Advertising Agencies", IF(indCode = 72, "Confectioners", IF(indCode = 73, "Conglomerates", IF(indCode = 74, "Consulting Services", IF(indCode = 75, "Drug Manufacturers - Specialty & Generic", IF(indCode = 76, "Footwear & Accessories", IF(indCode = 77, "Home Improvement Retail", IF(indCode = 78, "Lodging", IF(indCode = 79, "Oil & Gas Integrated", IF(indCode = 80, "Real Estate Services", IF(indCode = 81, "REIT - Office", IF(indCode = 82, "Staffing & Employment Services", IF(indCode = 83, "Steel", IF(indCode = 84, "Tobacco", IF(indCode = 85, "Tools & Accessories", IF(indCode = 86, "Utilities - Diversified", IF(indCode = 87, "Utilities - Regulated Gas", IF(indCode = 88, "Waste Management", IF(indCode = 89, "Apparel Manufacturing", IF(indCode = 90, "Auto & Truck Dealerships", IF(indCode = 91, "Beverages - Brewers", IF(indCode = 92, "Beverages - Wineries & Distilleries", IF(indCode = 93, "Chemicals", IF(indCode = 94, "Consumer Electronics", IF(indCode = 95, "Copper", IF(indCode = 96, "Electronic Gaming & Multimedia", IF(indCode = 97, "Food Distribution", IF(indCode = 98, "Gold", IF(indCode = 99, "Grocery Stores", IF(indCode = 100, "Health Information Services", IF(indCode = 101, "Insurance - Reinsurance", IF(indCode = 102, "Leisure", IF(indCode = 103, "Luxury Goods", IF(indCode = 104, "Personal Services", IF(indCode = 105, "Pollution & Treatment Controls", IF(indCode = 106, "REIT - Diversified", IF(indCode = 107, "REIT - Hotel & Motel", IF(indCode = 108, "Rental & Leasing Services", IF(indCode = 109, "Security & Protection Services", IF(indCode = 110, "Solar", IF(indCode = 111, "Trucking", IF(indCode = 112, "Utilities - Regulated Water", ""))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
+	Ret1D:	ret1
+	Ret5D:	ret5
+	Ret10D:	ret10
+	TurnoverCol:	turnover
+	TurnRankEq:	turnRank
+	TurnRankEtf:	etfTurnRank
+	EtfRelMomCol:	etfRelMom
+	BadDataFlag:	badData
+	HistOKFlag:	histOK
+	SplitRecentFlag:	splitRecent
+	StockTotalN:	eqTotal
+	StockAdv1D:	eqAdv1
+	StockDec1D:	eqDec1
+	StockNet1D:	eqNet1
+	EtfTotalN:	etfTotal
+	EtfAdv1D:	etfAdv1
+	EtfDec1D:	etfDec1
+	EtfNet1D:	etfNet1
+	IndustryN:	indNOwn
+	// ---- rotation motion ----
+	RotLevelRank:	rotX
+	RotXRawRelMom:	rotXRaw
+	RotDx3D:	rotDx3
+	RotDx5D:	rotDx5
+	RotDx10D:	rotDx10
+	Ret3D:	ret3
+	Intraday3D:	intra3
+	Gap3D:	gap3
+	MomAccel3D:	momAccel3
+	Intraday3DATR:	intra3Atr
+	Gap3DATR:	gap3Atr

@@ -1,0 +1,240 @@
+Notes:
+	AlexAligned Unified v7 split, part E, daily price history for the terminal's Ask tab. OPTIONAL. Run AFTER part C (any time after), with apply and scan only, no import.
+	Generated from part C by gen_v7_E_history.js. The Import block below is copied byte for byte from part C and only runs when import is on the command line, so do NOT run this part with import.
+	It reads the shared data file written by part C and writes its OWN file, AlexAligned_Unified_v7E_history.csv. It is never merged with parts A B C D, so merge_v7_scans.py and terminal_payload_v7.js are unaffected.
+	One row per symbol per bar for the last 280 bars: Date, Symbol, HOpen, HHigh, HLow, HClose. About 575 x 280 = 161,000 rows.
+	ScanSettings NumBars 280 is what asks RealTest for the history; parts A B C use NumBars 1 for the latest bar only.
+	No engines, no Correl, no InList items: it should take well under a minute.
+
+Import:
+	DataSource:	Yahoo
+	IncludeList:	APP, CHTR, CMCSA, DIS, ECHO, FOX, FOXA, GOOG, GOOGL, LYV, META, NFLX, NWS, NWSA, OMC, PSKY, RDDT, T, TKO, TMUS {"Comms"}
+	IncludeList:	TTWO, VZ, WBD {"Comms"}
+	IncludeList:	AMCR, AMZN, APTV, AVY, AZO, BALL, BBY, CASY, CMG, CVNA, DASH, DECK, DHI, DPZ, DRI, EBAY, F, GM, GPC, HAS {"ConsumerDisc"}
+	IncludeList:	HD, HLT, IP, LEN, LOW, LULU, LVS, MAR, MCD, MELI, MGM, NKE, NVR, ORLY, PDD, PHM, PKG, RL, ROL, ROST {"ConsumerDisc"}
+	IncludeList:	SBUX, SW, TJX, TPR, TSCO, TSLA, ULTA, WSM, WYNN, YUM {"ConsumerDisc"}
+	IncludeList:	ADM, BF-B, BG, CCEP, CHD, CL, CLX, COST, DG, DLTR, EL, GIS, HRL, HSY, KDP, KHC, KMB, KO, KR, KVUE {"ConsStaples"}
+	IncludeList:	MDLZ, MKC, MNST, MO, PEP, PG, PM, SJM, STZ, SYY, TGT, TSN, WMT {"ConsStaples"}
+	IncludeList:	APA, BKR, COP, CVX, DVN, EOG, EQT, EXE, FANG, HAL, KMI, MPC, OKE, OXY, PSX, SLB, TPL, TRGP, VLO, WMB {"Energy"}
+	IncludeList:	XOM {"Energy"}
+	IncludeList:	ACGL, AFL, AIG, AIZ, AJG, ALL, AMP, AON, APO, ARES, AXP, BAC, BEN, BLK, BNY, BRK-B, BRO, BX, C, CB {"Financials"}
+	IncludeList:	CBOE, CFG, CINF, CME, COF, COIN, EG, ERIE, FDS, FITB, GL, GS, HBAN, HIG, HOOD, IBKR, ICE, IVZ, JPM, KEY {"Financials"}
+	IncludeList:	KKR, L, MA, MCO, MET, MRSH, MS, MSCI, MTB, NDAQ, NTRS, PFG, PGR, PNC, PRU, PYPL, RF, RJF, SCHW, SPGI {"Financials"}
+	IncludeList:	STT, SYF, TFC, TROW, TRV, USB, V, WFC, WRB, WTW {"Financials"}
+	IncludeList:	A, ABBV, ABT, ALGN, ALNY, AMGN, BAX, BDX, BIIB, BMY, BSX, CAH, CI, CNC, COO, COR, CRL, CVS, DGX, DHR {"Healthcare"}
+	IncludeList:	DVA, DXCM, ELV, EW, GEHC, GILD, HCA, HSIC, HUM, IDXX, ILMN, INCY, IQV, ISRG, JNJ, LH, LLY, MCK, MDT, MRK {"Healthcare"}
+	IncludeList:	MRNA, MTD, PFE, PODD, REGN, RMD, RVTY, SOLV, STE, SYK, TECH, TMO, UHS, UNH, VEEV, VRTX, VTRS, WAT, WST, ZBH {"Healthcare"}
+	IncludeList:	ZTS {"Healthcare"}
+	IncludeList:	ABNB, ADP, ALLE, AME, AOS, AXON, BA, BE, BKNG, CARR, CAT, CCL, CHRW, CMI, CPRT, CSX, CTAS, DAL, DE, DOV {"Industrials"}
+	IncludeList:	EFX, EME, EMR, ETN, EXPD, EXPE, FAST, FDX, FDXF, FER, FERG, FIX, GD, GE, GEV, GNRC, GPN, GWW, HII, HON {"Industrials"}
+	IncludeList:	HONA, HUBB, HWM, IEX, IR, ITW, J, JBHT, JCI, LHX, LII, LMT, LUV, MAS, MMM, NCLH, NDSN, NOC, NSC, ODFL {"Industrials"}
+	IncludeList:	OTIS, PAYX, PCAR, PH, PNR, PWR, RCL, RKLB, ROK, RSG, RTX, SNA, SPCX, SWK, TDG, TRI, TT, TXT, UAL, UNP {"Industrials"}
+	IncludeList:	UPS, URI, VLTO, VRSK, VRT, WAB, WM, XYL {"Industrials"}
+	IncludeList:	AAPL, ACN, ADBE, ADI, ADSK, AKAM, ALAB, AMAT, AMD, ANET, APH, ARM, ASML, AVGO, BR, CDNS, CDW, CIEN, COHR, CPAY {"ITSector"}
+	IncludeList:	CRM, CRWD, CRWV, CSCO, CTSH, DDOG, DELL, FFIV, FICO, FIS, FISV, FLEX, FSLR, FTNT, FTV, GDDY, GEN, GLW, GRMN, HPE {"ITSector"}
+	IncludeList:	HPQ, IBM, INTC, INTU, IT, JBL, JKHY, KEYS, KLAC, LDOS, LITE, LRCX, MCHP, MPWR, MRVL, MSFT, MSI, MSTR, MU, NBIS {"ITSector"}
+	IncludeList:	NOW, NTAP, NVDA, NXPI, ON, ORCL, P, PANW, PLTR, PTC, Q, QCOM, ROP, SHOP, SMCI, SNDK, SNPS, STX, SWKS, TDY {"ITSector"}
+	IncludeList:	TEL, TER, TRMB, TXN, TYL, UBER, VRSN, WDAY, WDC, XYZ, ZBRA {"ITSector"}
+	IncludeList:	ALB, APD, CF, CRH, CTVA, DD, DOW, ECL, FCX, IFF, LIN, LYB, MLM, MOS, NEM, NUE, PPG, SHW, STLD, VMC {"Materials"}
+	IncludeList:	AEE, AEP, AES, ATO, AWK, CEG, CMS, CNP, D, DTE, DUK, ED, EIX, ES, ETR, EVRG, EXC, FE, LNT, NEE {"Utilities"}
+	IncludeList:	NI, NRG, PCG, PEG, PNW, PPL, SO, SRE, VST, WEC, XEL {"Utilities"}
+	IncludeList:	AMT, ARE, BXP, CBRE, CCI, CPT, CSGP, DLR, DOC, EQIX, ESS, EXR, FRT, HST, INVH, IRM, KIM, MAA, O, PLD {"RealEstate"}
+	IncludeList:	PSA, REG, SBAC, SPG, UDR, VICI, VMRK, VTR, WELL, WY {"RealEstate"}
+	IncludeList:	AAPL, MSFT, NVDA, AMZN, GOOGL, META, AVGO, TSLA, NFLX, AMD {"Generals"}
+	IncludeList:	SPY {"Benchmark"}
+	IncludeList:	APP, CHTR, CMCSA, DIS, ECHO, FOX, FOXA, GOOG, GOOGL, LYV, META, NFLX, NWS, NWSA, OMC {"AllEQ"}
+	IncludeList:	PSKY, RDDT, T, TKO, TMUS, TTWO, VZ, WBD, AMCR, AMZN, APTV, AVY, AZO, BALL, BBY {"AllEQ"}
+	IncludeList:	CASY, CMG, CVNA, DASH, DECK, DHI, DPZ, DRI, EBAY, F, GM, GPC, HAS, HD, HLT {"AllEQ"}
+	IncludeList:	IP, LEN, LOW, LULU, LVS, MAR, MCD, MELI, MGM, NKE, NVR, ORLY, PDD, PHM, PKG {"AllEQ"}
+	IncludeList:	RL, ROL, ROST, SBUX, SW, TJX, TPR, TSCO, TSLA, ULTA, WSM, WYNN, YUM, ADM, BF-B {"AllEQ"}
+	IncludeList:	BG, CCEP, CHD, CL, CLX, COST, DG, DLTR, EL, GIS, HRL, HSY, KDP, KHC, KMB {"AllEQ"}
+	IncludeList:	KO, KR, KVUE, MDLZ, MKC, MNST, MO, PEP, PG, PM, SJM, STZ, SYY, TGT, TSN {"AllEQ"}
+	IncludeList:	WMT, APA, BKR, COP, CVX, DVN, EOG, EQT, EXE, FANG, HAL, KMI, MPC, OKE, OXY {"AllEQ"}
+	IncludeList:	PSX, SLB, TPL, TRGP, VLO, WMB, XOM, ACGL, AFL, AIG, AIZ, AJG, ALL, AMP, AON {"AllEQ"}
+	IncludeList:	APO, ARES, AXP, BAC, BEN, BLK, BNY, BRK-B, BRO, BX, C, CB, CBOE, CFG, CINF {"AllEQ"}
+	IncludeList:	CME, COF, COIN, EG, ERIE, FDS, FITB, GL, GS, HBAN, HIG, HOOD, IBKR, ICE, IVZ {"AllEQ"}
+	IncludeList:	JPM, KEY, KKR, L, MA, MCO, MET, MRSH, MS, MSCI, MTB, NDAQ, NTRS, PFG, PGR {"AllEQ"}
+	IncludeList:	PNC, PRU, PYPL, RF, RJF, SCHW, SPGI, STT, SYF, TFC, TROW, TRV, USB, V, WFC {"AllEQ"}
+	IncludeList:	WRB, WTW, A, ABBV, ABT, ALGN, ALNY, AMGN, BAX, BDX, BIIB, BMY, BSX, CAH, CI {"AllEQ"}
+	IncludeList:	CNC, COO, COR, CRL, CVS, DGX, DHR, DVA, DXCM, ELV, EW, GEHC, GILD, HCA, HSIC {"AllEQ"}
+	IncludeList:	HUM, IDXX, ILMN, INCY, IQV, ISRG, JNJ, LH, LLY, MCK, MDT, MRK, MRNA, MTD, PFE {"AllEQ"}
+	IncludeList:	PODD, REGN, RMD, RVTY, SOLV, STE, SYK, TECH, TMO, UHS, UNH, VEEV, VRTX, VTRS, WAT {"AllEQ"}
+	IncludeList:	WST, ZBH, ZTS, ABNB, ADP, ALLE, AME, AOS, AXON, BA, BE, BKNG, CARR, CAT, CCL {"AllEQ"}
+	IncludeList:	CHRW, CMI, CPRT, CSX, CTAS, DAL, DE, DOV, EFX, EME, EMR, ETN, EXPD, EXPE, FAST {"AllEQ"}
+	IncludeList:	FDX, FDXF, FER, FERG, FIX, GD, GE, GEV, GNRC, GPN, GWW, HII, HON, HONA, HUBB {"AllEQ"}
+	IncludeList:	HWM, IEX, IR, ITW, J, JBHT, JCI, LHX, LII, LMT, LUV, MAS, MMM, NCLH, NDSN {"AllEQ"}
+	IncludeList:	NOC, NSC, ODFL, OTIS, PAYX, PCAR, PH, PNR, PWR, RCL, RKLB, ROK, RSG, RTX, SNA {"AllEQ"}
+	IncludeList:	SPCX, SWK, TDG, TRI, TT, TXT, UAL, UNP, UPS, URI, VLTO, VRSK, VRT, WAB, WM {"AllEQ"}
+	IncludeList:	XYL, AAPL, ACN, ADBE, ADI, ADSK, AKAM, ALAB, AMAT, AMD, ANET, APH, ARM, ASML, AVGO {"AllEQ"}
+	IncludeList:	BR, CDNS, CDW, CIEN, COHR, CPAY, CRM, CRWD, CRWV, CSCO, CTSH, DDOG, DELL, FFIV, FICO {"AllEQ"}
+	IncludeList:	FIS, FISV, FLEX, FSLR, FTNT, FTV, GDDY, GEN, GLW, GRMN, HPE, HPQ, IBM, INTC, INTU {"AllEQ"}
+	IncludeList:	IT, JBL, JKHY, KEYS, KLAC, LDOS, LITE, LRCX, MCHP, MPWR, MRVL, MSFT, MSI, MSTR, MU {"AllEQ"}
+	IncludeList:	NBIS, NOW, NTAP, NVDA, NXPI, ON, ORCL, P, PANW, PLTR, PTC, Q, QCOM, ROP, SHOP {"AllEQ"}
+	IncludeList:	SMCI, SNDK, SNPS, STX, SWKS, TDY, TEL, TER, TRMB, TXN, TYL, UBER, VRSN, WDAY, WDC {"AllEQ"}
+	IncludeList:	XYZ, ZBRA, ALB, APD, CF, CRH, CTVA, DD, DOW, ECL, FCX, IFF, LIN, LYB, MLM {"AllEQ"}
+	IncludeList:	MOS, NEM, NUE, PPG, SHW, STLD, VMC, AEE, AEP, AES, ATO, AWK, CEG, CMS, CNP {"AllEQ"}
+	IncludeList:	D, DTE, DUK, ED, EIX, ES, ETR, EVRG, EXC, FE, LNT, NEE, NI, NRG, PCG {"AllEQ"}
+	IncludeList:	PEG, PNW, PPL, SO, SRE, VST, WEC, XEL, AMT, ARE, BXP, CBRE, CCI, CPT, CSGP {"AllEQ"}
+	IncludeList:	DLR, DOC, EQIX, ESS, EXR, FRT, HST, INVH, IRM, KIM, MAA, O, PLD, PSA, REG {"AllEQ"}
+	IncludeList:	SBAC, SPG, UDR, VICI, VMRK, VTR, WELL, WY {"AllEQ"}
+	IncludeList:	XLC, XLY, XRT, XHB, XLP, XLE, XOP, OIH, USO, XLF, KRE, XLV {"ETF"}
+	IncludeList:	XBI, XLI, ITA, IYT, XLK, SMH, XLB, GDX, XLU, XLRE, TLT, HYG {"ETF"}
+	IncludeList:	LQD, QQQ, DIA, IWM, RSP, SOXX, VGT, VUG, IWF, MTUM, SPYG, ARKK {"ETF"}
+	IncludeList:	VWO, EEM, IEMG, VOO, IVV, VTI, ACWI, FXI, EWT, IJR, IJS, IJH {"ETF"}
+	IncludeList:	MDY, SCHD, IYR, IYM, XME, MAGS, VTV, IWD {"ETF"}
+	IncludeList:	AEE, AEP, CMS, CNP, D, DTE, DUK, ED, EIX, ES, ETR, EVRG, EXC, FE, LNT, NEE, PCG, PEG, PNW, PPL, SO, WEC, XEL {"Ind_UtilitiesRegulatedElectr"}
+	IncludeList:	AKAM, CPAY, CRWD, CRWV, FFIV, FISV, FTNT, GDDY, GEN, MSFT, NTAP, ORCL, PANW, PLTR, SNPS, VRSN, XYZ {"Ind_SoftwareInfrastructure"}
+	IncludeList:	AME, AOS, CMI, DOV, EMR, ETN, GEV, GNRC, IEX, IR, ITW, NDSN, OTIS, PH, PNR, ROK, XYL {"Ind_SpecialtyIndustrialMachi"}
+	IncludeList:	ADI, ALAB, AMD, ARM, AVGO, INTC, MCHP, MPWR, MRVL, MU, NVDA, NXPI, ON, QCOM, SWKS, TXN {"Ind_Semiconductors"}
+	IncludeList:	AXON, BA, GD, GE, HII, HONA, HWM, LHX, LMT, NOC, RKLB, RTX, SPCX, TDG, TXT {"Ind_AerospaceDefense"}
+	IncludeList:	ADBE, ADSK, CDNS, CRM, DDOG, FICO, INTU, MSTR, NOW, PTC, ROP, SHOP, TYL, UBER, WDAY {"Ind_SoftwareApplication"}
+	IncludeList:	AMP, APO, ARES, BEN, BLK, BX, IVZ, KKR, NTRS, PFG, RJF, STT, TROW {"Ind_AssetManagement"}
+	IncludeList:	A, CRL, DGX, DHR, IDXX, ILMN, IQV, LH, MTD, RVTY, TMO, WAT {"Ind_DiagnosticsResearch"}
+	IncludeList:	DIS, FOX, FOXA, LYV, NFLX, NWS, NWSA, PSKY, TKO, WBD {"Ind_Entertainment"}
+	IncludeList:	ABT, BSX, DXCM, EW, GEHC, MDT, PODD, STE, SYK, ZBH {"Ind_MedicalDevices"}
+	IncludeList:	CFG, FITB, HBAN, KEY, MTB, PNC, RF, TFC, USB {"Ind_BanksRegional"}
+	IncludeList:	ABBV, AMGN, BIIB, BMY, GILD, JNJ, LLY, MRK, PFE {"Ind_DrugManufacturersGeneral"}
+	IncludeList:	CBOE, CME, COIN, FDS, ICE, MCO, MSCI, NDAQ, SPGI {"Ind_FinancialDataStockExchan"}
+	IncludeList:	ACN, BR, CDW, CTSH, FIS, IBM, IT, JKHY, LDOS {"Ind_InformationTechnologySer"}
+	IncludeList:	APA, COP, DVN, EOG, EQT, EXE, FANG, OXY, TPL {"Ind_OilGasEP"}
+	IncludeList:	ALB, APD, DD, ECL, IFF, LIN, LYB, PPG, SHW {"Ind_SpecialtyChemicals"}
+	IncludeList:	ANET, DELL, HPQ, P, SMCI, SNDK, STX, WDC {"Ind_ComputerHardware"}
+	IncludeList:	AIZ, ALL, CB, CINF, L, PGR, TRV, WRB {"Ind_InsurancePropertyCasualt"}
+	IncludeList:	ALGN, BAX, BDX, COO, ISRG, RMD, SOLV, WST {"Ind_MedicalInstrumentsSuppli"}
+	IncludeList:	CHD, CL, CLX, EL, KMB, KVUE, PG {"Ind_HouseholdPersonalProduct"}
+	IncludeList:	AMT, CCI, DLR, EQIX, IRM, SBAC, WY {"Ind_ReitSpecialty"}
+	IncludeList:	ALNY, INCY, MRNA, REGN, TECH, VRTX {"Ind_Biotechnology"}
+	IncludeList:	CIEN, CSCO, HPE, LITE, MSI, ZBRA {"Ind_CommunicationEquipment"}
+	IncludeList:	AXP, COF, MA, PYPL, SYF, V {"Ind_CreditServices"}
+	IncludeList:	CI, CNC, CVS, ELV, HUM, UNH {"Ind_HealthcarePlans"}
+	IncludeList:	AJG, AON, BRO, ERIE, MRSH, WTW {"Ind_InsuranceBrokers"}
+	IncludeList:	CHRW, EXPD, FDX, FDXF, JBHT, UPS {"Ind_IntegratedFreightLogisti"}
+	IncludeList:	AMCR, AVY, BALL, IP, PKG, SW {"Ind_PackagingContainers"}
+	IncludeList:	CPT, ESS, INVH, MAA, UDR, VMRK {"Ind_ReitResidential"}
+	IncludeList:	CMG, DPZ, DRI, MCD, SBUX, YUM {"Ind_Restaurants"}
+	IncludeList:	COHR, FTV, GRMN, KEYS, TDY, TRMB {"Ind_ScientificTechnicalInstr"}
+	IncludeList:	AMAT, ASML, KLAC, LRCX, Q, TER {"Ind_SemiconductorEquipmentMa"}
+	IncludeList:	CHTR, CMCSA, ECHO, T, TMUS, VZ {"Ind_TelecomServices"}
+	IncludeList:	ABNB, BKNG, CCL, EXPE, NCLH, RCL {"Ind_TravelServices"}
+	IncludeList:	BAC, BNY, C, JPM, WFC {"Ind_BanksDiversified"}
+	IncludeList:	CCEP, KDP, KO, MNST, PEP {"Ind_BeveragesNonAlcoholic"}
+	IncludeList:	CARR, JCI, LII, MAS, TT {"Ind_BuildingProductsEquipmen"}
+	IncludeList:	GS, HOOD, IBKR, MS, SCHW {"Ind_CapitalMarkets"}
+	IncludeList:	COST, DG, DLTR, TGT, WMT {"Ind_DiscountStores"}
+	IncludeList:	APH, FLEX, GLW, JBL, TEL {"Ind_ElectronicComponents"}
+	IncludeList:	EME, FER, FIX, J, PWR {"Ind_EngineeringConstruction"}
+	IncludeList:	GOOG, GOOGL, META, NBIS, RDDT {"Ind_InternetContentInformati"}
+	IncludeList:	AMZN, DASH, EBAY, MELI, PDD {"Ind_InternetRetail"}
+	IncludeList:	GIS, HRL, KHC, MKC, SJM {"Ind_PackagedFoods"}
+	IncludeList:	FRT, KIM, O, REG, SPG {"Ind_ReitRetail"}
+	IncludeList:	BBY, CASY, TSCO, ULTA, WSM {"Ind_SpecialtyRetail"}
+	IncludeList:	APTV, AZO, GPC, ORLY {"Ind_AutoParts"}
+	IncludeList:	ACGL, AIG, BRK-B, HIG {"Ind_InsuranceDiversified"}
+	IncludeList:	AFL, GL, MET, PRU {"Ind_InsuranceLife"}
+	IncludeList:	CAH, COR, HSIC, MCK {"Ind_MedicalDistribution"}
+	IncludeList:	KMI, OKE, TRGP, WMB {"Ind_OilGasMidstream"}
+	IncludeList:	CSX, NSC, UNP, WAB {"Ind_Railroads"}
+	IncludeList:	DHI, LEN, NVR, PHM {"Ind_ResidentialConstruction"}
+	IncludeList:	CPRT, CTAS, GPN, TRI {"Ind_SpecialtyBusinessService"}
+	IncludeList:	CF, CTVA, MOS {"Ind_AgriculturalInputs"}
+	IncludeList:	DAL, LUV, UAL {"Ind_Airlines"}
+	IncludeList:	LULU, ROST, TJX {"Ind_ApparelRetail"}
+	IncludeList:	F, GM, TSLA {"Ind_AutoManufacturers"}
+	IncludeList:	CRH, MLM, VMC {"Ind_BuildingMaterials"}
+	IncludeList:	BE, HUBB, VRT {"Ind_ElectricalEquipmentParts"}
+	IncludeList:	CAT, DE, PCAR {"Ind_FarmHeavyConstructionMac"}
+	IncludeList:	ADM, BG, TSN {"Ind_FarmProducts"}
+	IncludeList:	FAST, FERG, GWW {"Ind_IndustrialDistribution"}
+	IncludeList:	DVA, HCA, UHS {"Ind_MedicalCareFacilities"}
+	IncludeList:	BKR, HAL, SLB {"Ind_OilGasEquipmentServices"}
+	IncludeList:	MPC, PSX, VLO {"Ind_OilGasRefiningMarketing"}
+	IncludeList:	DOC, VTR, WELL {"Ind_ReitHealthcareFacilities"}
+	IncludeList:	EXR, PLD, PSA {"Ind_ReitIndustrial"}
+	IncludeList:	LVS, MGM, WYNN {"Ind_ResortsCasinos"}
+	IncludeList:	CEG, NRG, VST {"Ind_UtilitiesIndependentPowe"}
+	IncludeList:	APP, OMC {"Ind_AdvertisingAgencies"}
+	IncludeList:	HSY, MDLZ {"Ind_Confectioners"}
+	IncludeList:	HON, MMM {"Ind_Conglomerates"}
+	IncludeList:	EFX, VRSK {"Ind_ConsultingServices"}
+	IncludeList:	VTRS, ZTS {"Ind_DrugManufacturersSpecial"}
+	IncludeList:	DECK, NKE {"Ind_FootwearAccessories"}
+	IncludeList:	HD, LOW {"Ind_HomeImprovementRetail"}
+	IncludeList:	HLT, MAR {"Ind_Lodging"}
+	IncludeList:	CVX, XOM {"Ind_OilGasIntegrated"}
+	IncludeList:	CBRE, CSGP {"Ind_RealEstateServices"}
+	IncludeList:	ARE, BXP {"Ind_ReitOffice"}
+	IncludeList:	ADP, PAYX {"Ind_StaffingEmploymentServic"}
+	IncludeList:	NUE, STLD {"Ind_Steel"}
+	IncludeList:	MO, PM {"Ind_Tobacco"}
+	IncludeList:	SNA, SWK {"Ind_ToolsAccessories"}
+	IncludeList:	AES, SRE {"Ind_UtilitiesDiversified"}
+	IncludeList:	ATO, NI {"Ind_UtilitiesRegulatedGas"}
+	IncludeList:	RSG, WM {"Ind_WasteManagement"}
+	IncludeList:	RL {"Ind_ApparelManufacturing"}
+	IncludeList:	CVNA {"Ind_AutoTruckDealerships"}
+	IncludeList:	STZ {"Ind_BeveragesBrewers"}
+	IncludeList:	BF-B {"Ind_BeveragesWineriesDistill"}
+	IncludeList:	DOW {"Ind_Chemicals"}
+	IncludeList:	AAPL {"Ind_ConsumerElectronics"}
+	IncludeList:	FCX {"Ind_Copper"}
+	IncludeList:	TTWO {"Ind_ElectronicGamingMultimed"}
+	IncludeList:	SYY {"Ind_FoodDistribution"}
+	IncludeList:	NEM {"Ind_Gold"}
+	IncludeList:	KR {"Ind_GroceryStores"}
+	IncludeList:	VEEV {"Ind_HealthInformationService"}
+	IncludeList:	EG {"Ind_InsuranceReinsurance"}
+	IncludeList:	HAS {"Ind_Leisure"}
+	IncludeList:	TPR {"Ind_LuxuryGoods"}
+	IncludeList:	ROL {"Ind_PersonalServices"}
+	IncludeList:	VLTO {"Ind_PollutionTreatmentContro"}
+	IncludeList:	VICI {"Ind_ReitDiversified"}
+	IncludeList:	HST {"Ind_ReitHotelMotel"}
+	IncludeList:	URI {"Ind_RentalLeasingServices"}
+	IncludeList:	ALLE {"Ind_SecurityProtectionServic"}
+	IncludeList:	FSLR {"Ind_Solar"}
+	IncludeList:	ODFL {"Ind_Trucking"}
+	IncludeList:	AWK {"Ind_UtilitiesRegulatedWater"}
+	StartDate:	2015-01-01
+	EndDate:	Latest
+	// Yahoo-only. Strips a symbol's newest bar ONLY if its own exchange
+	// session had not completed at import time -- documented as safe to
+	// leave on for pre-open runs. NOT plain True, which blindly strips
+	// every symbol's latest bar whether complete or not.
+	RemoveLatest:	Partial
+	SaveAs:	C:\RealTest21_newerv2\Data\alexaligned_unified_v7.rtd
+
+
+Settings:
+	DataFile:	C:\RealTest21_newerv2\Data\alexaligned_unified_v7.rtd
+	BarSize:	Daily
+	EndDate:	Latest
+	AccountSize:	100000
+	UseAvailableBars:	False
+	SaveScanAs:	?scriptpath?\AlexAligned_Unified_v7E_history.csv
+
+	// StartDate lives in TestSettings only, exactly as in parts A B C: a StartDate in
+	// Settings corrupts the ScanSettings EndDate Latest plus NumBars anchoring.
+TestSettings:
+	StartDate:	Earliest
+
+
+Data:
+	// raw daily prices, nothing else
+	histOpenV:	O
+	histHighV:	H
+	histLowV:	L
+	histCloseV:	C
+
+ScanSettings:
+	EndDate:	Latest
+	// 280 bars, one row per symbol per bar. 252 trading days is one year; the extra
+	// bars cover year-to-date in late December and the 12 month look-back with room.
+	NumBars:	280
+
+
+Scan:
+	// Scan column names differ from the Data item names, as RealTest requires.
+	HOpen:	histOpenV
+	HHigh:	histHighV
+	HLow:	histLowV
+	HClose:	histCloseV
