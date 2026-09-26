@@ -22,7 +22,7 @@ qmAsk=function(question,done){ var r=rw(question); NOTE=r.notes.filter(Boolean);
 /* sector breadth as a rankable field: its sector's net share of improving members */
 try{ QM_SYM.secb={lab:"Sector breadth (net % improving)",d:0}; QMX_FIELDS.unshift(["secb",/sector breadth/]); }catch(e){}
 var _en=qmEnrich;
-qmEnrich=function(ctx){ var r=_en(ctx); try{ ctx.rows.forEach(function(x){ var g=ctx.secStats&&ctx.secStats[x.sec]; x.secb=g&&g.cov?Math.round((g.impr-g.det)/g.cov*100):null; }); }catch(e){} return r; };
+qmEnrich=function(ctx){ var r=_en(ctx); try{ ctx.rows.forEach(function(x){ var g=ctx.secStats&&ctx.secStats[x.sec]; x.secb=g&&g.cov?Math.round((g.impr-g.det)/g.cov*100)+(typeof x.str==="number"?x.str/1000:0):null; }); }catch(e){} return r; };
 
 var _px=qmParseX;
 qmParseX=function(q){
@@ -30,6 +30,18 @@ qmParseX=function(q){
   try{ var t=qmT(q);
     /* "correlation to sector" means the 60-bar tie to its own sector, not to the universe */
     if(sp&&sp.sort&&sp.sort.f==="cu60"&&/correlation (?:to|with) (?:its |own |the )?sector/.test(t)) sp.sort.f="cs60";
+    /* an explicit "rank / sort / order by X" wins over adjectives such as "liquid" or "anomalous" */
+    if(sp&&(sp.kind==="screen"||sp.kind==="portfolio")&&sp.sort){ var mm=t.match(/\b(?:rank(?:ed)?|sort(?:ed)?|order(?:ed)?) by (?:the |its |their )?([a-z0-9 %\-]+?)(?:,|\.|;| then\b|$)/);
+      if(mm){ var ph=" "+mm[1].trim()+" ", fk=null;
+        if(/^ strength( percentile| score)? $/.test(ph)) fk="str"; else if(/^ risk( percentile| score)? $/.test(ph)) fk="risk";
+        else { try{ for(var i=0;i<QMX_FIELDS.length;i++){ if(new RegExp(QMX_FIELDS[i][1].source).test(ph)){ fk=QMX_FIELDS[i][0]; break; } } }catch(e){} }
+        if(fk&&fk!=="cu60"&&sp.sort.f!==fk&&QM_SYM[fk]){ sp.sort={f:fk,d:/\b(?:lowest|least|smallest|weakest|ascending|bottom)\b/.test(t)?"asc":"desc"}; sp.sortGiven=true; }
+        /* the adjective is kept as a filter once an explicit ranking replaces it */
+        if(fk&&Array.isArray(sp.filters)){ var hasF=function(f){ return sp.filters.some(function(x){ return x&&x.f===f; }); };
+          if(/\banomal\w*\b|\bunusual\b/.test(t)&&sp.sort.f!=="ga"&&!hasF("ga")) sp.filters.push({f:"ga",op:">=",v:0.3,txt:"anomalous (graph anomaly 0.30 or more)"});
+          if(/\bliquid\b/.test(t)&&sp.sort.f!=="liq"&&!hasF("liq")&&QM_SYM.liq) sp.filters.push({f:"liq",op:">=",v:66.7,txt:"liquid (top third by 20-day turnover)"}); } } }
+    if(sp&&Array.isArray(sp.filters)&&/\babove (?:its|the|their) trend line\b/.test(t)&&!sp.filters.some(function(f){ return f&&f.f==="atr"&&(f.op===">"||f.op===">="); })&&sp.filters.some(function(f){ return f&&f.f==="atr"; }))
+      sp.filters.push({f:"atr",op:">",v:0,txt:"above its trend line"});
     /* "rank by cluster balance / sector breadth": the base ranker does not take these two */
     if(sp&&(sp.kind==="screen"||sp.kind==="portfolio")&&sp.sort){
       if(/\b(?:rank(?:ed)?|sort(?:ed)?|order(?:ed)?) by (?:the |its )?cluster balance\b/.test(t)){ sp.sort={f:"bal",d:/\b(?:lowest|weakest|ascending)\b/.test(t)?"asc":"desc"}; sp.sortGiven=true; }

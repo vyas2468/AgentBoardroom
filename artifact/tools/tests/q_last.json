@@ -1,0 +1,6 @@
+["Show me top 10 anomalous symbols above StepMA, not deteriorating. Rank by strength.",
+"Show me top 10 liquid symbols above StepMA, not extended, 1 per sector.",
+"Show me top 10 symbols improving, in an uptrend, 1 per sector. Rank by breadth of sector.",
+"Show me top 10 liquid symbols improving, sorted by lowest volatility.",
+"Build a smart 10 stock portfolio of momentum leaders beating the market, in an uptrend, max 2 per sector, weighted.",
+"Build a portfolio of 4 ETFs and 8 stocks that are improving with signal convergence, low correlation, diversified, weighted."]
