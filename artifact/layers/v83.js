@@ -13,6 +13,7 @@ qmEnrich=function(ctx){
 };
 /* [pattern, filters, words]  the first filter carries the plain-English description; the others print their own rule */
 var V83=[
+ [/\b(?:not|no longer|isn't|without being) (?:over-?)?(?:extended|stretched)\b/,[{f:"atr",op:"<",v:1}],"not extended (less than 1 ATR above its trend line)"],
  [/\b(?:strong and (?:improving|rising|strengthening)|improving and strong|strengthening leaders)\b/,[{f:"str",op:">=",v:70},{f:"dir",op:"=",v:"improving"}],"strong and improving: strength percentile 70 or more"],
  [/\b(?:(?:weak|lagging) and (?:falling|deteriorating|weakening|declining)|(?:falling|deteriorating) laggards)\b/,[{f:"str",op:"<=",v:30},{f:"dir",op:"=",v:"deteriorating"}],"weak and falling: strength percentile 30 or less"],
  [/\b(?:recovering|recovery|turning up|turned up|bouncing back|bottoming|basing)\b/,[{f:"trend",op:"=",v:"down"},{f:"c3",op:">=",v:10}],"recovering: still in a downtrend"],
@@ -34,6 +35,8 @@ var V83_LIST=V83.map(function(c){ return c[2].split(":")[0].replace(/ \(.*$/,"")
 var _qmConds83=qmConds;
 qmConds=function(t){
   var s=String(t), add=[];
+  /* per-sector and per-subsector caps are read elsewhere; hide them here so "low volatility, max 2 per sector" does not become volatility at most 2 */
+  s=s.replace(/\b(?:max(?:imum)?|at most|no more than|up to|limit(?:ed)? to|not more than|one|1) (?:\d+ )?(?:stocks? |names? )?(?:per|from each|in each|for each|from any one|in any one|from a single) (?:sector|subsector|industry)\b/g,function(m){ return new Array(m.length+1).join(" "); });
   V83.forEach(function(c){
     var re=new RegExp(c[0].source,"g");
     if(!re.test(s)) return;
