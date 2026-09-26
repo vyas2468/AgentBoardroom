@@ -94,7 +94,7 @@ function hxFromStore(){
     });
   }).catch(function(){ return null; });
 }
-function hxSet(rec){ HX=rec?rec.hx:null; HX&&(HX.savedAt=rec.savedAt,HX.source=rec.source); HXM=null; HXC=null; hxLabels(); hxStatus(); }
+function hxSet(rec){ HX=rec?rec.hx:null; HX&&(HX.savedAt=rec.savedAt,HX.source=rec.source); HXM=null; HXC=null; hxLabels(); hxStatus();  try{ window.dispatchEvent(new CustomEvent("hxchange")); }catch(e){} }
 function hxBoot(){
   hxStatus("Looking for stored price history\u2026");
   hxIdbGet().then(function(loc){
@@ -148,6 +148,8 @@ function hxGroupPath(syms,a,L){
   return {ret:(eq-1)*100,vol:sd===null?null:sd*Math.sqrt(252)*100,dd:dd*100,rs:rs,n:Object.keys(used).length};
 }
 
+/* read-only access for the later layers (v84 shows the history on the tear sheet and four tabs) */
+try{ window.__hxApi={get:function(){ return HX; },metrics:hxMetrics,ret:hxRet,corr:hxCorr,beta:hxBeta,sd:hxSd,path:hxPath,groupPath:hxGroupPath,bench:hxBench,ytdBase:hxYtdBase}; }catch(e){}
 var HX_FIELDS={ytd:{lab:"YTD return",d:2,pct:1},m1:{lab:"1M return (21 bars)",d:2,pct:1},m3:{lab:"3M return (63 bars)",d:2,pct:1},m6:{lab:"6M return (126 bars)",d:2,pct:1},
   m12:{lab:"12M return (252 bars)",d:2,pct:1},voly:{lab:"YTD volatility (annualised %)",d:2},vol12:{lab:"12M volatility (annualised %)",d:2},
   ddy:{lab:"YTD max drawdown",d:2,pct:1},dd12:{lab:"12M max drawdown",d:2,pct:1},crsp:{lab:"Correlation to RSP (12M daily)",d:3},beta:{lab:"Beta to RSP (12M daily)",d:2},
