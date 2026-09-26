@@ -1,0 +1,81 @@
+SECTOR ROTATION TERMINAL - WHAT WAS DONE IN THIS SESSION (26 Sep 2026)
+Artifact: https://claude.ai/artifact/JBivgL88qHWeaCSsepr7cN
+Branch:   claude/artifact-access-question-f3s8rs  (layers in artifact/layers/, RealTest files in realtest/)
+
+HOW IT WAS KEPT SAFE
+- Every addition is a separate layer; the original page is untouched underneath.
+- After every change: the 119 existing Ask test answers are word-for-word unchanged, every original tab
+  and tear sheet shows identical content (with and without the price history loaded), and there are no page errors.
+
+1. PART E: PRICE HISTORY FROM REALTEST
+- New RealTest script (.rts) and a double-click launcher (.bat + .ps1) for C:\RealTest21_newerv2.
+- The .bat stays open, checks its files, refuses to start if RealTest is already running, and checks the output
+  (rows, header, freshness). Your real run passed: 160,339 rows, 575 symbols x 280 bars.
+- The daily workflow (parts C, B, A, merge, ingest gate) is unchanged and does not need part E.
+- The history is loaded in Ask the terminal ("Load price history") and saved in the browser and the shared store.
+- Delivered as a zip, because the viewer only lets pages save certain file types.
+
+2. HEADER TEXT
+- Top line now reads "CROSS-SECTIONAL MASTER - RT SCAN".
+- "StepMA with Alex bands" now reads "StepMA".
+
+3. TEAR SHEETS (click any ticker)
+- New "Price history (part E)" section: YTD, 1M, 3M, 6M and 12M returns against RSP, max drawdown and volatility
+  (YTD and 12M), distance from the 52-week high, correlation and beta to RSP, a small price chart against RSP,
+  and the five names whose daily returns move most like it.
+
+4. CORRELATION MATRIX TAB
+- Real daily-return correlation matrix at the top: 60 / 126 / 252 bars, clustered order (like Alex's) or sector
+  order, the 60 most extreme names or your own list (typed, or the last Ask answer), ticker labels, pair tables.
+- Alex-style hierarchical clusters map: every stock, YTD by default, average-linkage clustering, numbers in cells,
+  lime outlines for blocks that all rose and orange for blocks that all fell, Find two tickers, Reset view, step
+  through blocks, block table. Matches Alex's figures (MU x SNDK 0.81, WDC x STX 0.89).
+- Colour legends on every matrix. The original severity matrix is unchanged.
+
+5. HIDDEN GROUPS, RELATIONSHIP MAP, RADAR
+- Hidden Groups: each group checked against a year of prices ("holds up / partly / recent only"), basket returns,
+  volatility and drawdown; plus price-history groups found directly from returns.
+- Relationship map: the map's look-alike links checked against price correlation; an 11 x 11 sector correlation
+  matrix (252 / 60 / change); stocks that trade like another sector; relationships breaking down or forming;
+  subsector lead-lag candidates.
+- Radar: a second radar on six price-history qualities (YTD, 12M, calm, resilience, near high, own path).
+
+6. ASK THE TERMINAL
+- Plain-English concepts: strong and improving, recovering, rolling over, breaking out or down, not extended,
+  healthy or steady uptrend, momentum leaders, leading or lagging its sector, and more; combinable with everything.
+- Long-horizon history filters and rankings: YTD, 1-12 month returns, drawdown, volatility, beta, correlation to RSP.
+- Diagnostics of any list (group vs RSP, per name), matching Alex's table.
+- Pair test (Alex-style): correlation at 60/120/YTD/12M, rolling peak, Engle-Granger cointegration both ways with
+  bootstrap p-value, beta stability, spread shift, crossings, half-life, z-score, eligible or not. Matches statsmodels.
+  Works for two names, several names, "these", or a whole sector or subsector.
+- Correlation numbers: a pair (4 windows, saved severity, rolling peak), a matrix of names, most / least correlated
+  pairs in a group or across sectors, two sectors, least / most correlated with the market.
+- Low-correlation portfolios: the original portfolio rules pick the candidates, then names are added only while
+  every pair stays under the limit ("with low correlation between them", "correlation below 0.3 between them").
+- Clusters: blocks rising or falling together, which cluster a name is in, clusters that cross sectors, other windows.
+- Price relationships: what moves with a name, hedges, stocks that trade like another sector, relationships
+  breaking down or forming, lead-lag, price groups.
+- Fixed wrong answers: "correlation between NVDA and AMD", "least correlated with the market", "relationships
+  breaking down", "what leads Semiconductors" and others.
+- Clickable tickers in Members and link columns; spelling fixes for new words.
+- Example tiles by theme with Run and Edit; every example tested on your data.
+- Ask the terminal also appears in the Master theme, right after Industry Ledger.
+
+7. DOWNLOADS AND NAVIGATION
+- "Save as PNG (3x)" under every chart, map, graph and matrix on every tab (Relationship map, Rotation, Sector
+  Warning, Graph maps, Signal convergence, process maps, Treemap, Subsector Web, all matrices), saved exactly as
+  shown with a caption.
+- A down arrow (jump to the bottom) and a section menu for the open tab, next to the existing up arrow.
+
+8. PROCESS MAPS AND GUIDE
+- New process maps for the part E additions on Correlation matrix, Relationship map and Hidden Groups, and a
+  detailed map of how Ask reads questions. Same style, same Maps On/Off switch; the original maps are untouched.
+- New "Guide" tab (Reference & AI): the daily routine, the most important features and how to use them, Ask for
+  trading ideas, a 7-step portfolio process, what part E adds, terms (RSP, beta, correlation...), and limits.
+  All tables; "Open" jumps to a tab and "Run" asks the question.
+
+WORTH KNOWING
+- Low-correlation portfolios need the rules to produce more names than you asked for; otherwise the answer says so.
+- The clusters map finds fewer blocks than Alex's at the default cutoff; "Loose 0.35" finds more.
+- Lead-lag results are weak by nature and labelled as ideas to check, not signals.
+- Nothing here is a forecast or a backtest; every answer says what it counted and its data cutoff.

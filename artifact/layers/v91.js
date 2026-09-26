@@ -40,10 +40,10 @@ qmParseX=function(q){
         if(!inner||inner._err) inner=null;
         return {kind:"hcorr",mode:"port",inner:inner,q2:q2,n:n||(inner&&inner.n)||10,thr:lim?parseFloat(lim[1]):0.5,win:winOf(t.slice(Math.max(0,t.search(/correlat/))),"252")};
       }
-      if(/\b(?:least|lowest|low|most|highest|high)(?:ly)? correlat\w* (?:with|to) (?:the )?(?:market|rsp|benchmark|index|s ?p ?500|universe|spy)\b/.test(t))
+      if(/\b(?:least|lowest|low|most|highest|high)(?:ly)? correlat\w* (?:with|to) (?:the )?(?:market|rsp|benchmark|index|s ?p ?500|spy)\b/.test(t))
         return {kind:"hcorr",mode:"mkt",dir:/\b(?:least|lowest|low)\b/.test(t)?"low":"high",n:n||10,secIn:sm.inn,ind:inds};
-      if(/\b(?:most|least|highest|lowest|negatively|inversely|un)[ -]?correlated pairs?\b|\bpairs?(?: that are| which are)? (?:most|least|negatively|highly) correlated\b|\bmost co-?moving pairs?\b/.test(t)&&tk.length<2)
-        return {kind:"hcorr",mode:"gpairs",dir:/\b(?:least|lowest|negatively|inversely)\b/.test(t)?"low":(/\bun[ -]?correlated\b/.test(t)?"zero":"high"),n:n||10,ind:inds,secIn:sm.inn,cross:/\b(?:across|different|other|cross[- ]?) ?sectors?\b/.test(t),win:winOf(t,"252")};
+      if(/\b(?:most|least|highest|lowest|negatively|inversely|un)[ -]?correlated pairs?\b|\bpairs?(?: that are| which are)? (?:most|least|negatively|highly) correlated\b|\bmost co-?moving pairs?\b/.test(t)&&tk.length<2||(tk.length<2&&!/\b(?:portfolio|basket)\b/.test(t)&&!/\b(?:sub ?sectors?|sectors?|industry|industries|groups?) pairs?\b|\bpairs? of (?:sub ?sectors?|sectors?|industries)\b/.test(t)&&/\b(?:highest|strongest|most|top|biggest|greatest|lowest|weakest|least)\b[a-z0-9 ]{0,40}\bcorrelat\w*|\bcross[- ]?correlat\w*/.test(t)&&/\bpairs?\b|\b(?:two|2) (?:tickers|stocks|names|symbols)\b|\bcross[- ]?correlat\w*|\bwith each other\b|\bbetween them\b|\bto each other\b|\b(?:from|in) different sectors\b|\bacross sectors\b/.test(t)))
+        return {kind:"hcorr",mode:"gpairs",names:(function(){ var m=t.match(/\b(\d{1,2}) (?:tickers|stocks|names|symbols)\b/); return m?Math.max(2,Math.min(40,+m[1])):0; })(),related:/\b(?:related|linked|connected|shares?|shared|sharing|signals?|relationships?|look[- ]?alikes?|behav\w*|same cluster|hidden groups?|in some way|converg\w*)\b/.test(t),dir:/\b(?:least|lowest|negatively|inversely)\b/.test(t)?"low":(/\bun[ -]?correlated\b/.test(t)?"zero":"high"),n:n||10,ind:inds,secIn:sm.inn,cross:/\b(?:across|different|other|cross[- ]?) ?sectors?\b/.test(t),win:winOf(t,"252")};
       if(tk.length>=2) return {kind:"hcorr",mode:tk.length===2?"pair":"matrix",syms:tk.slice(0,20),win:winOf(t,"252")};
       if(follow) return {kind:"hcorr",mode:"matrix",syms:last.syms.slice(0,20),from:"last",win:winOf(t,"252")};
       if(!tk.length&&sm.inn.length===2&&/\bbetween\b|\band\b/.test(t)&&!/\bstocks?\b|\bnames?\b|\bsymbols?\b|\bwhich\b/.test(t)) return {kind:"hcorr",mode:"secpair",secs:sm.inn.slice(0,2)};
@@ -57,7 +57,7 @@ qmValidateAny=function(raw){
   if(!(raw&&raw.kind==="hcorr")) return _qmValidateAny91(raw);
   try{
     var sp={kind:"hcorr",mode:raw.mode,n:Math.max(1,Math.min(50,parseInt(raw.n,10)||10)),win:["60","126","252","ytd"].indexOf(String(raw.win))>=0?String(raw.win):"252",dir:raw.dir||"high",
-      thr:Math.max(0.1,Math.min(0.9,parseFloat(raw.thr)||0.5)),cross:!!raw.cross,from:raw.from||"named",
+      thr:Math.max(0.1,Math.min(0.9,parseFloat(raw.thr)||0.5)),cross:!!raw.cross,related:!!raw.related,names:Math.max(0,Math.min(40,parseInt(raw.names,10)||0)),from:raw.from||"named",
       secIn:(raw.secIn||[]).map(function(v){ return qmSecKey(v)||v; }),ind:raw.ind||[],secs:(raw.secs||[]).map(function(v){ return qmSecKey(v)||v; }),syms:(raw.syms||[]).map(function(s){ return String(s).toUpperCase(); })};
     if(["pair","matrix","gpairs","secpair","mkt","port"].indexOf(sp.mode)<0) return {error:"Unknown correlation question."};
     if(sp.mode==="port"){
@@ -67,6 +67,24 @@ qmValidateAny=function(raw){
     return {spec:sp};
   }catch(e){ return {error:"The query could not be checked: "+e.message}; }
 };
+
+/* non-price links between two stocks: look-alike, hidden group, price cluster, shared signal lenses */
+var LINKC=null;
+function links(){
+  var h=H(), st=h?String(h.savedAt)+"|"+h.dates.length:""; if(LINKC&&LINKC.st===st) return LINKC.fn;
+  var nb={}, hg={}, cl={}, fl={}, FL={ta:"Trend age",sd:"Structural drift",ms:"Momentum shape",sm:"Structure map",an:"Anomaly",at:"Attention"};
+  try{ var pool=buildVectors(); pool.forEach(function(s){ nb[s.sym]=pool.filter(function(o){ return o!==s; }).map(function(o){ return {s:o.sym,d:dist2(s._v,o._v)}; }).sort(function(a,b){ return a.d-b.d; }).slice(0,5).map(function(x){ return x.s; }); }); }catch(e){}
+  try{ if(swOk()&&moX().stockKeys.indexOf("peer")>=0) relClusters("stocks",0.6).clusters.forEach(function(c){ c.members.forEach(function(r){ hg[r.sym]=c.id; }); }); }catch(e){}
+  try{ var CLS=window.__hxClusters, Mc=CLS&&CLS.build("252"); if(Mc){ var g=CLS.flat(Mc,0.5); Mc.names.forEach(function(x,k){ cl[x.sym]=g[k]; }); } }catch(e){}
+  try{ SYM.forEach(function(s){ try{ fl[s.sym]=cgConvergence(s).flags; }catch(e){} }); }catch(e){}
+  var fn=function(a,b){ var w=[];
+    if((nb[a]&&nb[a].indexOf(b)>=0)||(nb[b]&&nb[b].indexOf(a)>=0)) w.push("behaviour look-alike");
+    if(hg[a]!==undefined&&hg[a]===hg[b]) w.push("same Hidden Group");
+    if(cl[a]!==undefined&&cl[a]===cl[b]) w.push("same price cluster");
+    if(fl[a]&&fl[b]){ var sh=Object.keys(FL).filter(function(k){ return fl[a][k]&&fl[b][k]; }); if(sh.length) w.push("both flagged: "+sh.map(function(k){ return FL[k]; }).join(", ")); }
+    return w; };
+  LINKC={st:st,fn:fn}; return fn;
+}
 
 /* ---------------- run ---------------- */
 var _qmRunX91=qmRunX;
@@ -127,12 +145,19 @@ qmRunX=function(spec,ctx,res,t0){
     var pool=ctx.rows.filter(function(r){ return h.syms[r.sym]&&(!spec.ind.length||spec.ind.indexOf(r.ind)>=0)&&(spec.ind.length||!spec.secIn.length||spec.secIn.indexOf(r.sec)>=0); });
     if(pool.length>600) pool=pool.slice(0,600);
     var Z=[]; pool.forEach(function(r){ var v=rets(r.sym,spec.win); if(!v) return; for(var k=0;k<v.length;k++) if(v[k]===null) return; var m=0; v.forEach(function(x){ m+=x; }); m/=v.length; var ss=0; v.forEach(function(x){ ss+=(x-m)*(x-m); }); ss=Math.sqrt(ss); if(!(ss>0)) return; Z.push({r:r,z:v.map(function(x){ return (x-m)/ss; })}); });
-    var out=[], cmp=spec.dir==="high"?function(p,q){ return q.v-p.v; }:(spec.dir==="low"?function(p,q){ return p.v-q.v; }:function(p,q){ return Math.abs(p.v)-Math.abs(q.v); }), K=spec.n;
+    var out=[], cmp=spec.dir==="high"?function(p,q){ return q.v-p.v; }:(spec.dir==="low"?function(p,q){ return p.v-q.v; }:function(p,q){ return Math.abs(p.v)-Math.abs(q.v); }), K=spec.related?1500:(spec.names?Math.max(spec.n,spec.names*2):spec.n);
     for(var x=0;x<Z.length;x++) for(var y=x+1;y<Z.length;y++){ if(spec.cross&&Z[x].r.sec===Z[y].r.sec) continue; var d=0, za=Z[x].z, zb=Z[y].z; for(var t=0;t<za.length;t++) d+=za[t]*zb[t]; out.push({a:Z[x].r,b:Z[y].r,v:d}); if(out.length>K*50){ out.sort(cmp); out.length=K; } }
-    out.sort(cmp); var L3=out.slice(0,K);
+    out.sort(cmp);
+    var LK=null;
+    if(spec.related){ LK=links(); out=out.filter(function(p){ p.why=LK(p.a.sym,p.b.sym); return p.why.length>0; }); }
+    var L3;
+    if(spec.names){ var seen={}, cnt=0; L3=[]; for(var z=0;z<out.length&&cnt<spec.names;z++){ var p0=out[z]; L3.push(p0); [p0.a.sym,p0.b.sym].forEach(function(s){ if(!seen[s]){ seen[s]=1; cnt++; } }); } }
+    else L3=out.slice(0,spec.n);
     var where=spec.ind.length?spec.ind.join(", "):(spec.secIn.length?spec.secIn.map(qmSecName).join(", "):"the whole scan");
-    res.lead="The "+L3.length+" "+(spec.dir==="high"?"most correlated":(spec.dir==="low"?"least (most negatively) correlated":"least related (closest to zero)"))+" pairs"+(spec.cross?" across sectors":"")+" in "+where+", "+wLab(spec.win)+", out of "+(Z.length*(Z.length-1)/2)+" pairs:";
-    res.table={head:["Rank","Pair","Correlation","Sectors","Subsectors"],align:["r","l","r","l","l"],body:L3.map(function(p,i){ return [String(i+1),p.a.sym+" – "+p.b.sym,qmN(p.v,3),qmSecName(p.a.sec)+(p.a.sec!==p.b.sec?" / "+qmSecName(p.b.sec):""),p.a.ind+(p.a.ind!==p.b.ind?" / "+p.b.ind:"")]; })};
+    res.lead="The "+L3.length+" "+(spec.dir==="high"?"most correlated":(spec.dir==="low"?"least (most negatively) correlated":"least related (closest to zero)"))+(L3.length===1?" pair":" pairs")+(spec.cross?" across sectors":"")+" in "+where+", "+wLab(spec.win)+", out of "+(Z.length*(Z.length-1)/2)+" pairs:";
+    if(spec.related) res.lead=res.lead.replace(/ pairs?(?= )/,function(m){ return m+" that "+(L3.length===1?"is":"are")+" also related (a behaviour look-alike, the same Hidden Group, the same price cluster or shared signal lenses)"; });
+    res.table={head:["Rank","Pair","Correlation","Sectors","Subsectors"].concat(spec.related?["Also linked by"]:[]),align:["r","l","r","l","l"].concat(spec.related?["l"]:[]),body:L3.map(function(p,i){ return [String(i+1),p.a.sym+" – "+p.b.sym,qmN(p.v,3),qmSecName(p.a.sec)+(p.a.sec!==p.b.sec?" / "+qmSecName(p.b.sec):""),p.a.ind+(p.a.ind!==p.b.ind?" / "+p.b.ind:"")].concat(spec.related?[p.why.join("; ")]:[]); })};
+    if(spec.related) res.notes.push("Related means at least one link besides price: behaviour look-alike (among each other's five closest on the nine scan features, as on the Relationship map), the same Hidden Group (link 0.60), the same cluster of the hierarchical clusters map (252 bars, average correlation 0.50), or both flagged by the same Signal convergence lens.");
     res.notes.push(M+" Ask “pair test A B” on any pair, or “correlation matrix of ...” for several names.");
     var ss2=[]; L3.forEach(function(p){ ss2.push(p.a.sym,p.b.sym); }); res.send=send(ss2.filter(function(s,i,a){ return a.indexOf(s)===i; }),"correlated pairs"); return fin(L3.length);
   }

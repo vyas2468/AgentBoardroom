@@ -19,6 +19,7 @@ function best(c){
 }
 function tabName(el){ var p=el.closest("section.pane"), t=p&&document.querySelector('[aria-controls="'+p.id+'"]'); return t?t.textContent.replace(/\s+/g," ").trim():"Chart"; }
 function heading(el){
+  try{ if(el.classList&&el.classList.contains("hx94plot")){ var sv=el.querySelector("svg"); if(sv&&sv.getAttribute("aria-label")) return sv.getAttribute("aria-label"); } }catch(e){}
   var host=el.closest(".block")||el.closest("figure")||el.parentNode, h=null;
   if(el.tagName==="FIGURE") h=el.querySelector("h2,h3");
   if(!h&&host){ var hs=host.querySelectorAll("h2,h3"); for(var i=hs.length-1;i>=0;i--){ if(hs[i].compareDocumentPosition(el)&Node.DOCUMENT_POSITION_FOLLOWING){ h=hs[i]; break; } } if(!h&&hs.length) h=hs[0]; }

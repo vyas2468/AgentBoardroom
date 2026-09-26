@@ -83,6 +83,11 @@ function blocks(M,cut){
   M.blocks[cut]=out; return out;
 }
 function dirBlocks(M){ return blocks(M,CM.cut).filter(function(b){ return b.dir!=="mixed"; }); }
+/* read-only access for v94 (portfolios built from the clusters): flat groups at a distance cut, and the blocks */
+function flatAt(M,cut){ var g=new Int32Array(M.n), id=0, i; for(i=0;i<M.n;i++) g[i]=-1;
+  M.nodes.forEach(function(nd){ if(nd.h>cut) return; if(nd.p&&nd.p.h<=cut) return; nd.ord.forEach(function(x){ g[x]=id; }); id++; });
+  for(i=0;i<M.n;i++) if(g[i]<0) g[i]=id++; return g; }
+try{ window.__hxClusters={build:function(w){ return build(w); },blocks:function(M,cut){ return blocks(M,cut); },flat:flatAt}; }catch(e){}
 
 /* drawing: (x0,y0) = top-left of the view in map pixels; the header bands stay fixed */
 function draw(g,M,x0,y0,vw,vh,cell,lab,P,opts){
