@@ -12,7 +12,7 @@ function btn(id,label,html,bottom){ var b=document.createElement("button"); b.id
 var down=btn("scrollBotBtn","Scroll to the bottom","&darr;",38);
 var secs=btn("secNavBtn","Jump to a section of this tab","&#9776;",142);
 secs.style.fontSize="17px";
-var menu=document.createElement("div"); menu.id="secNavMenu"; menu.hidden=true; menu.setAttribute("role","menu");
+var menu=document.createElement("div"); menu.id="secNavMenu"; menu.style.maxHeight="70vh"; menu.style.overflowY="auto"; menu.hidden=true; menu.setAttribute("role","menu");
 menu.setAttribute("style","position:fixed;right:76px;bottom:38px;z-index:89;width:340px;max-width:calc(100vw - 100px);max-height:min(70vh,560px);overflow:auto;background:var(--surface);color:var(--ink);border:1px solid var(--line-strong);border-radius:12px;box-shadow:var(--shadow);padding:8px 0;font-size:13px");
 document.body.appendChild(menu);
 function docH(){ return Math.max(document.documentElement.scrollHeight,document.body.scrollHeight); }
@@ -20,7 +20,18 @@ function y(){ return window.scrollY||document.documentElement.scrollTop||0; }
 function pane(){ var p=document.querySelector("section.pane:not([hidden])"); return p; }
 function heads(){
   var p=pane(), out=[]; if(!p) return out;
-  p.querySelectorAll("h2,h3").forEach(function(h){ if(!h.offsetParent||h.closest("#secNavMenu")) return; var t=(h.textContent||"").replace(/\s+/g," ").trim(); if(!t) return; out.push({el:h,t:t.length>90?t.slice(0,88)+"…":t,lv:h.tagName==="H2"?2:3}); });
+  function add(el,t,lv){ if(!el||!el.offsetParent||el.closest("#secNavMenu")) return; t=(t||"").replace(/\s+/g," ").trim(); if(!t) return; out.push({el:el,t:t.length>90?t.slice(0,88)+"\u2026":t,lv:lv}); }
+  p.querySelectorAll("h2,h3").forEach(function(h){ add(h,h.textContent,h.tagName==="H2"?2:3); });
+  /* panels, figure captions, example-tile jumps and the latest answers (Ask the terminal and any tab with these parts) */
+  try{
+    p.querySelectorAll("details > summary").forEach(function(s){ if(s.closest(".qm-turn")||s.closest("#hx93Tiles > div")) return; add(s,s.textContent.split(":")[0],3); });
+    p.querySelectorAll("figcaption").forEach(function(f){ add(f,f.textContent,3); });
+    var bar=p.querySelector("#hx97Bar"); if(bar) add(bar,"Show / hide panels \u00b7 download thread",3);
+    var tl=p.querySelector("#hx93Tiles"); if(tl&&tl.open){ var cards=[].slice.call(tl.querySelectorAll(":scope > div > div")); if(cards.length>2){
+      [[0,"start"],[Math.floor(cards.length/2),"middle"],[cards.length-1,"end"]].forEach(function(c){ var ttl=cards[c[0]].firstElementChild; add(cards[c[0]],"Example tiles: "+c[1]+" ("+(ttl?ttl.textContent:"")+")",3); }); } }
+    var th=p.querySelector("#qmThread"); if(th&&th.children.length){ add(th,"Answers thread",3); [].slice.call(th.querySelectorAll(":scope > .qm-turn")).slice(-10).forEach(function(t){ var q=t.querySelector(".qm-q"); if(q) add(q,"Answer: "+q.textContent,3); }); }
+    out.sort(function(a,b){ return (a.el.compareDocumentPosition(b.el)&4)?-1:1; });
+  }catch(e){}
   return out;
 }
 var tick=null;

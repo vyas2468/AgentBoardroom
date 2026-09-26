@@ -1,0 +1,15 @@
+const { chromium } = require('playwright'); const fs=require('fs'),path=require('path'),http=require('http');
+const live=fs.readFileSync('db/live_scan.json','utf8'); const site='site_new';
+const srv=http.createServer((req,res)=>{let p=decodeURIComponent(req.url.split('?')[0]);if(p==='/')p='/index.html';const f=path.join(site,p);if(!fs.existsSync(f)){res.writeHead(404);return res.end();}res.writeHead(200,{'content-type':'text/html'});fs.createReadStream(f).pipe(res);}).listen(0);
+(async()=>{ const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome'}); const p=await b.newPage({viewport:{width:1300,height:900}}); const errs=[]; p.on('pageerror',e=>errs.push(e.message));
+ await p.goto(`http://127.0.0.1:${srv.address().port}/`); await p.evaluate(s=>localStorage.setItem('alexaligned.scan.v1',JSON.stringify({savedAt:'t',source:'device',scan:JSON.parse(s)})),live); await p.reload(); await p.waitForTimeout(1500);
+ await p.evaluate(()=>{ [...document.querySelectorAll('#tabGroups button')].find(x=>x.dataset.g==='all').click(); document.querySelector('#tab-qry').click(); });
+ await p.evaluate(()=>{ document.querySelector('#qmInput').value='Overall sentiment'; document.querySelector('#qmGo').click(); }); await p.waitForTimeout(600);
+ await p.evaluate(()=>window.scrollTo(0,1500)); await p.waitForTimeout(300);
+ await p.evaluate(()=>document.querySelector('#secNavBtn').click()); await p.waitForTimeout(300);
+ console.log(await p.evaluate(()=>[...document.querySelectorAll('#secNavMenu button')].map(b=>b.textContent.trim()).join('\n')));
+ await p.evaluate(()=>{ const b=[...document.querySelectorAll('#secNavMenu button')].find(x=>/tiles: end/.test(x.textContent)); if(b) b.click(); }); await p.waitForTimeout(700);
+ console.log('scrolled to end tile, y=', await p.evaluate(()=>Math.round(window.scrollY)));
+ await p.evaluate(()=>document.querySelector('#tab-cm').click()); await p.waitForTimeout(500); await p.evaluate(()=>window.scrollTo(0,1200)); await p.waitForTimeout(200);
+ await p.evaluate(()=>document.querySelector('#secNavBtn').click()); await p.waitForTimeout(200);
+ console.log('other tab items:', await p.evaluate(()=>document.querySelectorAll('#secNavMenu button').length), 'errs',errs); await b.close(); srv.close(); })();
