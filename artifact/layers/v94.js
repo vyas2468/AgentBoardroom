@@ -68,10 +68,29 @@ var _qmParseX94=qmParseX;
 qmParseX=function(q){
   try{
     var t=qmT(q), tk=A.tickers(q), last=A.last(), fol=FOLLOW.test(t)&&last&&last.syms&&last.syms.length;
+    /* a ticker that is really part of a sector name ("IT Sector") is not a ticker here */
+    var bnm=""; try{ bnm=(A.bench&&A.bench())||"RSP"; }catch(e){ bnm="RSP"; }
+    tk=tk.filter(function(x){ return (x!==bnm&&x!=="SPY")||!new RegExp("\\b(?:vs\\.?|versus|against|relative to|compared (?:to|with)) (?:the )?"+x.toLowerCase()+"\\b").test(t); });
+    tk=tk.filter(function(x){ return !new RegExp("\\b"+x.toLowerCase().replace(/[.\-]/g,"\\$&")+" sector\\b").test(t); });
     var nm=t.match(/\b(\d{1,2})[- ]?(?:stocks?|names?|tickers?|symbols?)\b/)||t.match(/\b(?:top|best|first|show|list) (\d{1,2})\b/), n=nm?Math.max(1,Math.min(50,+nm[1])):0;
+    /* 000. show the Subsector Web for a sector, a subsector or a ticker's subsector */
+    if(/\b(?:sub ?sector|industry|sector) webs?\b/.test(t)){
+      var Cw=QM_CTX||qmBuildCtx(), iw=Cw?qmIndMentions(t,Cw):[], sw=qmSecMentions(t).inn, tw=tk[0]&&Cw&&Cw.bySym[tk[0]]?Cw.bySym[tk[0]]:null;
+      return {kind:"hcport",mode:"sbw",ind:iw[0]||(tw?tw.ind:null),sec:tw?tw.sec:(iw[0]&&Cw?(Cw.rows.filter(function(r){ return r.ind===iw[0]; })[0]||{}).sec:(sw[0]?(qmSecKey(sw[0])||sw[0]):null)),focus:tw?tw.sym:null};
+    }
+    /* 00. is X an anomaly / anomaly ranking inside a subsector */
+    if(/\banomal\w*\b/.test(t)&&!/\b(?:hidden groups?|pairs?|portfolio|basket|how many|highest|lowest|top|most|least|with a|with the|larger|smaller|above|below)\b/.test(t)){
+      var Ca=QM_CTX||qmBuildCtx(), ia=Ca?qmIndMentions(t,Ca):[];
+      if(tk.length) return {kind:"hcport",mode:"anom",syms:tk.slice(0,20)};
+      if(ia.length) return {kind:"hcport",mode:"anom",ind:ia[0]};
+      if(fol) return {kind:"hcport",mode:"anom",syms:last.syms.slice(0,30),from:"last"};
+    }
     /* 0. diagnostics of sectors and subsectors */
     if(/\bdiagnos\w*\b/.test(t)&&!tk.length&&!fol){
       var C0=QM_CTX||qmBuildCtx(), ss=qmSecMentions(t).inn, ii=C0?qmIndMentions(t,C0):[];
+      var bdir=t.match(/\b(rising|falling|directional) (?:blocks|clusters)\b/); if(bdir) return {kind:"hcport",mode:"gdiag",gtype:"blocks",dir:bdir[1],win:winOf(t,"ytd")};
+      var sdir=t.match(/\b(rising|improving|falling|deteriorating) (?:sub ?sectors|industries)\b/); if(sdir) return {kind:"hcport",mode:"gdiag",gtype:"subdir",dir:/rising|improving/.test(sdir[1])?"improving":"deteriorating",secs:ss};
+      if(ii.length>=2) return {kind:"hcport",mode:"gdiag",gtype:"inds",inds:ii};
       if(ii.length&&!/\bsectors?\b(?! ?(?:and|&) ?sub)/.test(t.replace(/\bsub ?sectors?\b/g,""))){ var mem=C0.rows.filter(function(r){ return ii.indexOf(r.ind)>=0; }).map(function(r){ return r.sym; }); if(mem.length) return {kind:"diag",syms:mem.slice(0,60),from:"named"}; }
       if(ss.length||/\b(?:all|every|each) sectors?\b|\bsectors?\b|\bsubsectors?\b|\bindustr\w*\b/.test(t)) return {kind:"hcport",mode:"gdiag",secs:ss,subs:ss.length>0||/\bsubsectors?\b|\bindustr\w*\b/.test(t)};
     }
@@ -80,6 +99,8 @@ qmParseX=function(q){
       var C=QM_CTX||qmBuildCtx(), sm=qmSecMentions(t).inn, syms=tk.slice(0,8), from="named";
       if(!syms.length&&fol){ syms=last.syms.slice(0,40); from="last"; }
       var type=/\bspread\b|\bz-?score\b/.test(t)?"spread":(/\brolling correlation\b|\bcorrelation\b/.test(t)?"rcorr":(/\bdrawdowns?\b|\bunderwater\b/.test(t)?"dd":(/\bvolatility\b|\bvol\b/.test(t)?"vol":(/\brelative strength\b|\bvs\.? (?:the )?(?:rsp|market|benchmark)\b|\bagainst (?:the )?(?:rsp|market|benchmark)\b|\brelative to (?:the )?(?:rsp|market|benchmark)\b|\bratio\b/.test(t)?"rs":(/\bytd\b|\byear to date\b/.test(t)&&!/\bprice\b/.test(t)?"ytd":"price")))));
+      var pb=t.match(/\b(rising|falling|directional) (?:blocks|clusters)\b/);
+      if(pb&&!tk.length) return {kind:"hplot",type:type==="spread"?"rcorr":type,syms:[],secs:[],blocks:pb[1],from:"blocks",win:winOf(t,"ytd")};
       if(syms.length||sm.length>=1) return {kind:"hplot",type:type,syms:syms,secs:syms.length?[]:sm.slice(0,6),from:from,win:winOf(t,type==="ytd"?"ytd":(type==="dd"||type==="vol"||type==="rcorr"||type==="spread"?"252":"all"))};
     }
     /* 2. portfolios from the clusters */
@@ -90,7 +111,7 @@ qmParseX=function(q){
       return {kind:"hcport",mode:"oneper",inner:inner,q2:q2,n:n||(inner&&inner.n)||10,win:winOf(t,"252")};
     }
     if(portW&&/\b(?:best|strongest|top|leading) (?:stock|name) (?:in|from|of) each (?:rising |falling |directional )?(?:block|cluster)\b|\b(?:one|1) (?:stock|name) from each (?:rising|falling|directional) (?:block|cluster)\b|\b(?:portfolio|basket) (?:from|of|using) (?:the )?(?:rising|falling|directional) (?:blocks|clusters)\b|\bfrom (?:the )?(?:rising|falling) (?:blocks|clusters)\b/.test(t))
-      return {kind:"hcport",mode:"blocks",dir:/\bfalling\b/.test(t)?"falling":"rising",n:n||0,win:winOf(t,"ytd")};
+      return {kind:"hcport",mode:"blocks",dir:/\bfalling\b/.test(t)?"falling":"rising",n:n||0,win:winOf(t,"ytd"),secIn:qmSecMentions(t).inn};
     /* 3. hedges and partners of a whole list */
     if(fol&&/\bhedg\w*\b/.test(t)) return {kind:"hcport",mode:"hedge",syms:last.syms.slice(0,50),n:n||10,cross:/\b(?:other|another|different) sectors?\b|\boutside\b/.test(t)};
     if(fol&&/\b(?:moves?|moving|trades?) (?:most )?(?:with|like) (?:these|them|this list|the list|this portfolio|the basket)\b/.test(t)) return {kind:"hcport",mode:"partners",syms:last.syms.slice(0,50),n:n||10};
@@ -128,10 +149,30 @@ qmRunX=function(spec,ctx,res,t0){
     function first(c){ var k=a; while(k<=L&&c[k]===null) k++; return k; }
     function add(name,v,c,dash){ series.push({name:name,v:v,c:c,dash:dash}); names.push(name); }
     var type=spec.type, title="", fmt=null, refs=[];
-    if(spec.secs&&spec.secs.length&&!syms.length){
-      spec.secs.forEach(function(k,i){ var key=qmSecKey(k)||k, mem=ctx.rows.filter(function(r){ return r.sec===key&&h.syms[r.sym]; }).map(function(r){ return r.sym; }); if(mem.length) add(qmSecName(key),basketCloses(mem,a,L),PAL[i%8]); });
-      if(bench) add(bench,basketCloses([bench],a,L),cssv("--ink-3")||"#888",true);
-      title="Sector baskets (equal weight), rebased to 100, "+wLab(spec.win); type="price";
+    if((spec.secs&&spec.secs.length&&!syms.length)||spec.blocks){
+      var groups=[], CLp=window.__hxClusters;
+      if(spec.blocks){ var Mp=CLp?CLp.build(spec.win==="all"?"ytd":spec.win):null; var blp=Mp?CLp.blocks(Mp,0.263).filter(function(b){ return spec.blocks==="directional"?b.dir!=="mixed":b.dir===spec.blocks; }):[];
+        blp.sort(function(p,q){ return Math.abs(q.ret)-Math.abs(p.ret); }); blp.slice(0,8).forEach(function(b){ var m=b.mem.map(function(x){ return Mp.names[x].sym; }); groups.push({name:m.slice(0,3).join(" ")+(m.length>3?" +"+(m.length-3):""),mem:m}); });
+        if(!groups.length){ res.lead="No "+spec.blocks+" blocks in the hierarchical clusters map for "+wLab(spec.win)+"."; return fin(0); } }
+      else spec.secs.forEach(function(k){ var key=qmSecKey(k)||k, mem=ctx.rows.filter(function(r){ return r.sec===key&&h.syms[r.sym]; }).map(function(r){ return r.sym; }); if(mem.length) groups.push({name:qmSecName(key),mem:mem}); });
+      var bcl=bench?basketCloses([bench],a,L):null, what=spec.blocks?"the "+spec.blocks+" blocks (equal-weight baskets, largest moves first)":"sector baskets (equal weight)";
+      function tf(ty,cl){ var o=[],k,pk=null; if(ty==="price") return cl; if(ty==="ytd") return cl.map(function(v){ return v-100; }); if(ty==="rs") return cl.map(function(v,i){ return bcl?v/bcl[i]*100:null; });
+        if(ty==="dd"){ cl.forEach(function(v){ if(pk===null||v>pk) pk=v; o.push((v/pk-1)*100); }); return o; }
+        if(ty==="vol"){ for(k=0;k<cl.length;k++){ var rs=[]; for(var j=Math.max(1,k-19);j<=k;j++) rs.push(cl[j]/cl[j-1]-1); o.push(rs.length>=15?A.sd(rs)*Math.sqrt(252)*100:null); } return o; } return cl; }
+      if(type==="rcorr"||type==="spread"){
+        if(groups.length<2){ res.lead="A rolling correlation chart needs two groups (two sectors, or at least two blocks)."; return fin(0); }
+        var g1=basketCloses(groups[0].mem,a,L), g2=basketCloses(groups[1].mem,a,L);
+        [60,20].forEach(function(w,ii){ var v=[]; for(var k=0;k<g1.length;k++){ var xs=[],ys=[]; for(var j=Math.max(1,k-w+1);j<=k;j++){ xs.push(g1[j]/g1[j-1]-1); ys.push(g2[j]/g2[j-1]-1); } v.push(xs.length>=Math.max(15,w*0.8)?A.corr(xs,ys):null); } add(w+"-bar",v,PAL[ii],ii===1); });
+        title="Rolling correlation of daily returns: "+groups[0].name+" and "+groups[1].name+" (equal-weight baskets), "+wLab(spec.win); refs=[{v:0,l:"0"}]; fmt=function(x){ return x.toFixed(2); }; type="rcorr";
+      } else {
+        groups.forEach(function(g,i){ add(g.name,tf(type,basketCloses(g.mem,a,L)),PAL[i%8]); });
+        if(bench&&(type==="price"||type==="ytd")) add(bench,tf(type,bcl),cssv("--ink-3")||"#888",true);
+        title={price:"Rebased to 100",ytd:"Return since the start of the window (%)",rs:"Relative strength against "+(bench||"the benchmark")+" (rebased to 100)",dd:"Drawdown from the running high (%)",vol:"Rolling 20-bar volatility (annualised %)"}[type]+": "+what+", "+wLab(spec.win);
+        if(type==="ytd"||type==="dd"){ fmt=function(x){ return (x>0?"+":"")+x.toFixed(0)+"%"; }; refs=[{v:0,l:"0"}]; }
+        if(type==="vol") fmt=function(x){ return x.toFixed(0)+"%"; };
+        if(type==="rs"||type==="price") refs=[{v:100,l:"100"}];
+      }
+      if(spec.blocks) res.notes.push("Blocks come from the hierarchical clusters map (Correlation matrix tab): 3 or more names merging at an average correlation of about 0.74, all rising or all falling over "+wLab(spec.win==="all"?"ytd":spec.win)+". Members: "+groups.map(function(g){ return g.mem.join(" "); }).join(" | ")+".");
     } else if(type==="spread"||type==="rcorr"){
       if(syms.length<2){ res.lead="A "+(type==="spread"?"spread":"rolling correlation")+" chart needs two tickers."; return fin(0); }
       var A1=syms[0], B1=syms[1], ca=h.syms[A1], cb=h.syms[B1];
@@ -200,14 +241,52 @@ qmRunX=function(spec,ctx,res,t0){
     if(!CL){ res.lead="The clusters map is not available."; return fin(0); }
     var Mb=CL.build(spec.win); if(!Mb){ res.lead="Not enough price history for that window."; return fin(0); }
     var bl=CL.blocks(Mb,0.263).filter(function(b){ return b.dir===spec.dir; }), rows=[];
-    bl.forEach(function(b){ var mem=b.mem.map(function(x){ return Mb.names[x].sym; }).filter(function(s){ return by[s]; }); if(!mem.length) return;
+    var bsec=(spec.secIn||[]).map(function(v){ return qmSecKey(v)||v; });
+    bl.forEach(function(b){ var mem=b.mem.map(function(x){ return Mb.names[x].sym; }).filter(function(s){ return by[s]&&(!bsec.length||bsec.indexOf(by[s].sec)>=0); }); if(!mem.length) return;
       mem.sort(function(p,q){ var a3=by[p].str, b3=by[q].str; return spec.dir==="rising"?((num(b3)?b3:-1)-(num(a3)?a3:-1)):((num(a3)?a3:999)-(num(b3)?b3:999)); });
       rows.push({pick:mem[0],mem:mem,avg:b.avg,ret:b.ret,size:b.size}); });
     rows.sort(function(p,q){ return spec.dir==="rising"?q.ret-p.ret:p.ret-q.ret; }); if(spec.n) rows=rows.slice(0,spec.n);
-    res.lead="The "+(spec.dir==="rising"?"strongest":"weakest")+" name from each <b>"+spec.dir+"</b> block of the hierarchical clusters map ("+wLab(spec.win)+"): "+rows.length+" names, one per block, so no two move as one.";
+    res.lead="The "+(spec.dir==="rising"?"strongest":"weakest")+" name from each <b>"+spec.dir+"</b> block of the hierarchical clusters map ("+wLab(spec.win)+")"+(bsec.length?", taking only names in "+bsec.map(qmSecName).join(", "):"")+": "+rows.length+" names, one per block, so no two move as one.";
     res.table={head:["Block","Symbol","Strength pctl","Block return","Block avg corr.","Members","Sector"],align:["r","l","r","r","r","l","l"],body:rows.map(function(r,i){ return [String(i+1),r.pick,qmN(by[r.pick].str,0),qmN(r.ret,1,1),qmN(r.avg,2),r.mem.join(" "),secN(r.pick)]; })};
     res.notes.push("Blocks: dendrogram nodes of 3 or more names merging at an average correlation of about 0.74, where every member "+(spec.dir==="rising"?"rose":"fell")+" over the window. From each block the name with the "+(spec.dir==="rising"?"highest":"lowest")+" strength percentile is taken. Equal weights; a block is a theme, so one name per block avoids owning the same move twice.");
     res.send=send(rows.map(function(r){ return r.pick; }),"one per "+spec.dir+" block"); return fin(rows.length);
+  }
+  if(spec.mode==="sbw"){
+    if(!spec.sec){ res.lead="Name a sector, a subsector or a ticker, for example \u201Cshow me the subsector web for Credit Services\u201D."; return fin(0); }
+    var okW=false; try{ sbwUni="stocks"; sbwSec=spec.sec; sbwInd=spec.ind||null; sbwRender(); okW=!!$("#sbwChart svg"); }catch(e){ okW=false; }
+    var memW=ctx.rows.filter(function(r){ return spec.ind?r.ind===spec.ind:r.sec===spec.sec; }).sort(function(p,q){ return (num(q.sev)?q.sev:-999)-(num(p.sev)?p.sev:-999); });
+    var svgW=okW?$("#sbwChart svg").outerHTML:"";
+    res.hxPlot=(svgW?'<div class="chart-scroll hx94plot hx95web" style="margin:8px 0">'+svgW+'</div>':'')+'<p style="margin:4px 0 8px"><button type="button" class="btn" data-goto="tab-sbw">Open the interactive Subsector Web on '+hE(spec.ind||qmSecName(spec.sec))+'</button> <span class="mini">Click any company dot above for its tear sheet; the tab adds hover details, isolating other industries, and the Names / Means toggles.</span></p>';
+    res.lead="Subsector Web for <b>"+hE(spec.ind?spec.ind+" ("+qmSecName(spec.sec)+")":qmSecName(spec.sec))+"</b>"+(spec.focus?", the subsector of "+spec.focus:"")+(spec.ind?", isolated inside its sector":"")+": industry circles sized and ringed by their anomaly and direction, companies around them.";
+    res.table={head:["Symbol","Direction","Severity","Graph anomaly","5D return","Trend","Subsector"],align:["l","l","r","r","r","l","l"],body:memW.slice(0,40).map(function(r){ return [r.sym,r.dir||"\u2013",qmN(r.sev,0),qmN(r.ga,3),qmN(r.r5,2,1),(r.trend||"")+(num(r.tb)?" "+r.tb+" sessions":""),r.ind]; })};
+    res.notes.push("The web is the same drawing as the Subsector Web tab, set to this selection; the button opens that tab where it is fully interactive. "+(memW.length>40?"The table shows the first 40 of "+memW.length+" names, highest severity first.":"Names sorted by severity."));
+    res.send=send(memW.map(function(r){ return r.sym; }),"subsector web names"); return fin(memW.length);
+  }
+  if(spec.mode==="anom"){
+    var rowsA=ctx.rows.filter(function(r){ return num(r.ga); }), sortedA=rowsA.slice().sort(function(p,q){ return q.ga-p.ga; }), NA=sortedA.length, rankOf={};
+    sortedA.forEach(function(r,i){ rankOf[r.sym]=i+1; });
+    var bySym0={}; SYM.forEach(function(x){ bySym0[x.sym]=x; });
+    function meanGa(list){ var v=list.filter(function(r){ return num(r.ga); }).map(function(r){ return r.ga; }); return v.length?v.reduce(function(a2,b2){ return a2+b2; },0)/v.length:null; }
+    function line(r){ var ind=rowsA.filter(function(x){ return x.ind===r.ind; }).sort(function(p,q){ return q.ga-p.ga; }), sec=rowsA.filter(function(x){ return x.sec===r.sec; });
+      var rk=rankOf[r.sym], pct=Math.round((1-(rk-1)/Math.max(1,NA-1))*100), s0=bySym0[r.sym]||{};
+      var ap=num(s0.apct)?s0.apct:null, yes=r.ga>=0.3||(ap!==null&&ap>=90), part=!yes&&(pct>=80||!!s0.aA);
+      var verdict=yes?("Yes"+(r.ctx==="Sector-confirmed"?", sector-confirmed":(r.ctx==="Isolated"?", isolated":""))):(part?"Partly (above average)":"No");
+      return {an:s0.anom,ap:ap,r:r,rk:rk,pct:pct,ir:ind.map(function(x){ return x.sym; }).indexOf(r.sym)+1,in_:ind.length,im:meanGa(ind),sm:meanGa(sec),verdict:verdict,aA:!!s0.aA,apct:s0.apct}; }
+    var list0;
+    if(spec.ind){ list0=rowsA.filter(function(r){ return r.ind===spec.ind; }).sort(function(p,q){ return q.ga-p.ga; }); if(!list0.length){ res.lead="No names with a graph anomaly score in "+spec.ind+"."; return fin(0); } }
+    else { list0=(spec.syms||[]).map(function(s){ return ctx.bySym[s]; }).filter(function(r){ return r&&num(r.ga); }); var missA=(spec.syms||[]).filter(function(s){ return !(ctx.bySym[s]&&num(ctx.bySym[s].ga)); }); if(missA.length) res.notes.push("No graph anomaly score in the scan for: "+missA.join(", ")+"."); }
+    if(!list0.length){ res.lead="None of those names has a graph anomaly score in the loaded scan."; return fin(0); }
+    var LA=list0.map(line);
+    if(!spec.ind&&LA.length===1){ var o=LA[0], r=o.r;
+      res.lead="<b>"+o.verdict+"</b>. "+r.sym+" on the scan's two anomaly readings: <b>graph anomaly "+r.ga.toFixed(3)+"</b>, rank "+o.rk+" of "+NA+" (higher than "+o.pct+"% of names; "+(r.ga>=0.3?"over":"under")+" the 0.30 line the Relationship map rings; "+o.ir+" of "+o.in_+" in "+r.ind+"), and <b>scan anomaly "+qmN(o.an,2)+"</b> (higher than "+qmN(o.ap,0)+"% of names"+(o.aA?", above the universe mean, so the Attention A flag is on":"")+"). Context: "+(r.ctx||"none")+".";
+    } else res.lead=spec.ind?"Graph anomaly inside <b>"+hE(spec.ind)+"</b>, highest first ("+LA.length+" names; subsector mean "+qmN(LA[0].im,3)+").":"Graph anomaly of "+LA.length+" names"+(spec.from==="last"?" from the previous answer":"")+", highest first.";
+    LA.sort(function(p,q){ return q.r.ga-p.r.ga; });
+    res.table={head:["Symbol","Verdict","Graph anomaly","Rank","Higher than","Scan anomaly","Scan anomaly pctl","Attention A flag","Context","Subsector","Rank in subsector","Subsector mean (graph)"],align:["l","l","r","r","r","r","r","l","l","l","r","r"],
+      body:LA.map(function(o){ return [o.r.sym,o.verdict,o.r.ga.toFixed(3),o.rk+" of "+NA,o.pct+"%",qmN(o.an,2),qmN(o.ap,0),o.aA?"on":"off",o.r.ctx||"\u2013",o.r.ind,o.ir+" of "+o.in_,qmN(o.im,3)]; })};
+    res.notes.push("Verdict: Yes when the graph anomaly is 0.30 or more or the scan anomaly is in the top 10%; Partly when either is above average (graph top 20%, or the Attention A flag on); otherwise No. The scan anomaly is the \u201CAnomaly\u201D line on the tear sheet.");
+    res.notes.push("Graph anomaly is the scan's measure of how unusual a name's behaviour is against its neighbours on the relationship graph (0 to about 0.5 here). The Relationship map and tear-sheet graph ring a name at 0.30 or more: green when its sector shows the same (Sector-confirmed), red when it stands alone (Isolated). The Attention A flag marks anomaly above the universe mean. It says a name is unusual, not which way it will move.");
+    res.notes.push("Next: open the tear sheet (click the ticker) for the ringed graph of its subsector, or ask \u201Canomaly ranking in "+(LA[0].r.ind)+"\u201D.");
+    res.send=send(LA.map(function(o){ return o.r.sym; }),"anomaly check"); return fin(LA.length);
   }
   if(spec.mode==="gdiag"){
     var secs=(spec.secs||[]).map(function(v){ return qmSecKey(v)||v; }), all=!secs.length;
@@ -219,10 +298,23 @@ qmRunX=function(spec,ctx,res,t0){
       var srt=mem.filter(function(s){ return num(M.by[s].ytd); }).sort(function(p,q){ return M.by[q].ytd-M.by[p].ytd; });
       return [(bold?"":"\u2003")+label,String(mem.length),f2(Y&&Y.ret,1,1),f2(T&&T.ret,1,1),T&&num(T.vol)?T.vol.toFixed(1)+"%":"\u2013",f2(T&&T.dd,1,1),f2(cr,2),srt.length?srt[0]+" "+f2(M.by[srt[0]].ytd,0,1):"\u2013",srt.length?srt[srt.length-1]+" "+f2(M.by[srt[srt.length-1]].ytd,0,1):"\u2013"]; }
     if(bench){ var bl0=gline(bench+" (benchmark)",[bench],true); if(bl0) rows2.push(bl0); }
+    if(spec.gtype){ var G=[], lab="";
+      if(spec.gtype==="inds"){ spec.inds.forEach(function(ind){ var mem=ctx.rows.filter(function(r){ return r.ind===ind; }); if(mem.length) G.push({label:ind+" ("+qmSecName(mem[0].sec)+")",mem:mem.map(function(r){ return r.sym; })}); }); lab=spec.inds.join(", "); }
+      if(spec.gtype==="subdir"){ var sk2=(spec.secs||[]).map(function(v){ return qmSecKey(v)||v; }); Object.keys(ctx.indStats).forEach(function(ind){ var st=ctx.indStats[ind]; if(st.n<2||st.bias!==spec.dir) return; if(sk2.length&&sk2.indexOf(st.sec)<0) return; G.push({label:ind+" ("+qmSecName(st.sec)+")",mem:st.rows.map(function(r){ return r.sym; })}); });
+        lab=(spec.dir==="improving"?"rising":"falling")+" subsectors (a majority of their Early Warning-covered members "+spec.dir+")"+(sk2.length?" in "+sk2.map(qmSecName).join(", "):""); }
+      if(spec.gtype==="blocks"){ var CLg=window.__hxClusters, Mg=CLg?CLg.build(spec.win||"ytd"):null; if(Mg) CLg.blocks(Mg,0.263).filter(function(b){ return spec.dir==="directional"?b.dir!=="mixed":b.dir===spec.dir; }).forEach(function(b){ var m=b.mem.map(function(x){ return Mg.names[x].sym; }); G.push({label:m.slice(0,4).join(" ")+(m.length>4?" +"+(m.length-4):""),mem:m}); });
+        lab="the "+spec.dir+" blocks of the hierarchical clusters map ("+wLab(spec.win||"ytd")+")"; }
+      var GL=G.map(function(g){ return gline(g.label,g.mem,true); }).filter(function(x){ return x; }).sort(function(p,q){ return (parseFloat(q[2])||-999)-(parseFloat(p[2])||-999); });
+      if(!GL.length){ res.lead="No groups found for "+lab+"."; return fin(0); }
+      res.lead="Diagnostic of "+lab+": "+GL.length+" equal-weight baskets against "+(bench||"the benchmark")+", YTD and 12 months, best YTD first.";
+      res.table={head:["Group","Names","YTD return","12M return","12M vol.","12M max drawdown","Corr. to "+(bench||"benchmark"),"Best YTD","Worst YTD"],align:["l","r","r","r","r","r","r","l","l"],body:rows2.concat(GL)};
+      res.notes.push("Each row is an equal-weight basket of its members, rebalanced daily. For every name in one group, ask \u201Cdiagnostic of <subsector>\u201D or list the tickers.");
+      var sAll=[]; G.forEach(function(g){ sAll=sAll.concat(g.mem); }); res.send=send(sAll.filter(function(x,i,a2){ return a2.indexOf(x)===i; }),"diagnostic groups");
+      return fin(GL.length); }
     secs.forEach(function(k){ var mem=ctx.rows.filter(function(r){ return r.sec===k; }).map(function(r){ return r.sym; }); var l=gline(qmSecName(k)+(spec.subs?" (whole sector)":""),mem,true); if(l) rows2.push(l);
       if(spec.subs){ var ids={}; ctx.rows.forEach(function(r){ if(r.sec===k) (ids[r.ind]=ids[r.ind]||[]).push(r.sym); });
         Object.keys(ids).map(function(ind){ return {ind:ind,l:gline(ind,ids[ind],false)}; }).filter(function(x){ return x.l; }).sort(function(p,q){ return parseFloat(q.l[2])-parseFloat(p.l[2]); }).forEach(function(x){ rows2.push(x.l); }); } });
-    res.lead="Diagnostic of "+(all?"every sector":secs.map(qmSecName).join(", "))+(spec.subs?" and "+(all?"their":"its")+" subsectors":"")+": equal-weight baskets against "+(bench||"the benchmark")+", YTD and 12 months.";
+    res.lead="Diagnostic of "+(all?"every sector":secs.map(qmSecName).join(", "))+(spec.subs?" and "+(all||secs.length>1?"their":"its")+" subsectors":"")+": equal-weight baskets against "+(bench||"the benchmark")+", YTD and 12 months.";
     res.table={head:["Group","Names","YTD return","12M return","12M vol.","12M max drawdown","Corr. to "+(bench||"benchmark"),"Best YTD","Worst YTD"],align:["l","r","r","r","r","r","r","l","l"],body:rows2};
     res.notes.push("Each row is an equal-weight basket of its scan stocks, rebalanced daily (the same method as a diagnostic of a list). Subsectors are sorted by YTD return inside each sector. For the names of one subsector ask \u201Cdiagnostic of <subsector>\u201D, e.g. \u201Cdiagnostic of Semiconductors\u201D; for all sectors ask \u201Cdiagnostic of all sectors\u201D.");
     return fin(rows2.length);
