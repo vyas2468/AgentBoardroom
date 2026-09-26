@@ -328,8 +328,8 @@ function runSmart(spec,ctx,res){
   function avgPair(list){ if(!h) return null; var s=0,k=0; for(var a=0;a<list.length;a++) for(var b=a+1;b<list.length;b++){ var x=cor(list[a].sym,list[b].sym,252); if(num(x)){ s+=x; k++; } } return k?s/k:null; }
   var plain=rows.slice(0,pick.length), ap=avgPair(pick), apP=avgPair(plain);
   /* weights */
-  var wMode=/\binverse vol\w*\b|\brisk parity\b|\bvolatility weighted\b|\bequal risk\b/.test(t)?"inverse volatility":(/\bscore weighted\b|\bconviction\b|\bweighted by (?:score|conviction)\b/.test(t)?"score":"equal");
-  var raw=pick.map(function(p){ if(wMode==="inverse volatility"){ var v=num(p.vol12)?p.vol12:null; return v?1/v:null; } if(wMode==="score") return p._s; return 1; });
+  var wMode=/\binverse vol\w*\b|\brisk parity\b|\bvolatility weighted\b|\bequal risk\b|\brisk[- ]weighted\b/.test(t)?"inverse volatility":(/\bscore weighted\b|\bconviction\b|\bweighted by (?:score|conviction)\b/.test(t)||(/\bweight(?:ed|ing|s)?\b/.test(t)&&!/\bequal(?:ly)?[- ]?weight/.test(t))?"score":"equal");
+  var raw=pick.map(function(p,k){ if(wMode==="inverse volatility"){ var v=num(p.vol12)?p.vol12:null; return v?1/v:null; } if(wMode==="score") return (pick.length-k)+pick.length/2; return 1; });
   if(raw.some(function(x){ return !num(x); })){ raw=pick.map(function(){ return 1; }); if(wMode!=="equal") notes.push("Weights: "+wMode+" needs the price history for every name, so equal weights are used."); wMode="equal"; }
   var tw=raw.reduce(function(p,q){ return p+q; },0); pick.forEach(function(p,k){ p._w=raw[k]/tw*100; });
   var secs={}, hgs={}; pick.forEach(function(p){ secs[etf?p.grp:p.sec]=1; if(G.hg[p.sym]!==undefined) hgs[G.hg[p.sym]]=1; });
@@ -346,7 +346,7 @@ function runSmart(spec,ctx,res){
       .concat(read.map(function(x){ return [x[0],x[1],"named in the question"]; }))
       .concat(hard.map(function(x){ return ["Filter",x,"named in the question"]; }))
       .concat(etf?[["Limit","at most "+Math.max(2,Math.ceil(N/2))+" per ETF group; near-identical funds (correlation above 0.95) are not doubled up","diversification"]]:[["Limit","at most "+maxSec+" per sector, "+maxInd+" per subsector, "+maxHg+" per Hidden Group"+(oneCl?", 1 per price cluster (252-bar dendrogram cut at 0.5)":""),"diversification"]])
-      .concat([["Correlation penalty",h?(lowCorr?"strong":"mild")+": each pick is marked down by its highest correlation to the names already picked":"off (load the price history)",lowCorr?"you asked for low correlation / clusters / diversification":"default"],["Weights",wMode,wMode==="equal"?"default (ask for inverse volatility or score weighted)":"named in the question"]])}}];
+      .concat([["Correlation penalty",h?(lowCorr?"strong":"mild")+": each pick is marked down by its highest correlation to the names already picked":"off (load the price history)",lowCorr?"you asked for low correlation / clusters / diversification":"default"],["Weights",wMode==="score"?"by score rank (the best pick about 2.4 times the last)":wMode,wMode==="equal"?"default (ask for inverse volatility or score weighted)":"named in the question"]])}}];
   if(exT.length) notes.push("Excluded: "+exT.join(", ")+".");
   notes.push("Adaptive: the words in your question change the weights (for example “defensive” raises low volatility and lowers momentum; “converge” raises signal convergence), so two differently worded questions give different, explained portfolios. Not a forecast and not backtested.");
   res.notes=res.notes.concat(notes);
