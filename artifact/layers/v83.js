@@ -55,6 +55,10 @@ qmConds=function(t){
 /* the Claude fallback learns the new field and words */
 try{ QM_PROMPT=QM_PROMPT.replace("\nQ: ","srel = severity minus the median severity of the stock's own sector. Concept words the rules already turn into filters: "+V83_LIST.join(", ")+".\n\nQ: "); }catch(e){}
 
+/* a per-subsector cap is a subsector rule: do not add the "you mentioned subsectors but gave no subsector rule" note */
+var _qmParseX83=qmParseX;
+qmParseX=function(q){ var r=_qmParseX83(q); try{ if(r&&r.subNote&&/\b(?:per|each|from each|in each|for each|in any one|from any one|from a single) (?:subsectors?|industry|industries)\b/i.test(String(q))) r.subNote=false; }catch(e){} return r; };
+
 /* ---------- 30 more examples ---------- */
 var V83_EX=[
  "Build a conservative 10 stock portfolio of strong and improving stocks.",
