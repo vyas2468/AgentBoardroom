@@ -63,5 +63,22 @@ qmRunX=function(spec,ctx,res,t0){
   } }catch(e){}
   NOTE=null; return r;
 };
+/* ---- tear-sheet stepping: ↑ / ↓ move through the tickers of the table (or list / map) the tear sheet was opened from ---- */
+try{
+  var TL=null;
+  function listFrom(el){ var box=el.closest("table")||el.closest("svg")||el.closest("ul,ol")||el.closest(".qm-a")||el.closest(".block")||el.parentNode, seen={}, out=[];
+    [].slice.call(box.querySelectorAll("[data-tear]")).forEach(function(x){ var v=x.getAttribute("data-tear"); if(v&&!seen[v]){ seen[v]=1; out.push(v); } }); return out; }
+  function badge(){ try{ var b=document.getElementById("tearBody"); if(!b||!TL) return; var i=TL.indexOf(tearOpenSym); if(i<0) return; var d=document.getElementById("hx100Nav");
+      if(!d){ d=document.createElement("div"); d.id="hx100Nav"; d.style.cssText="font:600 11.5px var(--mono,monospace);color:var(--ink-3);margin:0 0 6px;"; }
+      d.textContent=(i+1)+" / "+TL.length+"  \u00b7  \u2191 \u2193 to move through this list"; b.insertBefore(d,b.firstChild); }catch(e){} }
+  document.addEventListener("click",function(e){ var t=e.target.closest?e.target.closest("[data-tear]"):null; if(!t) return;
+    var tw=document.getElementById("tearWrap"); if(tw&&tw.contains(t)){ TL=null; return; }
+    var l=listFrom(t); TL=l.length>1?l:null; setTimeout(badge,0); },true);
+  document.addEventListener("keydown",function(e){
+    if(e.key!=="ArrowDown"&&e.key!=="ArrowUp") return; var tw=document.getElementById("tearWrap"); if(!tw||tw.hidden||!TL) return;
+    var tg=e.target&&e.target.tagName; if(/INPUT|TEXTAREA|SELECT/.test(tg||"")) return;
+    var i=TL.indexOf(tearOpenSym); if(i<0) return; var j=e.key==="ArrowDown"?Math.min(TL.length-1,i+1):Math.max(0,i-1);
+    e.preventDefault(); if(j!==i){ openTear(TL[j]); badge(); } });
+}catch(e){}
 }catch(e){ try{ console.warn("v100 layer skipped:",e); }catch(_){} }
 })();
