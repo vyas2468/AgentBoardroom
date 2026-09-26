@@ -1,0 +1,113 @@
+============================================================================
+SECTOR ROTATION TERMINAL - FINAL HANDOFF (26 Sep 2026, end of session)
+Live page: https://claude.ai/artifact/JBivgL88qHWeaCSsepr7cN  (version 129)
+Code: branch claude/artifact-access-question-f3s8rs, folder artifact/ (base page + layers v81-v102)
+Technical detail for the next session: docs/HANDOFF.md (start at the top section)
+============================================================================
+
+HOW EVERYTHING WAS KEPT SAFE
+- The original page is never edited. Every feature is a separate "layer" file added on top, which wraps the
+  existing code and only reacts to new wording. Anything it does not recognise goes to the old code unchanged.
+- After every change, 348 saved test questions (49 original questions, 207 older tiles, 12 breakout tiles, 16 setup
+  tiles and 64 newer tiles) were asked again. Every answer had to match the saved one word for word before publishing.
+  This held at every publish in this session. Any change that did show up was either an intended fix or was undone.
+- Every new tile question was asked in the real page (with your scan and price history) before being added.
+
+----------------------------------------------------------------------------
+PART A. WHAT WAS DONE IN THIS SESSION, STEP BY STEP
+----------------------------------------------------------------------------
+Earlier in the session (versions 99-126, also in SESSION_COMPLETE_FINAL_2026-09-26.txt):
+ 1. RealTest part E price history script and launcher; the page loads the history (1M / 3M / YTD / 12M returns,
+    drawdown, volatility, beta).
+ 2. Ask the terminal: charts in answers, maps, correlation questions, pairs tests, hedges, diagnostics,
+    colour-coded sentiment and breadth tables.
+ 3. Smart (adaptive) portfolios for stocks, ETFs, mixed and long / short; themes; foldable tabs; My tiles (saved
+    questions, synced); a label on each answer saying whether rules or Claude read it; many query fixes (rank by X
+    wins, StepMA / bands / cluster balance / sector breadth, "2 per sector", "not deteriorating").
+ 4. Tear sheets step with the Up / Down keys; the section menu; universe listings; shared conditions (RMESA, cluster 1,
+    trend line).
+
+This part of the session:
+ 5. (v127) Maps on any list: "signal convergence map on ILMN, KEYS, ..." and "... of these" (relationship map, hidden
+    groups, correlation matrix too).
+ 6. (v127) Three new charts: quadrant SCATTER (e.g. risk vs return), MARKET MAP (treemap by sector, sized by turnover,
+    coloured by any measure) and SCORECARD (names x 15 measures, coloured by universe percentile).
+ 7. (v127) Tools for "these": breadth, re-rank, EXIT CHECK (hold / watch / exit with reasons), EXPOSURE (sector weights
+    vs the universe), RELATIVE STRENGTH LEADERBOARD vs RSP.
+ 8. (v127) Smart builder: "ranked by X" obeyed, "near their trend line" read, "can be in the same sector" lifts the limit.
+ 9. (v128) PORTFOLIO FROM A LIST: "Build a smart portfolio of 8 from these, low correlation, max 2 per sector" - the
+    adaptive builder picks only from your list, with all its options (weights, conditions, ranking, weighting,
+    long / short).
+10. (v128) SPREAD vs the list's basket ("Plot the spread of these", "Which of these are stretched?", "Spread of NVDA vs
+    these") and RELATIVE STRENGTH vs own sector ("Relative strength of these vs their sector").
+11. (v128) ROLLING CORRELATION for one or many tickers, sectors, subsectors or "these", against RSP, their own sector
+    or a ticker, with several lines compared on one chart. Two-name pairs keep the old pair chart.
+12. (v128) NAVIGATION: the menu button (bottom right) lists every tile group as a jump ("Tiles > ..."). It works even
+    when the tiles are closed, alongside top, start / middle / end and bottom.
+13. (v129) EXPOSURE now also shows names that share a Hidden Group or price cluster, a concentration warning, and five
+    strong names that would diversify the list (lowest correlation to it, under-weighted sectors first).
+14. (v129) YOUR OWN COLUMNS: "Show trend length, severity and YTD for these", "Show 3 month return, beta and rank in
+    sector for the top 10 improving stocks", "Show trend length and severity for NVDA AMD AVGO".
+15. (v129) "Show 15 strong and improving stocks" now gives 15 (it gave 10 before).
+16. (v129) ONE SENTENCE: screen + chart / check: "Risk return scatter of strong and improving stocks", "Market map of
+    stocks in an uptrend coloured by 1 month", "Scorecard of the top 10 improving stocks", "Exit check on stocks in a
+    fresh uptrend". The screen runs first and the answer says so.
+17. (v129) QUERY FIXES:
+    - "not in an uptrend" is labelled correctly (the filter was already right);
+    - "not overbought" now means NOT overbought (before, it gave overbought names);
+    - "fast above slow" is read (fast cycle line above the DSP line);
+    - "bullish trend flip" is read as a fresh uptrend;
+    - "rank by A, then by B" is a two-key ranking;
+    - "Which sector has the most improving tickers and the fewest anomalies?" counts both, per sector or subsector
+      (any 2+ of: improving, deteriorating, not deteriorating, anomalies, uptrend, downtrend, signals converge,
+      strengthening, weakening, above cluster 1, above trend line);
+    - "top 2 per sector by 5D return", "lowest 2 per sector by risk", "top 1 per subsector by strength";
+    - DUAL MOMENTUM baseline: "12-1 month momentum leaders beating RSP, else cash".
+18. NEW TILE GROUPS (all tested). Find them in Ask > Example tiles, or through the menu > "Tiles > ...":
+    - Charts: scatter, market map, scorecard
+    - Lists and "these": maps, breadth, exit check, exposure, leaderboard
+    - Portfolios from a list (adaptive, combined conditions)
+    - Spread and relative strength of a list
+    - Rolling correlation: tickers, sectors, subsectors, comparisons
+    - Combined workflows: screen, chart, build, check
+    - Query fixes: negations, two-key ranking, group counts
+    - Leaders per group and dual momentum
+    - One sentence: screen + chart, columns, exposure
+
+TIP: "these" always means the previous answer's names. After you build a portfolio, "these" is the portfolio.
+Start a chain with a list question (for example "Top 30 stocks by strength").
+
+----------------------------------------------------------------------------
+PART B. LEFT FOR THE NEXT SESSION - AND WHY
+----------------------------------------------------------------------------
+1. Tracked lists and the Portfolio Tracker, including "what changed in these since the last run". This is the next
+   big feature: it needs saved daily snapshots and a new tab, so it deserves its own session (design in HANDOFF.md).
+2. Navy colour theme. You deferred it. Every chart has to be checked for hard-coded colours.
+3. Warn when part of a question was not used ("Not applied: ..."). Adding a warning line to existing answers would
+   change their text, so it needs a separate pass that approves each changed answer.
+4. Harder base-reader phrases: "crossed above the DSP" (a fresh cross, not just above), "pulling back in an uptrend",
+   and "above StepMA and near its trend line" together. These are in the original reader; each needs its own test.
+5. Connections questions ignore "in rising subsectors"; the AF Approach layout is busy for 20+ names.
+6. The dual-momentum baseline is a snapshot. Turning it into a monthly backtest belongs with the RealTest work.
+
+----------------------------------------------------------------------------
+PART C. IDEAS: UNIQUE, USEFUL, HIGH IMPACT
+----------------------------------------------------------------------------
+1. Daily "what changed" digest: one answer each morning listing names that entered or left an uptrend, crossed
+   cluster 1, flipped direction or started converging, for the whole market and for your saved lists.
+2. Tracked lists with BUY / HOLD / SELL: save any answer as a list; each day the exit check and the adaptive builder
+   propose changes, with a running equity curve against RSP.
+3. Rotation playback: animate the market map and the sector scatter over the last 60 bars (a slider), to see money
+   moving between sectors.
+4. Risk budget builder: "10 names, max 12% volatility, beta under 1": weights solved so the portfolio meets the
+   limits, with the risk contribution of each name shown.
+5. Scenario check: "what if the market falls 5%": each list's expected move from its betas and correlations, and
+   which names hedge it.
+6. Regime banner: a single line on every page (trend / breadth / correlation regime) that changes the default
+   weights of the smart builder automatically (defensive when breadth is weak and correlations are high).
+7. Alerts on your tiles: pick a My tile and get a note when its answer changes (new names in or out).
+8. Pairs monitor: the spread and z-score of your favourite pairs in one table, flagging those beyond 2.
+9. Explain a pick: a "why this name" card combining its scorecard row, relative strength, convergence lenses and
+   the nearest look-alikes, in plain English.
+10. RealTest export of any smart portfolio as a ready-to-run test file, so ideas from Ask are backtested in one click.
+============================================================================
