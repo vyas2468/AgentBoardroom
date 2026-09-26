@@ -3,6 +3,8 @@
    the down arrow (below it) jumps to the bottom of the page, and the list button (above it) opens the headings of the tab you are on,
    so a long tab can be crossed in one click. Both only show when the page is long enough to need them. */
 (function(){
+/* Ask the terminal also sits in the Master theme, right after Industry Ledger (it stays in "Reference & AI" too) */
+try{ var mg=TG_GROUPS.filter(function(g){ return g.k==="mst"; })[0]; if(mg&&mg.tabs.indexOf("qry")<0){ var ix=mg.tabs.indexOf("ild"); if(ix>=0) mg.tabs.splice(ix+1,0,"qry"); else mg.tabs.push("qry"); } }catch(e){}
 try{
 var up=$("#scrollTopBtn"); if(!up) return;
 var css="position:fixed;right:22px;z-index:88;width:44px;height:44px;border-radius:50%;background:var(--accent);color:var(--ground);border:1px solid var(--accent);cursor:pointer;font-size:19px;line-height:1;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow)";

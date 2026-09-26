@@ -80,21 +80,38 @@ function tearBlock(sym){
 var _moTearGraph84=moTearGraph;
 moTearGraph=function(sym){ var base=_moTearGraph84(sym), add=""; try{ add=tearBlock(sym); }catch(e){ add=""; } return base+add; };
 
-/* ================= 2. Correlation matrix: real daily returns ================= */
-var cmW=252;
+/* ================= 2. Correlation matrix: real daily returns, clustered like Alex's ================= */
+var cmW=252, cmOrd="clu", cmSrc="top", cmList=[];
+try{ var _cl=localStorage.getItem("alexaligned.cmhx.list"); if(_cl) cmList=JSON.parse(_cl)||[]; }catch(e){}
 function cmMount(){
   var pane=$("#pane-cm"); if(!pane||$("#hx84Cm")) return;
   var el=blockEl("hx84Cm",
-    '<div class="block-head"><h2>Real daily-return correlation, from your part E price history</h2><span class="count" id="hx84CmNote"></span></div>'+
-    '<p class="lede">The matrix above correlates each name&rsquo;s saved <em>severity</em> (or composite) across your saved runs. This one uses the actual daily price returns from the '+
-    'price history you loaded: the same sixty names in the same sector order, so the two can be read side by side. Teal is positive, red negative; hover a cell for the pair. '+
-    'The tables underneath search <strong>all</strong> stocks, not just the sixty.</p>'+
-    '<div class="controls"><div class="ctl-grp"><span class="ctl-lab">Window</span>'+segHtml("hx84CmWin",[60,126,252],["60 bars","126 bars","252 bars"],252)+'</div></div>'+
+    '<div class="block-head"><h2>Correlation matrix from real daily returns (part E price history)</h2><span class="count" id="hx84CmNote"></span></div>'+
+    '<p class="lede">The price correlation matrix: how closely each pair of names’ <strong>daily returns</strong> moved together, from the price history you loaded. '+
+    '<strong>Clustered</strong> order (the default, as in Alex’s clustered matrix) puts names that move together next to each other, so every bloc shows up as a teal square on the diagonal, '+
+    'with the blocs outlined; <strong>Sector</strong> order keeps the sector layout. Teal is positive, red negative; hover a cell for the pair and click a name for its tear sheet. '+
+    'The matrix further down this tab is a different measure: it correlates each name’s saved <em>severity score</em> across your saved runs.</p>'+
+    '<div class="controls"><div class="ctl-grp"><span class="ctl-lab">Window</span>'+segHtml("hx84CmWin",[60,126,252],["60 bars","126 bars","252 bars"],252)+'</div>'+
+    '<div class="ctl-grp"><span class="ctl-lab">Order</span>'+segHtml("hx84CmOrd",["clu","sec"],["Clustered","Sector"],"clu")+'</div>'+
+    '<div class="ctl-grp"><span class="ctl-lab">Names</span>'+segHtml("hx84CmSrc",["top","list"],["60 most extreme","Your list"],"top")+'</div></div>'+
+    '<div class="controls" id="hx84CmListRow" hidden><input type="text" id="hx84CmIn" size="60" placeholder="Type tickers, for example MGM LVS WYNN CZR NCLH RCL CCL" aria-label="Tickers for the matrix" style="font-family:var(--mono);font-size:12.5px;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);max-width:100%">'+
+    ' <button class="btn ghost" type="button" id="hx84CmGo">Draw</button> <button class="btn ghost" type="button" id="hx84CmLast">Use the last Ask answer</button> <span class="count" id="hx84CmMsg"></span></div>'+
     '<div class="tm-shell"><div class="chart-scroll" id="hx84CmHeat"></div></div>'+
+    '<div id="hx84CmClu" style="margin-top:8px;font-size:12.5px;color:var(--ink-2)"></div>'+
     '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:14px;margin-top:12px">'+
-    ['up','cross','down'].map(function(k){ return '<div><h3 style="margin:0 0 6px">'+(k==="up"?"Most co-moving pairs":(k==="cross"?"Most co-moving pairs across sectors":"Most diverging pairs"))+'</h3><div class="tbl-scroll"><table id="hx84Cm_'+k+'"><thead><tr><th style="text-align:left">Pair</th><th style="text-align:left">Sectors</th><th>Correlation</th></tr></thead><tbody></tbody></table></div></div>'; }).join("")+'</div>');
-  var fig=pane.querySelector(":scope > figure"); if(fig) pane.insertBefore(el,fig); else pane.appendChild(el);
+    ['up','cross','down'].map(function(k){ return '<div><h3 style="margin:0 0 6px" id="hx84CmH_'+k+'">'+(k==="up"?"Most co-moving pairs":(k==="cross"?"Most co-moving pairs across sectors":"Most diverging pairs"))+'</h3><div class="tbl-scroll"><table id="hx84Cm_'+k+'"><thead><tr><th style="text-align:left">Pair</th><th style="text-align:left">Sectors</th><th>Correlation</th></tr></thead><tbody></tbody></table></div></div>'; }).join("")+'</div>');
+  var sevSeg=$("#cmMetricSeg"), sevBlk=sevSeg&&sevSeg.closest(".block");
+  if(sevBlk&&sevBlk.parentNode===pane) pane.insertBefore(el,sevBlk); else { var fig=pane.querySelector(":scope > figure"); if(fig) pane.insertBefore(el,fig); else pane.appendChild(el); }
   segWire("hx84CmWin",function(v){ cmW=+v; cmDraw(); });
+  segWire("hx84CmOrd",function(v){ cmOrd=v; cmDraw(); });
+  segWire("hx84CmSrc",function(v){ cmSrc=v; $("#hx84CmListRow").hidden=v!=="list"; cmDraw(); });
+  var inp=$("#hx84CmIn"); if(inp) inp.value=cmList.join(" ");
+  function take(list){ var h=H(); var ok=[], bad=[]; list.forEach(function(s){ s=String(s).toUpperCase(); if(!s||ok.indexOf(s)>=0) return; if(h&&h.syms[s]) ok.push(s); else bad.push(s); });
+    cmList=ok.slice(0,80); try{ localStorage.setItem("alexaligned.cmhx.list",JSON.stringify(cmList)); }catch(e){}
+    $("#hx84CmIn").value=cmList.join(" "); $("#hx84CmMsg").textContent=cmList.length+" names"+(bad.length?"; not in the price history: "+bad.join(", "):"")+(ok.length>80?"; first 80 used":""); cmDraw(); }
+  $("#hx84CmGo").addEventListener("click",function(){ take(($("#hx84CmIn").value||"").split(/[\s,;]+/)); });
+  $("#hx84CmIn").addEventListener("keydown",function(e){ if(e.key==="Enter") take(($("#hx84CmIn").value||"").split(/[\s,;]+/)); });
+  $("#hx84CmLast").addEventListener("click",function(){ var l=null; try{ l=A.last&&A.last(); }catch(e){} if(l&&l.syms&&l.syms.length) take(l.syms); else $("#hx84CmMsg").textContent="No Ask answer with tickers yet."; });
 }
 function cmAll(w){
   return cached("cmall|"+w,function(){
@@ -109,25 +126,58 @@ function cmAll(w){
     return {up:up.slice(0,15),down:dn.slice(0,15),cross:cr.slice(0,15),n:Z.length};
   });
 }
+/* average-linkage hierarchical clustering on distance 1 - r; returns the leaf order and flat clusters cut at average r >= cut */
+function cmCluster(n,R,cut){
+  var cl=[], i, j; for(i=0;i<n;i++) cl.push({m:[i],ord:[i]});
+  function d(a,b){ var s=0,k=0; a.m.forEach(function(x){ b.m.forEach(function(y){ var r=x<y?R[x+","+y]:R[y+","+x]; s+=1-(r===null||r===undefined?0:r); k++; }); }); return s/k; }
+  var flat=null;
+  while(cl.length>1){ var bi=0,bj=1,bd=Infinity; for(i=0;i<cl.length;i++) for(j=i+1;j<cl.length;j++){ var x=d(cl[i],cl[j]); if(x<bd){ bd=x; bi=i; bj=j; } }
+    if(flat===null&&bd>1-cut) flat=cl.map(function(c){ return c.m.slice(); });
+    var nc={m:cl[bi].m.concat(cl[bj].m),ord:cl[bi].ord.concat(cl[bj].ord)}; cl.splice(bj,1); cl.splice(bi,1,nc); }
+  if(flat===null) flat=[cl[0].m.slice()];
+  return {ord:cl.length?cl[0].ord:[],flat:flat};
+}
 function cmDraw(){
   cmMount(); var el=$("#hx84Cm"); if(!el) return;
   var h=H(); if(!h||(typeof cmUni!=="undefined"&&cmUni==="etfs")||h.dates.length<cmW+1){ el.hidden=true; return; }
   el.hidden=false;
-  var pool=cmTopPool(), n=pool.length, V=pool.map(function(s){ return rets(s.sym,cmW); }), R={}, i,j;
-  for(i=0;i<n;i++) for(j=i+1;j<n;j++) R[i+","+j]=pcor(V[i],V[j]);
-  var cell=Math.max(6,Math.min(16,900/Math.max(1,n))), W=cell*n, s=['<svg viewBox="0 0 '+W+' '+W+'" role="img" aria-label="Daily return correlation of the same sixty names, ordered by sector." style="width:100%;height:auto;min-width:420px">'];
+  var bySym={}; SYM.forEach(function(s){ bySym[s.sym]=s; });
+  var pool=cmSrc==="list"?cmList.filter(function(s){ return h.syms[s]; }).map(function(s){ return bySym[s]||{sym:s,sec:"ETF / other"}; }):cmTopPool();
+  if(cmSrc==="list"&&pool.length<2){ $("#hx84CmHeat").innerHTML='<p class="lede" style="margin:10px">Type at least two tickers above and press Draw (or Enter), or send the last Ask answer.</p>'; $("#hx84CmClu").innerHTML=""; ["up","cross","down"].forEach(function(k){ $("#hx84Cm_"+k+" tbody").innerHTML=""; }); return; }
+  var n0=pool.length, V=pool.map(function(s){ return rets(s.sym,cmW); }), R0={}, i,j;
+  for(i=0;i<n0;i++) for(j=i+1;j<n0;j++) R0[i+","+j]=pcor(V[i],V[j]);
+  var C=cmCluster(n0,R0,0.5), order=cmOrd==="clu"?C.ord:pool.map(function(p,k){ return k; });
+  var cid={}; C.flat.forEach(function(m,k){ m.forEach(function(x){ cid[x]=k; }); });
+  var P=order.map(function(k){ return pool[k]; }), n=P.length, R={};
+  for(i=0;i<n;i++) for(j=i+1;j<n;j++){ var a=order[i], b=order[j]; R[i+","+j]=a<b?R0[a+","+b]:R0[b+","+a]; }
+  var cell=Math.max(8,Math.min(22,900/Math.max(1,n))), lab=Math.round(Math.min(64,cell*0.62*6+10)), fs=Math.max(6.5,Math.min(11,cell*0.62)), W=lab+cell*n;
+  var s=['<svg viewBox="0 0 '+W+' '+W+'" role="img" aria-label="Daily return correlation matrix, '+(cmOrd==="clu"?"clustered":"ordered by sector")+'." style="width:100%;height:auto;max-width:'+Math.round(Math.max(460,W*1.25))+'px;min-width:'+Math.min(900,Math.max(360,n*12))+'px">'];
+  P.forEach(function(p,k){ s.push('<text class="hx84l" data-s="'+hE(p.sym)+'" x="'+(lab-3)+'" y="'+(lab+k*cell+cell/2+fs/3).toFixed(1)+'" text-anchor="end" font-size="'+fs.toFixed(1)+'" fill="var(--ink-2)" style="cursor:pointer">'+hE(p.sym)+'</text>');
+    s.push('<text class="hx84l" data-s="'+hE(p.sym)+'" transform="translate('+(lab+k*cell+cell/2+fs/3).toFixed(1)+','+(lab-3)+') rotate(-90)" font-size="'+fs.toFixed(1)+'" fill="var(--ink-2)" style="cursor:pointer">'+hE(p.sym)+'</text>'); });
   for(i=0;i<n;i++) for(j=0;j<n;j++){ var r=i===j?null:(i<j?R[i+","+j]:R[j+","+i]);
-    s.push('<rect class="hx84c" data-i="'+i+'" data-j="'+j+'" x="'+(j*cell).toFixed(1)+'" y="'+(i*cell).toFixed(1)+'" width="'+cell.toFixed(1)+'" height="'+cell.toFixed(1)+'" fill="'+(i===j?"var(--sunken)":heat(r))+'" stroke="var(--surface)" stroke-width="0.5"/>'); }
-  var prev=null; pool.forEach(function(p,k){ if(p.sec!==prev){ s.push('<line x1="0" y1="'+(k*cell).toFixed(1)+'" x2="'+W+'" y2="'+(k*cell).toFixed(1)+'" stroke="var(--line-strong)"/><line x1="'+(k*cell).toFixed(1)+'" y1="0" x2="'+(k*cell).toFixed(1)+'" y2="'+W+'" stroke="var(--line-strong)"/>'); prev=p.sec; } });
+    s.push('<rect class="hx84c" data-i="'+i+'" data-j="'+j+'" x="'+(lab+j*cell).toFixed(1)+'" y="'+(lab+i*cell).toFixed(1)+'" width="'+cell.toFixed(1)+'" height="'+cell.toFixed(1)+'" fill="'+(i===j?"var(--sunken)":heat(r))+'" stroke="var(--surface)" stroke-width="0.5"/>'); }
+  if(cmOrd==="clu"){ var st=0; for(i=1;i<=n;i++){ if(i===n||cid[order[i]]!==cid[order[st]]){ if(i-st>=2) s.push('<rect x="'+(lab+st*cell).toFixed(1)+'" y="'+(lab+st*cell).toFixed(1)+'" width="'+((i-st)*cell).toFixed(1)+'" height="'+((i-st)*cell).toFixed(1)+'" fill="none" stroke="var(--accent)" stroke-width="1.6"/>'); st=i; } } }
+  else { var prev=null; P.forEach(function(p,k){ if(p.sec!==prev){ var z=(lab+k*cell).toFixed(1); s.push('<line x1="'+lab+'" y1="'+z+'" x2="'+W+'" y2="'+z+'" stroke="var(--line-strong)"/><line x1="'+z+'" y1="'+lab+'" x2="'+z+'" y2="'+W+'" stroke="var(--line-strong)"/>'); prev=p.sec; } }); }
   s.push('</svg>'); var host=$("#hx84CmHeat"); host.innerHTML=s.join("");
-  tipOn(host.querySelector("svg"),function(t){ if(!(t.classList&&t.classList.contains("hx84c"))) return null; var a=+t.getAttribute("data-i"), b=+t.getAttribute("data-j"); if(a===b) return null; var r=a<b?R[a+","+b]:R[b+","+a];
-    return '<div class="t">'+hE(pool[a].sym)+' &times; '+hE(pool[b].sym)+'</div><dl><dt>Return correlation</dt><dd>'+(r===null?"not enough shared bars":r.toFixed(2))+'</dd><dt>Window</dt><dd>'+wLab(cmW)+'</dd><dt>Sectors</dt><dd>'+hE(secShort(pool[a].sec))+' / '+hE(secShort(pool[b].sec))+'</dd></dl>'; });
-  var all=cmAll(cmW);
+  var svg=host.querySelector("svg");
+  svg.addEventListener("click",function(e){ var t=e.target; if(t.classList&&t.classList.contains("hx84l")) openTear(t.getAttribute("data-s")); });
+  tipOn(svg,function(t){ if(!(t.classList&&t.classList.contains("hx84c"))) return null; var a=+t.getAttribute("data-i"), b=+t.getAttribute("data-j"); if(a===b) return null; var r=a<b?R[a+","+b]:R[b+","+a];
+    return '<div class="t">'+hE(P[a].sym)+' &times; '+hE(P[b].sym)+'</div><dl><dt>Return correlation</dt><dd>'+(r===null||r===undefined?"not enough shared bars":r.toFixed(3))+'</dd><dt>Window</dt><dd>'+wLab(cmW)+'</dd><dt>Sectors</dt><dd>'+hE(secShort(P[a].sec))+' / '+hE(secShort(P[b].sec))+'</dd></dl>'; });
+  /* the blocs, in matrix order */
+  var blocs=[]; if(cmOrd==="clu"){ var seen={}; order.forEach(function(k){ var c=cid[k]; if(seen[c]) return; seen[c]=1; var m=C.flat[c]; if(m.length<2) return;
+    var t2=0,k2=0; for(var x=0;x<m.length;x++) for(var y=x+1;y<m.length;y++){ var p=m[x],q=m[y], rr=p<q?R0[p+","+q]:R0[q+","+p]; if(rr!==null&&rr!==undefined){ t2+=rr; k2++; } }
+    var secs={}; m.forEach(function(z){ secs[secShort(pool[z].sec)]=1; }); blocs.push({m:m.map(function(z){ return pool[z].sym; }),avg:k2?t2/k2:null,nSec:Object.keys(secs).length}); }); }
+  $("#hx84CmClu").innerHTML=cmOrd==="clu"?(blocs.length?'<strong>Blocs outlined</strong> (average correlation 0.50 or more inside the bloc): '+blocs.map(function(b){ return '<span style="display:inline-block;margin:2px 10px 2px 0">'+b.m.map(tk).join(" ")+' <span class="mini">avg '+(b.avg===null?"&#8211;":b.avg.toFixed(2))+(b.nSec>1?", "+b.nSec+" sectors":"")+'</span></span>'; }).join(""):"No bloc reaches an average correlation of 0.50 in this window."):"";
+  /* pair tables: the whole universe for the default names, the chosen names for your list */
+  var all;
+  if(cmSrc==="list"){ var ps=[]; for(i=0;i<n0;i++) for(j=i+1;j<n0;j++){ var rv=R0[i+","+j]; if(rv!==null&&rv!==undefined) ps.push({a:pool[i],b:pool[j],r:rv}); }
+    all={up:ps.slice().sort(function(p,q){ return q.r-p.r; }).slice(0,15),down:ps.slice().sort(function(p,q){ return p.r-q.r; }).slice(0,15),cross:ps.filter(function(p){ return p.a.sec!==p.b.sec; }).sort(function(p,q){ return q.r-p.r; }).slice(0,15),n:n0}; }
+  else all=cmAll(cmW);
   ["up","cross","down"].forEach(function(k){ var tb=$("#hx84Cm_"+k+" tbody"); if(!tb) return;
-    tb.innerHTML=all[k].length?all[k].map(function(p){ return '<tr><td style="text-align:left">'+tk(p.a.sym)+' &times; '+tk(p.b.sym)+'</td><td style="text-align:left;color:var(--ink-2);font-size:12px">'+hE(secShort(p.a.sec))+' / '+hE(secShort(p.b.sec))+'</td><td class="num">'+p.r.toFixed(2)+'</td></tr>'; }).join(""):'<tr><td colspan="3" style="text-align:center;color:var(--ink-3)">No pairs with a full window.</td></tr>'; });
-  $("#hx84CmNote").textContent=wLab(cmW)+" · "+all.n+" stocks with a full window · "+srcLine();
+    tb.innerHTML=all[k].length?all[k].map(function(p){ return '<tr><td style="text-align:left">'+tk(p.a.sym)+' &times; '+tk(p.b.sym)+'</td><td style="text-align:left;color:var(--ink-2);font-size:12px">'+hE(secShort(p.a.sec))+' / '+hE(secShort(p.b.sec))+'</td><td class="num">'+p.r.toFixed(2)+'</td></tr>'; }).join(""):'<tr><td colspan="3" style="text-align:center;color:var(--ink-3)">No pairs.</td></tr>'; });
+  $("#hx84CmH_up").textContent=cmSrc==="list"?"Most co-moving pairs in your list":"Most co-moving pairs (all stocks)";
+  $("#hx84CmNote").textContent=wLab(cmW)+" · "+n0+" names in the matrix"+(cmSrc==="list"?"":", "+all.n+" stocks searched for the pair tables")+" · "+srcLine();
 }
-
 /* ================= 3. Hidden Groups: do the groups hold up over a longer history? ================= */
 function hgMount(){
   var t=$("#hgTbl"), blk=t&&t.closest(".block"); if(!blk||$("#hx84Hg")) return;
