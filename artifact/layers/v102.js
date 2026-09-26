@@ -152,6 +152,8 @@ qmParseX=function(q){
   return sp0;
 };
 QMX_KINDS.hx102=1;
+/* dual momentum applies "max N per cluster" itself: drop the "cluster conditions not applied" note for those questions */
+try{ var _ign102=qmIgn; qmIgn=function(q){ var a2=_ign102(q); try{ var tt=qmT(q); if(/\bdual momentum\b|\b12[- ](?:minus[- ])?1(?: month)? momentum\b|\babsolute momentum\b/.test(tt)&&/\bper (?:price )?clusters?\b/.test(tt)) a2=a2.filter(function(x){ return !/cluster conditions/.test(x); }); }catch(e){} return a2; }; }catch(e){}
 /* "not in an uptrend": the filter already reads "is not"; say so in the answer */
 var _ft=qmFilterTxt; qmFilterTxt=function(f){ if(f&&f.f==="trend"&&f.op==="!=") return "not in "+(f.v==="up"?"a fast Trend Filter uptrend":"a fast Trend Filter downtrend"); return _ft(f); };
 var _va=qmValidateAny;
