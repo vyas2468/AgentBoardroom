@@ -99,6 +99,54 @@ function tmxSave(btn){
     img.src=url;
   }catch(e){ done("Could not render"); }
 }
+/* generic high-resolution PNG of any chart on the page (used by the matrices and the Subsector Web); the treemap keeps its own saver above */
+function pngDeliver(name,blob,done){
+  if(DLNS){ try{ DLNS.save({filename:name,data:blob}).then(function(){ done("Saved"); },function(e){ done(dlErr(e)); }); }catch(e){ done(dlErr(e)); } return; }
+  try{ var u=URL.createObjectURL(blob), a=document.createElement("a"); a.href=u; a.download=name; document.body.appendChild(a); a.click(); document.body.removeChild(a); setTimeout(function(){ URL.revokeObjectURL(u); },4000); done("Download started"); }catch(e){ done("Blocked by the browser"); }
+}
+function pngBtnState(btn){ var old=btn?btn.textContent:""; if(btn){ btn.textContent="Rendering…"; btn.disabled=true; } return function(msg){ if(!btn) return; btn.textContent=msg; setTimeout(function(){ btn.textContent=old; btn.disabled=false; },2200); }; }
+function pngCaption(g,W,H,S,lines){
+  var cs=getComputedStyle(document.documentElement), ink=cs.getPropertyValue("--ink").trim()||"#111", ink3=cs.getPropertyValue("--ink-3").trim()||"#777";
+  (lines||[]).forEach(function(t,i){ g.fillStyle=i===0?ink:ink3; g.font=(i===0?"600 "+(13*S):(11*S))+"px -apple-system,Segoe UI,Helvetica,Arial,sans-serif"; g.fillText(String(t),10*S,(H+18+i*18)*S); });
+}
+/* svg: an <svg> element; lines: caption lines under the image; S: scale */
+window.__svgPng=function(svg,name,lines,btn,S){
+  var done=pngBtnState(btn); S=S||3;
+  try{
+    var vb=(svg.getAttribute("viewBox")||"").split(/\s+/).map(Number), W=vb[2], H=vb[3];
+    if(!(W>0&&H>0)){ var bb=svg.getBoundingClientRect(); W=bb.width; H=bb.height; svg=svg.cloneNode(true); svg.setAttribute("viewBox","0 0 "+W+" "+H); }
+    var cap=lines&&lines.length?lines.length*18+12:0;
+    var cl=svg.cloneNode(true); cl.setAttribute("xmlns","http://www.w3.org/2000/svg"); cl.setAttribute("width",String(W*S)); cl.setAttribute("height",String(H*S)); cl.removeAttribute("style");
+    /* carry the page's computed look (fonts, colours set by CSS classes, hidden parts) into the image */
+    var hid=[];
+    if(svg.isConnected){ try{ var PR=["fill","stroke","stroke-width","stroke-dasharray","stroke-linecap","opacity","fill-opacity","stroke-opacity","font-family","font-size","font-weight","font-style","text-anchor","dominant-baseline","letter-spacing","stop-color","stop-opacity","visibility"];
+      var rc=getComputedStyle(svg); cl.setAttribute("style","font-family:"+rc.fontFamily+";font-size:"+rc.fontSize+";");
+      var oa=svg.querySelectorAll("*"), ca=cl.querySelectorAll("*");
+      if(oa.length===ca.length&&oa.length<60000) for(var q=0;q<oa.length;q++){ var cs2=getComputedStyle(oa[q]); if(cs2.display==="none"){ hid.push(ca[q]); continue; }
+        var st2=""; for(var z=0;z<PR.length;z++){ var v=cs2.getPropertyValue(PR[z]); if(v) st2+=PR[z]+":"+v+";"; } ca[q].setAttribute("style",st2); }
+    }catch(e){} }
+    else cl.querySelectorAll("[style]").forEach(function(e){ if(/display\s*:\s*none/.test(e.getAttribute("style"))) hid.push(e); });
+    hid.forEach(function(e){ if(e.parentNode) e.parentNode.removeChild(e); });
+    var txt=tmxResolve(new XMLSerializer().serializeToString(cl));
+    var bg=getComputedStyle(document.documentElement).getPropertyValue("--surface").trim()||"#fff";
+    var img=new Image(), url=URL.createObjectURL(new Blob([txt],{type:"image/svg+xml;charset=utf-8"}));
+    img.onload=function(){
+      try{ var c=document.createElement("canvas"); c.width=Math.round(W*S); c.height=Math.round((H+cap)*S); var g=c.getContext("2d");
+        g.fillStyle=bg; g.fillRect(0,0,c.width,c.height); g.drawImage(img,0,0,W*S,H*S); URL.revokeObjectURL(url); pngCaption(g,W,H,S,lines);
+        c.toBlob(function(b){ if(!b){ done("Could not render"); return; } pngDeliver(name,b,done); },"image/png");
+      }catch(e){ done("Could not render"); } };
+    img.onerror=function(){ URL.revokeObjectURL(url); done("Could not render"); };
+    img.src=url;
+  }catch(e){ done("Could not render"); }
+};
+/* a ready canvas (already drawn at high resolution) plus caption lines */
+window.__canvasPng=function(canvas,name,lines,btn,S){
+  var done=pngBtnState(btn); S=S||1;
+  try{ var cap=lines&&lines.length?lines.length*18+12:0, W=canvas.width/S, H=canvas.height/S, c=document.createElement("canvas"); c.width=canvas.width; c.height=Math.round(canvas.height+cap*S); var g=c.getContext("2d");
+    g.fillStyle=getComputedStyle(document.documentElement).getPropertyValue("--surface").trim()||"#fff"; g.fillRect(0,0,c.width,c.height); g.drawImage(canvas,0,0); pngCaption(g,W,H,S,lines);
+    c.toBlob(function(b){ if(!b){ done("Could not render (too large?)"); return; } pngDeliver(name,b,done); },"image/png");
+  }catch(e){ done("Could not render"); }
+};
 function tmxInit(){
   var wrap=document.getElementById("tmWrap"); if(!wrap||document.getElementById("tmxSave")) return;
   var controls=wrap.closest(".block")?wrap.closest(".block").querySelector(".controls"):null; if(!controls) return;
