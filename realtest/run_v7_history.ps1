@@ -7,8 +7,9 @@
 # Run it AFTER run_v7_workflow.ps1 has finished (or any time after part C), never while
 # another RealTest job is running.  It does not touch the merged scan, the merge script or
 # the terminal ingest gate.  Stops at the first failed check, like the main launcher.
-#   -Ask   ask before starting
-param([switch]$Ask)
+#   -Ask      ask before starting
+#   -NoPause  do not wait for Enter at the end (the .bat pauses instead, so the window never closes early)
+param([switch]$Ask, [switch]$NoPause)
 $ErrorActionPreference = 'Stop'
 $Root = 'C:\RealTest21_newerv2'
 $Scr  = Join-Path $Root 'Scripts'
@@ -22,7 +23,7 @@ $Flags = @('-apply','-scan')
 
 function Stop-Run([string]$why) {
   Write-Host ''; Write-Host ('STOPPED: ' + $why) -ForegroundColor Red
-  if ($Ask) { Read-Host 'Press Enter to close' | Out-Null }
+  if ($Ask -and -not $NoPause) { Read-Host 'Press Enter to close' | Out-Null }
   exit 1
 }
 function Line-Count([string]$p) { if (Test-Path $p) { @(Get-Content $p).Count } else { 0 } }
@@ -60,5 +61,5 @@ Write-Host ''
 Write-Host ('PART E PASSED. ' + $rows + ' rows in ' + $mins + ' min.') -ForegroundColor Green
 Write-Host ('History file: ' + $Csv)
 Write-Host 'Next: open the Sector Rotation Terminal, tab Ask the terminal, click Load price history and drop this CSV.'
-if ($Ask) { Read-Host 'Press Enter to close' | Out-Null }
+if ($Ask -and -not $NoPause) { Read-Host 'Press Enter to close' | Out-Null }
 exit 0
