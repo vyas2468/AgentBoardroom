@@ -31,7 +31,7 @@
 | v96 | Alex-style colour-coded sentiment / breadth / SEW tables |
 | v97 | Ask: show/hide switches, per-answer timing, remove + undo, thread PNG / PDF export |
 | v98 | Spelling, ETF tear links, adaptive portfolios (stocks, ETFs, mixed, smart long/short), shared conditions, connections, themes and rotation, foldable tabs |
-| v99 | My tiles (saved questions; browser + account sync), modern styling, full-width layout (version 109) |
+| v99 | My tiles (saved questions; browser + account sync), modern styling, full-width layout, aligned header (version 110) |
 
 ## Open items (owner's wish list)
 1. Navy colour theme next to dark / light: add tokens under a `data-theme="navy"` attribute and check every tab, chart,

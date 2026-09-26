@@ -262,7 +262,7 @@ forecast; connection paths show co-movement, not cause.
 
 PART 8. FINAL STATUS (end of session, 26 Sep 2026)
 --------------------------------------------------
-Live page: https://claude.ai/artifact/JBivgL88qHWeaCSsepr7cN (version 109)
+Live page: https://claude.ai/artifact/JBivgL88qHWeaCSsepr7cN (version 110)
 Code:      branch claude/artifact-access-question-f3s8rs (layers v81 to v99 in artifact/layers, splice81.py builds the page)
 
 Your last checks, reviewed: all seven answers you pasted (smart 10-stock portfolio, themes strengthening, Credit Services
@@ -308,7 +308,7 @@ Note: saved tiles live in this browser only. Clearing site data, or a private wi
 "Copy all" backup of tiles you care about.
 
 
-PART 10. LAST CHANGES (version 109)
+PART 10. LAST CHANGES (version 110)
 -----------------------------------
 A. My tiles now persist properly
    - Every change is saved in this browser AND in your account's store for this page, so your tiles follow you to any
@@ -365,7 +365,7 @@ PART 11. VERSION 106
   sector); the navy theme (next session).
 
 
-PART 12. THREE NEW TILES (version 109) AND END OF SESSION
+PART 12. THREE NEW TILES (version 110) AND END OF SESSION
 ---------------------------------------------------------
 New tiles in Ask the terminal, every question tested and answering correctly:
  1. "Portfolios with conditions (combine them)" - 7 questions: strongest name per rising block + improving + signal
@@ -381,7 +381,7 @@ New tiles in Ask the terminal, every question tested and answering correctly:
 Two small fixes found while testing them: "Which themes are weakening?" now says "Weakest:" in its first line, and
 "Best stock in each theme" now gives one name per theme (it showed the theme table before).
 
-Final checks (version 109): the 49 original questions, all 207 earlier tile questions and the 34 newer tile questions
+Final checks (version 110): the 49 original questions, all 207 earlier tile questions and the 34 newer tile questions
 answer word for word as before; the 21 new questions all answer; no page errors.
 
 STILL OUTSTANDING (for a future session)
@@ -391,7 +391,7 @@ STILL OUTSTANDING (for a future session)
  Nothing is broken or half-finished; all work is published, committed and pushed.
 
 
-PART 13. LAST TASK OF THE SESSION (version 109) - AND CONCLUSIONS
+PART 13. LAST TASK OF THE SESSION (version 110) - AND CONCLUSIONS
 -----------------------------------------------------------------
 Your set of test questions: all working (IT Sector links improving; rising blocks + improving + convergence;
 independent + low drawdown + beating the market; Utilities / IT Sector bridges; improving ETFs inverse-volatility weighted).
@@ -425,14 +425,15 @@ CONCLUSIONS
 - The terminal now answers in plain English across tables, charts, maps, correlations, pair tests, clusters, themes,
   rotation, connections and adaptive portfolios (stocks, ETFs, mixed, long / short) with combinable conditions, and
   keeps your own saved questions (My tiles) in your account.
-- Everything is published (version 109), committed and pushed; nothing is half-finished.
+- Everything is published (version 110), committed and pushed; nothing is half-finished.
 - Yes, this is sufficient to continue from in a future session: start by asking Claude to read docs/HANDOFF.md and
   use the sector-terminal skill.
 - Open items for next time: navy theme; "in rising subsectors" inside connections questions; tidier AF layout for
   very large subsectors.
 
 
-PART 14. MY TILES LAYOUT FIX (version 109)
+PART 14. MY TILES LAYOUT FIX (version 110)
 - Tiles now span the full width; each question uses the whole row with compact buttons at the right, aligned in a
   column; on a phone-width screen the text wraps neatly beside the buttons. Tested at wide and narrow widths; all
   My tiles actions still work; the 49 original questions answer as before.
+- Version 110: the tile header's Run all, edit and delete buttons line up exactly with the Run, edit and remove columns below.
