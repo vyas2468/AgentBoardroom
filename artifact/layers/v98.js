@@ -166,7 +166,7 @@ qmParseX=function(q){
     /* ---- connections ---- */
     var CONN=/\bconnect\w*\b|\blink(?:s|ed|ing)?\b|\bbridg\w*\b|\brelated\b|\bin common\b|\bties? between\b|\btied\b/.test(t)&&!PORT&&!/\bcorrelation matrix\b|\bmap\b|\bweb\b/.test(t);
     if(CONN&&tks.length===2&&!/\bpairs?\b/.test(t)) return mark({kind:"hconn",mode:"pair",a:tks[0],b:tks[1]});
-    if(CONN&&!tks.length&&!/\bpairs?\b/.test(t)&&/\bwhat (?:links|connects|ties|joins)\b|\bconnections? between\b|\blinks? between\b|\bbridg\w*\b|\bhow (?:are|is|do) .+ (?:connected|linked|related|connect|link)\b|\bin common\b/.test(t)){ var G=[], rest=" "+t.replace(/-/g," ")+" ";
+    if(CONN&&!tks.length&&!/\bpairs?\b/.test(t)&&/\bwhat (?:links|connects|ties|joins)\b|\bconnections? between\b|\blinks? between\b|\bbridg\w*\b|\bhow (?:are|is|do) .+ (?:connected|linked|related|connect|link)\b|\bin common\b/.test(t)){ var G=[], rest=" "+t.replace(/-/g," ").replace(/\s+/g," ").trim()+" ";
       ii.forEach(function(k){ G.push({t:"ind",k:k}); rest=rest.split(C.indNorm[k]).join(" "); });
       var th2=themesIn(rest); if(/\btheme/.test(t)||th2.some(function(k){ return k==="aiinfra"||k==="power"||k==="semis"; })) th2.forEach(function(k){ G.push({t:"theme",k:k}); var re=new RegExp(TH_BY[k].re.source,"g"); rest=rest.replace(re," "); });
       (qmSecMentions(rest).inn||[]).forEach(function(k){ var key=qmSecKey(k)||k; if(!G.some(function(g){ return g.t==="sec"&&g.k===key; })) G.push({t:"sec",k:key}); });
@@ -191,6 +191,12 @@ qmParseX=function(q){
       if(th.length===1&&!/\bthemes\b|\ball themes\b|\bwhich themes?\b|\brank\b/.test(t)) return mark({kind:"htheme",mode:"detail",k:th[0]});
       return mark({kind:"htheme",mode:"list",win:winOf(t)||"m1",asc:/\bweak\w*\b|\blagging\b|\bworst\b|\bdeteriorat\w*\b/.test(t)&&!/\bstrong\w*\b/.test(t),by:/\bstrengthen\w*|\bimprov\w*/.test(t)?"sent":null}); }
     if(/\bshow (?:me )?the (.+?) (?:theme|basket)\b/.test(t)&&th.length===1) return mark({kind:"htheme",mode:"detail",k:th[0]});
+    /* ---- mixed ETFs + stocks, smart long / short ---- */
+    if(PORT&&/\betfs?\b/.test(t)&&/\bstocks?\b|\bequit\w*\b|\bnames\b/.test(t)&&!/\blong[ -]short\b/.test(t)){
+      var me=t.match(/\b(\d{1,2}) ?etfs?\b/), ms=t.match(/\b(\d{1,2}) ?(?:stocks?|equit\w*|names)\b/);
+      return mark({kind:"hsmart",mix:{etf:me?Math.max(1,Math.min(20,+me[1])):5,stk:ms?Math.max(1,Math.min(30,+ms[1])):5},t:t}); }
+    if(PORT&&/\blong[ -\/]?(?:and )?short\b/.test(t)&&/\bsmart\b|\badaptive\b/.test(t)){
+      var ln=t.match(/\b(\d{1,2}) ?(?:longs?|stocks?|names|etfs?)\b/); return mark({kind:"hsmart",uni:/\betfs?\b/.test(t)?"etf":"stocks",ls:{n:ln?Math.max(2,Math.min(20,+ln[1])):5},t:t}); }
     /* ---- adaptive portfolio ---- */
     if(PORT&&!/\brisk level\b|\blong[ -]short\b|\bshort\b|\b(?:one|1) (?:stock |name )?(?:per|from each|in each|for each) (?:cluster|block|bloc)\b|\bfrom each (?:rising|falling) (?:block|cluster)\b|\b(?:each|every) (?:rising |falling |directional )?(?:block|bloc)s?\b|\bpairs?\b|\bhedg\w*\b/.test(t)){
       var ETF=/\betfs?\b|\bfunds\b|\bexchange traded\b/.test(t);
@@ -231,7 +237,8 @@ qmRunX=function(spec,ctx,res,t0){
 
 /* ================= smart portfolio ================= */
 function runSmart(spec,ctx,res){
-  var t=spec.t||"", G=groups(), h=H(), etf=spec.uni==="etf";
+  if(spec.mix||spec.ls) return runCombo(spec,ctx,res);
+  var SHORT=spec.side==="short", t=SHORT?" portfolio ":(spec.t||""), G=groups(), h=H(), etf=spec.uni==="etf";
   var rows=etf?etfRows():ctx.rows.slice();
   var notes=[], read=[];
   /* hard filters */
@@ -244,6 +251,7 @@ function runSmart(spec,ctx,res){
   }
   var exm=t.match(/\b(?:excluding|except|without|not) ([a-z0-9 ,]+)/), exT=[]; if(exm){ (exm[1].toUpperCase().match(/[A-Z]{1,5}/g)||[]).forEach(function(s){ if((ctx.bySym[s]||etfSet()[s])&&exT.indexOf(s)<0) exT.push(s); }); rows=rows.filter(function(r){ return exT.indexOf(r.sym)<0; }); }
   var hard=[];
+  if(SHORT){ rows=rows.filter(function(r){ return r.dir!=="improving"&&(etf||r.trend!=="up"); }); hard.push(etf?"not improving":"not improving and not in an uptrend"); }
   if(/\bimproving\b/.test(t)&&!/\bimproving sub ?sectors?\b/.test(t)){ rows=rows.filter(function(r){ return r.dir==="improving"; }); hard.push("Early Warning direction improving"); }
   else if(/\bstrengthening\b/.test(t)){ rows=rows.filter(function(r){ return etf?num(r.rec)&&r.rec>0:num(r.sev)&&r.sev>0; }); hard.push("strengthening (score above zero)"); }
   if(!etf&&/\b(?:fresh|new|young|recent|just turned)(?: trend)? (?:up ?trend|uptrend|trend up)s?\b/.test(t)){ rows=rows.filter(function(r){ return r.trend==="up"&&num(r.tb)&&r.tb<=10; }); hard.push("in a fresh uptrend (10 sessions or less)"); }
@@ -276,8 +284,9 @@ function runSmart(spec,ctx,res){
   rows.forEach(function(r){
     var mom=etf?pStr(r):mean([num(r.str)?r.str/100:null,pM3(r.m3),pYtd(r.ytd)]);
     var f={mom:mom,conv:num(r.conv)?r.conv/6:null,dir:r.dir==="improving"?1:(r.dir==="deteriorating"?0:0.5),rot:etf?null:pRot(indNet[r.ind]),sent:etf?pRec(r.rec):null,low:(function(){ var v=pVol(num(r.vol12)?r.vol12:r.vol); return num(v)?1-v:null; })()};
+    if(SHORT) ["mom","dir","rot","sent"].forEach(function(k){ if(num(f[k])) f[k]=1-f[k]; });
     var s=0, w=0, parts=[]; Object.keys(W).forEach(function(k){ if(!W[k]||!num(f[k])) return; s+=W[k]*f[k]; w+=W[k]; parts.push([k,W[k]*f[k],f[k]]); });
-    r._f=f; r._s=w?s/w*100:0; parts.sort(function(a,b){ return b[1]-a[1]; }); r._why=parts.slice(0,3).filter(function(p){ return p[2]>=0.55; }).map(function(p){ return {mom:"momentum",conv:"convergence "+(num(r.conv)?r.conv+"/6":""),dir:"improving",rot:"rising subsector",sent:"SEW score",low:"low volatility"}[p[0]]; });
+    r._f=f; r._s=w?s/w*100:0; parts.sort(function(a,b){ return b[1]-a[1]; }); r._why=parts.slice(0,3).filter(function(p){ return p[2]>=0.55; }).map(function(p){ return (SHORT?{mom:"weak momentum",conv:"convergence "+(num(r.conv)?r.conv+"/6":""),dir:"deteriorating",rot:"falling subsector",sent:"weak SEW score",low:"low volatility"}:{mom:"momentum",conv:"convergence "+(num(r.conv)?r.conv+"/6":""),dir:"improving",rot:"rising subsector",sent:"SEW score",low:"low volatility"})[p[0]]; });
   });
   rows.sort(function(a,b){ return b._s-a._s; });
   /* constraints */
@@ -328,6 +337,35 @@ function runSmart(spec,ctx,res){
   res.notes=res.notes.concat(notes);
   if(!etf) res.send=sendOf(ctx,pick.map(function(p){ return p.sym; }),"adaptive portfolio");
   return pick.length;
+}
+
+/* mixed ETFs + stocks, and smart long / short: run the builder for each part and put the parts together */
+function runCombo(spec,ctx,res){
+  var parts=spec.mix?[{lab:"Stocks",sp:{kind:"hsmart",uni:"stocks",n:spec.mix.stk,t:spec.t}},{lab:"ETFs",sp:{kind:"hsmart",uni:"etf",n:spec.mix.etf,t:spec.t}}]
+    :[{lab:"Long",sp:{kind:"hsmart",uni:spec.uni||"stocks",n:spec.ls.n,t:spec.t}},{lab:"Short",sp:{kind:"hsmart",uni:spec.uni||"stocks",n:spec.ls.n,t:spec.t,side:"short"}}];
+  var out=[], total=0;
+  parts.forEach(function(p){ var r={notes:[],extra:[],bullets:[]}; var n=runSmart(p.sp,ctx,r); out.push({p:p,r:r,n:n,syms:r.table?r.table.body.map(function(row){ return row[1]; }):[]}); total+=n; });
+  if(!total){ res.lead="No names passed the rules for either part."; return 0; }
+  var h=H(), all=[]; out.forEach(function(o){ o.syms.forEach(function(s){ all.push(s); }); });
+  var ap=null; if(h){ var s2=0,k=0; for(var a=0;a<all.length;a++) for(var b=a+1;b<all.length;b++){ var c=cor(all[a],all[b],252); if(num(c)){ s2+=c; k++; } } ap=k?s2/k:null; }
+  if(spec.mix){
+    /* weight each part by its share of the names; each part keeps its own weighting inside */
+    out.forEach(function(o){ if(!o.r.table) return; var share=o.n/total, wi=o.r.table.head.indexOf("Weight"); o.r.table.body.forEach(function(row){ var w=parseFloat(row[wi]); if(num(w)) row[wi]=(w*share).toFixed(1)+"%"; }); });
+    res.lead="A mixed portfolio of "+out[0].n+" stocks and "+out[1].n+" ETFs, each part built by the adaptive builder with the same conditions and then weighted by its share of the names ("+(out[0].n/total*100).toFixed(0)+"% stocks, "+(out[1].n/total*100).toFixed(0)+"% ETFs)."+(num(ap)?" Average pairwise correlation across all "+all.length+" holdings: <b>"+ap.toFixed(2)+"</b> (252 bars).":"");
+  } else {
+    var nl=out[0].n, ns=out[1].n, cross=null; if(h){ var lb=basketRets(out[0].syms,252), sb=basketRets(out[1].syms,252); if(lb&&sb) cross=corArr(lb,sb); }
+    var Mm=null; try{ Mm=A.metrics(); }catch(e){} var beta=function(list){ return mean(list.map(function(s){ var m=Mm&&Mm.by?Mm.by[s]:null; return m&&!m.stale?m.beta:null; })); }, bl=beta(out[0].syms), bs=beta(out[1].syms);
+    res.lead="A smart long / short portfolio: "+nl+" longs chosen with your conditions, "+ns+" shorts scored the opposite way (weak momentum, deteriorating, falling subsectors; never improving or in an uptrend). Equal gross on each side (dollar neutral)."+(num(cross)?" The long and short baskets correlate <b>"+cross.toFixed(2)+"</b> (252 bars), so the short side hedges "+(cross>=0.5?"much":(cross>=0.25?"some":"little"))+" of the long side's market move.":"")+(num(bl)&&num(bs)?" Average beta to RSP: longs "+bl.toFixed(2)+", shorts "+bs.toFixed(2)+".":"");
+  }
+  var first=out[0].r; res.table=first.table; if(res.table) res.table=JSON.parse(JSON.stringify(res.table));
+  res.extra=[{title:out[0].p.lab+": "+(first.lead||"").replace(/<[^>]+>/g,"").slice(0,200),table:{head:["Part"],align:["l"],body:[]}}].slice(0,0);
+  res.drillLead=out[0].p.lab+" ("+out[0].n+")";
+  if(out[1].r.table) res.extra.push({title:out[1].p.lab+" ("+out[1].n+")"+(spec.ls?": scored for weakness":""),table:out[1].r.table});
+  (out[0].r.extra||[]).slice(0,1).forEach(function(x){ res.extra.push({title:out[0].p.lab+" part - "+x.title,table:x.table}); });
+  res.notes=res.notes.concat(out[1].r.notes.filter(function(x){ return !/^Adaptive:/.test(x); })).concat(out[0].r.notes);
+  var items=[]; out.forEach(function(o,i){ o.syms.forEach(function(s){ if(ctx.bySym[s]) items.push({sym:s,side:(spec.ls&&i===1)?"short":"long",w:null}); }); });
+  if(items.length) res.send={label:spec.ls?"smart long / short":"mixed portfolio (stocks)",items:items.slice(0,50)};
+  return total;
 }
 
 /* ================= connections ================= */
