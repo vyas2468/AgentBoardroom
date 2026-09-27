@@ -10,6 +10,9 @@ UPDATE at 01:20 UTC: the 600-bar price-history CSV finished and is confirmed goo
 UPDATE at 02:00 UTC: three more real backtests run (Part G), plus your three requests for next
 session -- save backtest results, a detailed trade list to verify correctness, and speed -- are
 now planned out concretely in Part H.
+UPDATE at 02:30 UTC: a 6th real backtest, your actual success target stated explicitly (55% win
+rate, avg win/avg loss ratio >= 1, reasonable trade frequency), and a small feature added against
+it -- see Part I.
 ============================================================================
 
 ----------------------------------------------------------------------------
@@ -356,4 +359,67 @@ next session:
    a rebalance-frequency comparison view (note: item 3 above is a manual version of exactly this;
    if it proves useful, this backlog item could become "build that as a proper reusable feature"),
    the navy colour theme.
+
+----------------------------------------------------------------------------
+PART I. YOUR ACTUAL SUCCESS TARGET, A 6TH REAL RESULT, AND A SMALL FEATURE ADDED FOR IT
+----------------------------------------------------------------------------
+1. YOUR STATED TARGET (write this down, it's the actual bar every future backtest should be
+   judged against, not just "did it beat RSP"): a win rate of 55% or better, an average-win-to-
+   average-loss ratio of 1.0 or better, and a reasonable trade frequency (i.e. not the extreme
+   churn seen in every "smart" portfolio tested today).
+
+2. A 6TH REAL BACKTEST: "Build a smart 6 stock defensive portfolio, established uptrend, low
+   drawdown, inverse volatility weighted" (daily rebalance, 260 dates):
+     Value 82,295 (start 100,000)   Return -17.71%   RSP same days +11.91%
+     Max drawdown -19.32%           Annualised vol 11.3%   Sharpe-style -1.53
+     Closed trades / win rate: 724 / 47%
+   724 closed trades on a 6-STOCK portfolio over 259 days is the most extreme churn number seen
+   all session -- roughly 2.8 trades per day across only 6 slots, meaning positions are barely
+   held before being replaced. For a portfolio explicitly built to be "defensive" and "low
+   drawdown," this level of instability is itself suspicious and worth investigating directly
+   (see Part H.3/H.4 -- the rebalance test and the churn question are now clearly the same
+   investigation, not two separate curiosities).
+
+3. THE HONEST READ ON "ARE THESE PORTFOLIOS JUST USELESS": no, not established -- but they have
+   not cleared the bar yet either, and there are three specific, testable reasons why, not just
+   one vague "bad luck":
+   a) REGIME MISMATCH. Every portfolio tested today was explicitly defensive / low-volatility /
+      low-beta / low-drawdown by construction, and RSP had a strong ~12% up year over the exact
+      same window. A strategy built to reduce drawdown in a DOWN market will structurally give up
+      upside in a strong UP market -- underperforming RSP here does not by itself mean the rules
+      are bad, it may mean this window was simply the wrong regime to test them in.
+   b) CHURN/COST DRAG (the more actionable concern). Every single result today had extreme trade
+      turnover relative to portfolio size -- worst case 724 trades on just 6 names. If names are
+      flapping in and out of "qualifies" status every few days, either the underlying filter
+      thresholds sit right on a knife-edge many stocks hover around, or transaction costs from
+      that much turnover are quietly eating most of any real edge regardless of stock-picking
+      quality. This is the single most likely reason none of today's results are anywhere near a
+      55% win rate / >=1.0 win-loss ratio -- worth chasing down BEFORE concluding the portfolio
+      TYPE itself has no edge.
+   c) SMALL, CORRELATED SAMPLE. All six real backtests this session used the same ~1-year window
+      and overlapping universe/history. That is one regime, tested six different ways -- not six
+      independent trials. None of today's results should be read as a general verdict on "smart"
+      or dual-momentum portfolios; they are a verdict on this specific year only, so far.
+
+4. SMALL FEATURE ADDED THIS SESSION, IN RESPONSE TO THE STATED TARGET: the backtest stats table
+   in v104.js (btSection()) now shows two more rows, computed from stats.avgWin/stats.avgLoss
+   that the tracker engine already calculates internally (no new maths, purely additive):
+     "Avg win / avg loss"   -- the average return of winning trades vs. losing trades
+     "Win/loss ratio"       -- avgWin divided by |avgLoss|, so it can be checked directly against
+                               your >= 1.0 target without doing it by hand every time
+   Verified: node -c syntax check clean. NOT run through the full 348-question regression or the
+   40+28 unit tests this time (it is a two-line, purely additive display change reading fields
+   that already exist and are already tested elsewhere -- same risk class as the earlier
+   trade-list table addition) -- worth a real regression pass before or during the next publish,
+   just to be thorough, even though the change is low-risk by construction.
+   Committed (b9d5c4a), NOT yet published -- queued with the trade-list table (Part A.2/C.1) and
+   the win/loss-ratio row for the SAME next publish, so the one mandatory full-page read covers
+   all of it at once.
+
+5. SUGGESTED NEXT THING TO TRY (cheap, once we're back to testing): a plain rank/momentum
+   portfolio with a TIGHTER, less "flappy" condition set (fewer simultaneous transient filters
+   like "pullback"+"convergence"+"breadth" stacked together) is more likely to show a stable,
+   checkable win rate and win/loss ratio than the heavily-conditioned "smart" portfolios tried so
+   far. Worth running alongside the Part H.3 rebalance-frequency test, since both are cheap,
+   no-code experiments that could be done back to back early next session.
 ============================================================================
