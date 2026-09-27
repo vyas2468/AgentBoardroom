@@ -111,11 +111,24 @@ PART C. WHAT IS LEFT, AND WHY
    a launcher script matching the tested pattern of the other launchers, then comparing RT's
    resulting equity against the terminal's own backtest for the same portfolio/dates as a
    real cross-check. This closes the original three-part plan from the very start of this arc.
-3. A real cluster-diversified portfolio backtest against real data, using the now-confirmed
-   600-bar file (today's dual-momentum test only proved the plain-portfolio path so far) --
-   this is the item Part D.2 below asks you to try next.
+3. DONE THIS SESSION -- see Part F below: the 600-bar file successfully unblocked a real
+   cluster-diversified ("smart") portfolio backtest. The result itself raised a new question
+   (very high trade count) that is now item 5 below.
 4. Older backlog, unchanged and still open: Portfolio Tracker Compare/Combined views, money/
    sizing/overlap in the tracker, a rebalance-frequency comparison view, the navy colour theme.
+5. NEW, FROM TODAY'S RESULT: investigate why "Build a smart 10 stock portfolio in an
+   established uptrend with low beta, not deteriorating" produced 1,068 closed trades over 259
+   replay days on a 10-name portfolio (~4 trades/day average). Not necessarily a bug -- a daily-
+   rebalanced, cluster-diversified portfolio can genuinely reshuffle heavily if which names
+   qualify for which cluster slot changes often day to day -- but it is unusually high and worth
+   checking before trusting the -5.05% return number. Two things to try first, before assuming
+   anything is wrong: (a) switch that portfolio's rebalance setting from daily to weekly or
+   monthly (via its Settings button) and re-run the backtest -- if trade count drops to a sane
+   level and the return changes a lot, the daily churn itself was the story; (b) sanity-check a
+   few individual dates by hand (open the portfolio's live tracker view, compare picks on two
+   adjacent dates) to see whether the smart builder's cluster assignment is genuinely this
+   unstable day to day, which would be useful, real information about that portfolio type
+   regardless of the backtest.
 
 ----------------------------------------------------------------------------
 PART E. HOW THE BACKTEST ACTUALLY WORKS, STEP BY STEP (asked for explicitly this session)
@@ -190,13 +203,41 @@ history than has actually been supplied.
 PART D. PLAN OF ACTION, IN ORDER
 ----------------------------------------------------------------------------
 1. DONE: the 600-bar CSV finished and was confirmed sane (342,526 rows, 575 symbols).
-2. You: swap the price-history upload to the new 600-bar file (steps in Part B above) and try one
-   "smart"/cluster portfolio backtest, report what you see -- a real result, or a refusal with a
-   different reason.
-3. Me: build the Terminal_Weights.csv export + RealTest validation runner (Part C.2), and publish
-   it together with the already-built trade-list table (Part C.1) in one combined publish, so the
-   one required full-page read serves both.
-4. You: run the validation runner and compare its numbers to the terminal's own backtest for the
+2. DONE: swapped in the 600-bar file, ran a "smart" cluster-diversified portfolio backtest --
+   see Part F for the real result. It ran (did not refuse), which is the main proof needed;
+   the trade-count question (Part C.5) is a follow-up, not a blocker.
+3. You (next session, quick): try Part C.5's rebalance-frequency experiment (switch that
+   portfolio to weekly/monthly, re-run, compare trade count and return) -- five minutes, and it
+   tells us whether the -5.05% number is trustworthy as-is or was mostly daily-churn noise.
+4. Me (next session): build the Terminal_Weights.csv export + RealTest validation runner
+   (Part C.2), and publish it together with the already-built trade-list table (Part C.1) in one
+   combined publish, so the one required full-page read serves both.
+5. You: run the validation runner and compare its numbers to the terminal's own backtest for the
    same portfolio -- closes the original three-part plan.
-5. Later, as time/budget allows: the older backlog in Part C.4.
+6. Later, as time/budget allows: the older backlog in Part C.4.
+
+----------------------------------------------------------------------------
+PART F. TODAY'S SMART-PORTFOLIO BACKTEST RESULT (real data, first of its kind)
+----------------------------------------------------------------------------
+Portfolio: "Build a smart 10 stock portfolio in an established uptrend with low beta, not
+deteriorating" (a cluster-diversified, adaptive-builder portfolio -- exactly the kind that was
+refused outright with the old 280-bar price history).
+Files used: AlexAligned_Unified_v7F_History_260bars_Merged.csv (scan) +
+AlexAligned_Unified_v7E_history_600bars.csv (price history, today's new file).
+RESULT: it ran successfully -- no refusal, the 252-bar warm-up check passed cleanly with the
+600-bar file. This is the first proof that cluster/correlation-diversified portfolios can be
+backtested at all, closing out the last open question from Part B/C.3 of the previous handoff.
+  Replayed 260 rebalance-eligible dates, 2025-09-15 to 2026-09-25.
+  Period: 2025-09-16 to 2026-09-25 (259 bars)
+  Value (start 100,000): 94,946        Return: -5.05%
+  RSP over the same days: +11.91%      Max drawdown: -12.76%
+  Annualised volatility: 12.6%         Sharpe-style ratio: -0.26
+  Closed trades / win rate: 1,068 / 47%
+FLAG (see Part C.5 for the concrete next step): 1,068 closed trades on a 10-name portfolio over
+259 days is unusually high turnover (~4 trades/day average). This is plausible for a daily-
+rebalanced, cluster-based portfolio if which names qualify for which cluster slot genuinely
+shifts a lot day to day, but it has NOT yet been confirmed that this is what's happening versus
+some other cause -- the honest state is "the number is real and reproducible, but its magnitude
+is unexplained and worth checking before treating -5.05% as a meaningful verdict on this
+portfolio type." The rebalance-frequency experiment in Part C.5 is the fastest way to find out.
 ============================================================================
