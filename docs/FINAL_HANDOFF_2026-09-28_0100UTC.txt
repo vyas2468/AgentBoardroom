@@ -1,5 +1,5 @@
 ============================================================================
-SECTOR ROTATION TERMINAL + REALTEST BACKTESTING - HANDOFF (2026-09-28 01:20 UTC)
+SECTOR ROTATION TERMINAL + REALTEST BACKTESTING - HANDOFF (2026-09-28 02:00 UTC)
 Live page: https://claude.ai/artifact/JBivgL88qHWeaCSsepr7cN  (version 141 -- unchanged since
 last handoff; the trade-list addition below is committed to git but NOT yet published)
 Code: branch claude/artifact-access-question-f3s8rs, folder artifact/ (page) + realtest/ (RT scripts)
@@ -7,6 +7,9 @@ Previous handoff: docs/FINAL_HANDOFF_2026-09-28_0000UTC.txt
 This handoff picks up right where that one left off: you had just gotten your first successful
 real-data backtest result (Dual momentum top 8), and I had started building a trade-list feature.
 UPDATE at 01:20 UTC: the 600-bar price-history CSV finished and is confirmed good (see Part A.4).
+UPDATE at 02:00 UTC: three more real backtests run (Part G), plus your three requests for next
+session -- save backtest results, a detailed trade list to verify correctness, and speed -- are
+now planned out concretely in Part H.
 ============================================================================
 
 ----------------------------------------------------------------------------
@@ -240,4 +243,117 @@ shifts a lot day to day, but it has NOT yet been confirmed that this is what's h
 some other cause -- the honest state is "the number is real and reproducible, but its magnitude
 is unexplained and worth checking before treating -5.05% as a meaningful verdict on this
 portfolio type." The rebalance-frequency experiment in Part C.5 is the fastest way to find out.
+
+----------------------------------------------------------------------------
+PART G. THREE MORE REAL BACKTESTS RUN THIS SESSION (all against the 600-bar file)
+----------------------------------------------------------------------------
+1. "Build a smart portfolio of 25 stocks in an uptrend, pulling back, ranked by strength"
+   (daily rebalance -- the portfolio's default, never changed): 260 dates replayed.
+     Value 84,185 (start 100,000)  Return -15.81%   RSP same days +11.91%
+     Max drawdown -22.09%          Annualised vol 15.9%   Sharpe-style -0.93
+     Closed trades / win rate: 4,178 / 50%
+   4,178 trades over 259 days on a 25-name portfolio -- roughly 16 trades/day, i.e. most of the
+   portfolio effectively turns over daily. Same pattern as the Part F result, just larger scale.
+
+2. "Build a smart 25 stock portfolio, improving, 2 per sector, pullback, weighted" -- this one
+   you switched to WEEKLY rebalance in Settings before running: 54 rebalance-eligible dates
+   (matches ~52 weeks/year, correct).
+     Value 92,714 (start 100,000)  Return -7.29%    RSP same days +11.91%
+     Max drawdown -11.21%          Annualised vol 12.0%   Sharpe-style -0.51
+     Closed trades / win rate: 861 / 47%
+   861 trades across only 54 weekly rebalance points on a 25-name portfolio is still very high --
+   roughly 16 trades PER WEEKLY REBALANCE, meaning close to two-thirds of the whole 25-name list
+   turns over every single week. IMPORTANT FINDING: switching to weekly did not tame the churn
+   the way the previous handoff guessed it might. This means the high trade count is probably not
+   really about rebalance FREQUENCY at all -- it's that "pullback" (and similarly transient
+   conditions like signal convergence, positive sector breadth) are inherently short-lived
+   per-name states: a stock qualifies as "pulling back" for a session or two, then stops, so the
+   qualifying list is genuinely unstable from one rebalance point to the next almost regardless of
+   how often you check. That is a real, useful property of these portfolio TYPES to know about,
+   not a backtest bug -- but see Part H.3 for the one clean test we still haven't run.
+
+3. "Dual momentum top 10 where signals converge, positive sector breadth, low correlation,
+   weighted" -- also weekly rebalance: 54 dates.
+     Value 102,214 (start 100,000)  Return +2.21%   RSP same days +11.91%
+     Max drawdown -26.86%           Annualised vol 39.5%   Sharpe-style 0.27
+     Closed trades / win rate: 370 / 44%
+   Positive return, but notice the volatility (39.5% annualised) and drawdown (-26.86%) are both
+   far worse than either of the two "smart" portfolios above despite the smaller trade count --
+   worth a closer look next session (is this the "low correlation" condition actually
+   concentrating risk instead of spreading it, given the cluster/correlation math needed 252 bars
+   of warm-up that this run barely clears? worth checking with an even longer price history later).
+
+CROSS-CUTTING OBSERVATION: none of the five real backtests run today or in the previous session
+(across two portfolio types and three rebalance settings) beat RSP, and several lost money
+outright while RSP gained ~12% over the same window. This is one specific ~1-year window on one
+scan, not a general verdict on any of these portfolio types -- but it is exactly the kind of
+finding backtesting exists to surface, and is worth keeping in mind rather than assuming the
+"smart" builder or dual-momentum screens are automatically an edge.
+
+----------------------------------------------------------------------------
+PART H. NEXT SESSION'S CONCRETE PLAN (your three asks, made specific)
+----------------------------------------------------------------------------
+You asked for, in order: (1) the ability to SAVE backtest results, (2) a detailed trade list to
+verify the backtest is actually correct, (3) ideas to speed the whole process up. Plus the
+apples-to-apples rebalance test that Part G surfaced as still missing. In priority order for
+next session:
+
+1. PUBLISH WHAT'S ALREADY BUILT (do this first, it's free -- already tested, just needs the one
+   mandatory full-page read before publishing, which the RealTest validation runner below should
+   share). This directly answers your ask #2: the "Closed trades" table (Part A.2/C.1) already
+   shows entry date/price, exit date/price, return, days held and why sold, for every trade in a
+   result -- exactly the level of detail needed to spot-check whether a backtest's trades look
+   sane (e.g. checking a couple of the 1,068 or 4,178 trades by hand against the live tracker's
+   own picks on those dates).
+
+2. SAVE BACKTEST RESULTS (your ask #1) -- NOT built yet, needs real design work next session.
+   Current state: a backtest result (BT.out in v104.js) lives only in an in-memory JS variable --
+   it vanishes on page reload or if you switch away and the tab re-renders from scratch, so every
+   comparison across the portfolios you tried today required re-running each one from the file
+   inputs again. Plan: persist each completed backtest result (portfolio id, the two file names/
+   sizes as a fingerprint, the stats, the equity curve, the trades array) into the same kind of
+   store the "Save this run" / stored-runs feature already uses (browser localStorage as the
+   baseline, the artifact db capability as a shared upgrade when available -- mirroring exactly
+   how snapshotNow()/saveRun() already work elsewhere on this page) so you can come back later,
+   see every backtest you've ever run for a portfolio, and compare them side by side without
+   re-uploading 372 MB every time. This is a real, scoped feature to build and test properly, not
+   a quick add -- plan on it being the main piece of next session's implementation work.
+
+3. THE MISSING APPLES-TO-APPLES REBALANCE TEST -- cheap, do this first thing next session, no
+   code needed. Take ONE portfolio (e.g. "Build a smart 10 stock portfolio in an established
+   uptrend with low beta, not deteriorating", the one from Part F) and back-test it three times,
+   changing ONLY its rebalance setting each time: daily, weekly, monthly. Compare trade count and
+   return across the three. This is the clean version of the experiment Part G.2 accidentally
+   ran on a DIFFERENT portfolio at only one alternate setting -- doing it properly on the SAME
+   portfolio will finally tell us whether "pullback"/"convergence"/"breadth" conditions are
+   inherently unstable (as Part G.2 suggests) or whether rebalance frequency still matters some
+   amount once isolated as the only variable.
+
+4. SPEED (your ask #3) -- the single biggest, cheapest win available: CACHE THE PARSED FILES.
+   Right now, every single click of "Run backtest" re-reads and re-parses BOTH uploaded files
+   from scratch via FileReader, even if you are just switching the portfolio dropdown and running
+   the exact same two files again (which is exactly what happened for all of today's five runs --
+   the same 372 MB scan file and the same price-history file were re-read and re-grouped-by-date
+   from zero, every time, for no reason, since the file CONTENTS never changed between runs).
+   Concretely: v104.js's groupScanByDate() result and the parsed price-history structure could be
+   cached in memory keyed by each File object's name+size+lastModified, and only re-parsed when
+   one of those actually changes. This alone should make trying several portfolios back to back
+   (exactly what you did today) much faster after the first run, with no change to correctness --
+   the parsing logic itself would be identical, just not repeated needlessly. Plan to implement
+   and test this alongside item 2 (SAVE BACKTEST RESULTS), since both touch the same code area.
+   Secondary, lower-priority speed idea for later: chunked/streamed CSV parsing instead of
+   reading the whole file into one JS string via readAsText, which would help the very FIRST run
+   on a large file too, not just repeat runs -- more invasive, worth doing only if caching alone
+   isn't enough.
+
+5. THE REALTEST VALIDATION RUNNER (Part C.2, unchanged from before) -- still the last of the
+   three-part plan from the very start of this arc: Terminal_Weights.csv export, a small .rts
+   template using DataValueFile/DynamicSizing/Commission, a launcher, then comparing RT's own
+   equity against the terminal's backtest for the same portfolio as an independent cross-check.
+   Natural to bundle its one mandatory full-page-read-before-publish with item 1 above.
+
+6. Older backlog, unchanged: Portfolio Tracker Compare/Combined views, money/sizing/overlap,
+   a rebalance-frequency comparison view (note: item 3 above is a manual version of exactly this;
+   if it proves useful, this backlog item could become "build that as a proper reusable feature"),
+   the navy colour theme.
 ============================================================================
