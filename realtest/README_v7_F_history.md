@@ -22,16 +22,15 @@ indicator set, split the same way A/B/C/D already are, for speed.
 
 ## One-time setup
 
-For each of your part scripts you want history for (start with just one, e.g. part C, to see
-how long it takes before committing to all four):
+**Easiest: double-click `Generate_AlexAligned_v7_F_History.bat`.** It finds whichever of your
+part A/B/C/D scripts sit in the same folder and generates the matching part-F scripts
+automatically -- no typing required. Run it again any time you want to regenerate with a
+different NumBars (`generate_v7_F_history.ps1 -NumBars 60`, if you prefer PowerShell directly).
 
+Or, to generate just one part by hand (e.g. to try part C alone first):
 ```
-node _generators\gen_v7_F_history.js  AlexAligned_Unified_v7_C_....rts  Scripts\AlexAligned_Unified_v7F_C_History.rts  260
-node _generators\gen_v7_F_history.js  AlexAligned_Unified_v7_A_....rts  Scripts\AlexAligned_Unified_v7F_A_History.rts  260
-node _generators\gen_v7_F_history.js  AlexAligned_Unified_v7_B_....rts  Scripts\AlexAligned_Unified_v7F_B_History.rts  260
-node _generators\gen_v7_F_history.js  AlexAligned_Unified_v7_D_....rts  Scripts\AlexAligned_Unified_v7F_D_History.rts  260
+node _generators\gen_v7_F_history.js  AlexAligned_Unified_v7_C_....rts  AlexAligned_Unified_v7F_C_History.rts  260
 ```
-
 The generator refuses to run (with a clear error) if the source file doesn't look like a normal
 part A/B/C/D script, rather than guessing.
 
@@ -43,10 +42,13 @@ not just the latest one. If a part is too slow at 260, re-run the generator for 
 with a smaller number (e.g. 60); the other parts can keep 260. Never hand-edit a generated
 script's `Data:`/`Scan:` section to try to speed it up.
 
-Put `merge_v7_F_history.py`, `run_v7_F_history.ps1` and `Run_AlexAligned_v7_F_History.bat` in
-the same Scripts folder as your other launchers (they already assume `C:\RealTest21_newerv2` --
-edit the `$Root`/`$Scr` lines at the top of the .ps1 if yours differs, the same as the other
-launchers).
+Put all of these files (the `.py`, `.ps1`, `.bat` and the generated `.rts` scripts) in the same
+Scripts folder as your other launchers -- or in a subfolder of your own, e.g.
+`Scripts\SectorTerminalScripts`, which is fine: RealTest resolves `DataFile:` and `?scriptpath?`
+paths correctly either way. If you use a subfolder, edit the `$Scr`/`SCR` line near the top of
+`run_v7_F_history.ps1` and `Run_AlexAligned_v7_F_History.bat` to point at it (leave `$Root` as
+`C:\RealTest21_newerv2` -- that is RealTest.exe's own folder, not affected by moving Scripts).
+The same two-line edit applies to your existing part A-E launchers if you move those too.
 
 ## Running it
 
