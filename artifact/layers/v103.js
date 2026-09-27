@@ -26,11 +26,23 @@ function money(v){ return num(v)?v.toLocaleString("en-US",{maximumFractionDigits
 /* ================= engine (pure) =================
    port: {settings:{entry:"open"|"close",cost:bps,notional}, ups:[{d:"YYYY-MM-DD",picks:[{s,side}],exits:{sym:reason}}]}
    hx:   {dates:[...ISO], syms:{sym:[close...]}, opens:{sym:[open...]}|undefined}, bench: symbol */
+function pkeyOf(d,mode){ if(mode==="weekly"){ var m=String(d||"").match(/^(\d{4})-(\d{2})-(\d{2})/); if(!m) return d; var dt=new Date(Date.UTC(+m[1],+m[2]-1,+m[3])); var dow=(dt.getUTCDay()+6)%7; dt.setUTCDate(dt.getUTCDate()-dow); return dt.getUTCFullYear()+"-"+("0"+(dt.getUTCMonth()+1)).slice(-2)+"-"+("0"+dt.getUTCDate()).slice(-2); }
+  if(mode==="monthly") return String(d).slice(0,7);
+  if(mode==="quarterly"){ var mm=+String(d).slice(5,7); return String(d).slice(0,4)+"-Q"+(Math.floor((mm-1)/3)+1); }
+  if(mode==="yearly") return String(d).slice(0,4);
+  return d; }
+/* keep only the ups[] entries that trigger a trade event at this rebalance rhythm: the first entry always,
+   then the first entry of each new period (week/month/quarter/year) that differs from the previously kept
+   entry's period. Entries not selected are dropped from the trade timeline only; the caller still marks
+   positions to market every day from hx, and the stored ups[] itself is never touched. */
+function filterRebal(list,mode){ if(!mode||mode==="daily"||!list.length) return list; var outp=[], prevKey=null;
+  list.forEach(function(u){ var k=pkeyOf(u.d,mode); if(prevKey===null||k!==prevKey){ outp.push(u); prevKey=k; } }); return outp; }
 function engine(port,hx,bench){
-  var S=port.settings||{}, entry=S.entry||"open", bps=num(S.cost)?S.cost:10, N0=S.notional||100000;
+  var S=port.settings||{}, entry=S.entry||"open", bps=num(S.cost)?S.cost:10, N0=S.notional||100000, rebal=S.rebalance||"daily", wm=S.weight||"eq";
   var out={equity:[],trades:[],holdings:[],pending:[],flags:[],orders:null,stats:null,fillNote:""};
-  var ups=(port.ups||[]).slice().sort(function(a,b){ return a.d<b.d?-1:(a.d>b.d?1:0); });
-  if(!ups.length) return out;
+  var upsAll=(port.ups||[]).slice().sort(function(a,b){ return a.d<b.d?-1:(a.d>b.d?1:0); });
+  if(!upsAll.length) return out;
+  var ups=filterRebal(upsAll,rebal);
   var last=ups[ups.length-1], prev=ups.length>1?ups[ups.length-2]:null, key=function(p){ return p.s+"|"+(p.side||"long"); };
   /* latest orders from the decision records (valid with or without prices) */
   var pk={}, lk={}; if(prev) prev.picks.forEach(function(p){ pk[key(p)]=p; }); last.picks.forEach(function(p){ lk[key(p)]=p; });
@@ -44,6 +56,13 @@ function engine(port,hx,bench){
   function close(s,i){ var c=C[s]; return c&&num(c[i])?c[i]:null; }
   function lastClose(s,i){ var c=C[s]; if(!c) return null; for(var j=i;j>=0;j--) if(num(c[j])) return c[j]; return null; }
   function execPx(s,i){ if(entry==="open"){ if(O&&O[s]&&num(O[s][i])) return O[s][i]; return close(s,i); } return close(s,i); }
+  /* realized volatility of daily returns, trailing window ending at bar i: up to 63 returns, min 20 required
+     (fewer/gaps -> null, and callers fall back to raw weight 1 for that symbol only) */
+  function volOf(s,i){ var c=C[s]; if(!c) return null; var rets=[];
+    for(var j=i;j>0&&rets.length<63;j--){ var a=c[j],b=c[j-1]; if(num(a)&&num(b)&&b!==0) rets.unshift((a-b)/b); }
+    if(rets.length<20) return null;
+    var m=rets.reduce(function(x,y){ return x+y; },0)/rets.length, va=rets.reduce(function(x,y){ return x+(y-m)*(y-m); },0)/(rets.length-1);
+    return Math.sqrt(va); }
   var sched=ups.map(function(u){ return {u:u,i:entry==="open"?idxAfter(u.d):idxOnOrAfter(u.d)}; });
   sched.filter(function(x){ return x.i<0; }).forEach(function(x){ out.pending.push({d:x.u.d,n:x.u.picks.length,msg:entry==="open"?(O?"fills at the next open after ":"fills at the next close after (no opens in the loaded history) ")+x.u.d+" (not in the loaded history yet)":"fills at the close of "+x.u.d+" (not in the loaded history yet)"}); });
   var run=sched.filter(function(x){ return x.i>=0; }); if(!run.length) return out;
@@ -59,13 +78,18 @@ function engine(port,hx,bench){
         var ret=p.side==="short"?(p.px-px)/p.px*100:(px-p.px)/p.px*100;
         out.trades.push({s:p.s,side:p.side,inD:p.d,inPx:p.px,outD:D[i],outPx:px,ret:ret,days:i-p.i,why:((x.u.exits||{})[p.s]||"no longer in the list")+(gap?" (data gap: sold at the last known price)":"")});
         delete pos[k]; });
-      /* buys: equal weight of current value */
+      /* buys: sized by the weight source (eq/rank/iv). raw weight per pick in x.u.picks order (already rank
+         order), normalized to sum to 1 across ALL current picks (held + new); "eq" gives raw=1 for every pick,
+         which reduces to the original V/n equal-weight target exactly. Held positions keep their original
+         entry sizing untouched; only a fresh buy's target size uses the normalized weight. */
       var V=cash; Object.keys(pos).forEach(function(k){ var p=pos[k], px=execPx(p.s,i)||lastClose(p.s,i)||p.px; V+=p.sh*px; });
       var n=x.u.picks.length, buys=x.u.picks.filter(function(p){ return !pos[key(p)]; }); if(!n||!buys.length) return;
-      var tgt=V/n, needL=0; buys.forEach(function(p){ if(p.side!=="short") needL+=tgt*(1+bps/1e4); });
+      var raws=x.u.picks.map(function(p,idx){ if(wm==="rank") return (n-idx)+n/2; if(wm==="iv"){ var vol=volOf(p.s,i); return (num(vol)&&vol>0)?1/vol:1; } return 1; });
+      var sumRaw=raws.reduce(function(a,b){ return a+b; },0)||1, wgt={}; x.u.picks.forEach(function(p,idx){ wgt[key(p)]=raws[idx]/sumRaw; });
+      var needL=0; buys.forEach(function(p){ if(p.side!=="short") needL+=V*wgt[key(p)]*(1+bps/1e4); });
       var scale=needL>0?Math.min(1,Math.max(0,cash)/needL):1; if(scale<0.999) out.flags.push(D[i]+": not enough cash for full-size buys; buys scaled to "+(scale*100).toFixed(0)+"%");
       buys.forEach(function(p){ var px=execPx(p.s,i); if(!num(px)){ out.flags.push(D[i]+": "+p.s+" had no price, not bought"); return; }
-        var val=p.side==="short"?tgt:tgt*scale, sh=val/px, cost=val*bps/1e4; tradedNotional+=val;
+        var tgt=V*wgt[key(p)], val=p.side==="short"?tgt:tgt*scale, sh=val/px, cost=val*bps/1e4; tradedNotional+=val;
         if(p.side==="short"){ cash+=val-cost; pos[key(p)]={s:p.s,side:"short",sh:-sh,px:px,d:D[i],i:i}; } else { cash-=val+cost; pos[key(p)]={s:p.s,side:"long",sh:sh,px:px,d:D[i],i:i}; } });
     });
     var v=cash; Object.keys(pos).forEach(function(k){ var p=pos[k], c=close(p.s,i); if(num(c)){ var lp=lastPx[k]; if(num(lp)&&Math.abs(c/lp-1)>0.4) out.flags.push(D[i]+": "+p.s+" moved "+pct((c/lp-1)*100,0)+" in one day (check for a split or merger in the history)"); lastPx[k]=c; } v+=p.sh*(num(c)?c:(lastPx[k]||p.px)); });
@@ -139,7 +163,8 @@ function updateAll(){
 }
 
 /* ================= tab ================= */
-var SEL=null, LASTMSG=[], DELARM=null, RENAME=null, UNDO=null;
+var SEL=null, LASTMSG=[], DELARM=null, RENAME=null, UNDO=null, SETTINGS_EDIT=null;
+function opt(list,val){ return list.map(function(x){ return '<option value="'+x[0]+'"'+(x[0]===val?' selected':'')+'>'+x[1]+'</option>'; }).join(""); }
 function status(){ var el=document.getElementById("hx103Cloud"); if(el) el.textContent={local:"Saved in this browser",saving:"Saving to your account…",synced:"Saved to your account",error:"Account save failed (kept in this browser)"}[CLOUD]||""; }
 function tbl(head,align,body,hx){ var t={head:head,align:align,body:body}; if(hx) t.hxColor=hx; try{ return qmTableHtml(t); }catch(e){ return ""; } }
 function chart(E,title){ if(!E||E.length<2) return '<p class="mini">The equity curve starts once the first orders have filled (next open after the signal).</p>';
@@ -171,7 +196,17 @@ function render(){
   h.push('<h3 style="margin:12px 0 4px">'+hE(p.name)+'</h3><p class="mini">Question: '+hE(p.q)+' · frozen query kind <b>'+hE(p.spec.kind)+'</b> · started '+hE(p.created)+' </p>');
   h.push('<p style="margin:4px 0">'+(RENAME===p.id?'<input id="hx103Name" type="text" value="'+hE(p.name)+'" style="font:inherit;padding:4px 6px;min-width:320px;max-width:100%"> <button type="button" class="btn" data-trkrensave="'+p.id+'">Save name</button> <button type="button" class="btn ghost" data-trkcancel="1">Cancel</button>':'<button type="button" class="btn ghost" data-trkren="'+p.id+'">Rename</button>')+
     ' <button type="button" class="btn ghost" data-trkcsv="'+p.id+'">Download CSV</button> '+
+    ' <button type="button" class="btn ghost" data-trkset="'+p.id+'">Settings</button> '+
     (DELARM===p.id?'<button type="button" class="btn" data-trkdel="'+p.id+'" style="background:var(--neg);border-color:var(--neg);color:#fff">Yes, delete this portfolio</button> <button type="button" class="btn ghost" data-trkcancel="1">Cancel</button>':'<button type="button" class="btn ghost" data-trkdel="'+p.id+'">Delete</button>')+'</p>');
+  if(SETTINGS_EDIT===p.id){ var ps=p.settings||{};
+    h.push('<div style="margin:6px 0 10px;padding:8px 10px;border:1px solid var(--line);border-radius:6px;max-width:560px">'+
+      '<div style="display:flex;flex-wrap:wrap;gap:12px">'+
+      '<label>Rebalance <select id="hx103SetRebal" style="font:inherit;padding:3px 5px">'+opt([["daily","Daily"],["weekly","Weekly"],["monthly","Monthly"],["quarterly","Quarterly"],["yearly","Yearly"]],ps.rebalance||"daily")+'</select></label>'+
+      '<label>Entry fill <select id="hx103SetEntry" style="font:inherit;padding:3px 5px">'+opt([["open","Next open"],["close","Next close"]],ps.entry||"open")+'</select></label>'+
+      '<label>Cost (bps) <input id="hx103SetCost" type="number" min="0" step="1" value="'+(num(ps.cost)?ps.cost:10)+'" style="width:70px;font:inherit;padding:3px 5px"></label>'+
+      '<label>Weight <select id="hx103SetWeight" style="font:inherit;padding:3px 5px">'+opt([["eq","Equal"],["rank","Rank-weighted"],["iv","Inverse volatility"]],ps.weight||"eq")+'</select></label>'+
+      '</div><p class="mini" style="margin:8px 0 4px">Change these any time — they only change how the portfolio’s already-recorded picks are turned into trades and weights; the recorded history itself never changes.</p>'+
+      '<p style="margin:4px 0"><button type="button" class="btn" data-trksetsave="'+p.id+'">Save</button> <button type="button" class="btn ghost" data-trkcancel="1">Cancel</button></p></div>'); }
   if(r.error) h.push('<p>Could not compute: '+hE(r.error)+'</p>');
   if(r.fillNote) h.push('<p class="mini">'+hE(r.fillNote)+'</p>');
   var st=r.stats; if(st) h.push(tbl(["Measure","Value"],["l","r"],[["Period",st.start+" to "+st.end+" ("+st.days+" bars)"],["Value (start 100,000)",money(st.value)],["Return",pct(st.ret)],["RSP over the same days",pct(st.bench)],["Max drawdown",pct(st.mdd)],["Annualised volatility",num(st.vol)?st.vol.toFixed(1)+"%":"\u2013"],["Sharpe-style ratio",num(st.sharpe)?st.sharpe.toFixed(2):"–"],["Closed trades / win rate",st.trades+" / "+(num(st.win)?st.win.toFixed(0)+"%":"–")],["Average win / loss",pct(st.avgWin)+" / "+pct(st.avgLoss)],["Average days held",num(st.avgDays)?st.avgDays.toFixed(1):"–"],["Turnover (traded / average value)",num(st.turnover)?st.turnover.toFixed(0)+"%":"–"]]));
@@ -193,13 +228,18 @@ function csvOf(p){ var r=engine(p,H(),(A.bench&&A.bench())||"RSP"), L=["type,dat
 function download(name,text){ try{ if(window.claude&&window.claude.use){ window.claude.use("downloads").then(function(dl){ if(dl&&dl.save) dl.save({filename:name,data:text}).catch(function(){}); else fallback(); },fallback); return; } }catch(e){} fallback();
   function fallback(){ try{ var a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([text],{type:"text/csv"})); a.download=name; document.body.appendChild(a); a.click(); a.remove(); }catch(e){} } }
 document.addEventListener("change",function(e){ if(e.target&&e.target.id==="hx103Sel"){ SEL=e.target.value; render(); } });
-document.addEventListener("click",function(e){ var t=e.target&&e.target.closest?e.target.closest("[data-trkupd],[data-trksel],[data-trkren],[data-trkdel],[data-trkcsv],[data-trkgo],[data-trkrensave],[data-trkcancel],[data-trkundo]"):null; if(!t) return;
-  if(t.hasAttribute("data-trkcancel")){ DELARM=null; RENAME=null; render(); return; }
+document.addEventListener("click",function(e){ var t=e.target&&e.target.closest?e.target.closest("[data-trkupd],[data-trksel],[data-trkren],[data-trkdel],[data-trkcsv],[data-trkgo],[data-trkrensave],[data-trkcancel],[data-trkundo],[data-trkset],[data-trksetsave]"):null; if(!t) return;
+  if(t.hasAttribute("data-trkcancel")){ DELARM=null; RENAME=null; SETTINGS_EDIT=null; render(); return; }
   if(t.hasAttribute("data-trkundo")){ if(UNDO){ ST.ports.splice(Math.min(UNDO.i,ST.ports.length),0,UNDO.p); SEL=UNDO.p.id; UNDO=null; save(); render(); } return; }
   if(t.hasAttribute("data-trkrensave")){ var pr=ST.ports.filter(function(x){ return x.id===t.getAttribute("data-trkrensave"); })[0], inp=document.getElementById("hx103Name"); if(pr&&inp&&inp.value.trim()){ pr.name=inp.value.trim().slice(0,160); save(); } RENAME=null; render(); return; }
   if(t.hasAttribute("data-trkgo")){ var tb=document.getElementById("tab-ptk"); if(tb){ try{ selectTab(tb); }catch(err){} window.scrollTo({top:0,behavior:"smooth"}); render(); } return; }
   if(t.hasAttribute("data-trkupd")){ LASTMSG=updateAll(); render(); return; }
   if(t.hasAttribute("data-trksel")){ SEL=t.getAttribute("data-trksel"); render(); try{ var dd=document.getElementById("hx103Sel"); if(dd) dd.scrollIntoView({behavior:"smooth",block:"start"}); }catch(err){} return; }
+  if(t.hasAttribute("data-trkset")){ SETTINGS_EDIT=t.getAttribute("data-trkset"); DELARM=null; RENAME=null; render(); return; }
+  if(t.hasAttribute("data-trksetsave")){ var psid=t.getAttribute("data-trksetsave"), pset=ST.ports.filter(function(x){ return x.id===psid; })[0];
+    if(pset){ pset.settings=pset.settings||{}; var rb=document.getElementById("hx103SetRebal"), en=document.getElementById("hx103SetEntry"), co=document.getElementById("hx103SetCost"), wt=document.getElementById("hx103SetWeight");
+      if(rb) pset.settings.rebalance=rb.value; if(en) pset.settings.entry=en.value; if(co&&co.value!==""&&num(+co.value)) pset.settings.cost=+co.value; if(wt) pset.settings.weight=wt.value; save(); }
+    SETTINGS_EDIT=null; render(); return; }
   var id=t.getAttribute("data-trkren")||t.getAttribute("data-trkdel")||t.getAttribute("data-trkcsv"), p=ST.ports.filter(function(x){ return x.id===id; })[0]; if(!p) return;
   if(t.hasAttribute("data-trkren")){ RENAME=id; DELARM=null; render(); try{ var ip=document.getElementById("hx103Name"); if(ip){ ip.focus(); ip.select(); } }catch(err){} return; }
   if(t.hasAttribute("data-trkdel")){ if(DELARM!==id){ DELARM=id; RENAME=null; render(); return; } var ix=ST.ports.indexOf(p); UNDO={p:p,i:ix}; ST.ports=ST.ports.filter(function(x){ return x.id!==id; }); DELARM=null; SEL=null; save(); render(); return; }
