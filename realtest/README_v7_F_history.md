@@ -64,6 +64,22 @@ data at least once. It:
 If you only generated part C, only part C runs and merges (a valid one-column-family backtest
 history on its own) -- you don't need all four to try this out.
 
+## A longer price-history file (for cluster/correlation backtests)
+
+The backtest's "Not reproducible point-in-time" check needs 252 bars of price history
+*before* the first replay date, on top of however many bars the replay window itself covers.
+`AlexAligned_Unified_v7E_history.csv` (part E, `_generators/gen_v7_E_history.js`) is the
+lightweight, engine-free script that already produces this file -- it now takes an optional
+third argument for how many bars to ask for:
+```
+node _generators\gen_v7_E_history.js  AlexAligned_Unified_v7_C_....rts  AlexAligned_Unified_v7_E_History_bigger.rts  600
+```
+(600 covers 252 bars of warm-up plus a 260-bar F export's window with margin to spare -- adjust
+to match whatever NumBars you use for part F.) A non-default bar count writes its own file,
+`AlexAligned_Unified_v7E_history_<N>bars.csv`, so it never overwrites an existing 280-bar export.
+It has no engines, no `Correl()`, no `InList` items, so even 600+ bars should still run in well
+under a minute -- nothing like part F's per-part run times.
+
 ## What's next
 
 This merged CSV is the input the terminal's point-in-time replay ("Backtest this portfolio")
