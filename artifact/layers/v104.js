@@ -309,7 +309,9 @@ function btSection(){
       ["Value (start 100,000)",money(st.value)],["Return",pct(st.ret)],["RSP over the same days",pct(st.bench)],
       ["Max drawdown",pct(st.mdd)],["Annualised volatility",num(st.vol)?st.vol.toFixed(1)+"%":"–"],
       ["Sharpe-style ratio",num(st.sharpe)?st.sharpe.toFixed(2):"–"],
-      ["Closed trades / win rate",st.trades+" / "+(num(st.win)?st.win.toFixed(0)+"%":"–")]
+      ["Closed trades / win rate",st.trades+" / "+(num(st.win)?st.win.toFixed(0)+"%":"–")],
+      ["Avg win / avg loss",(num(st.avgWin)?pct(st.avgWin):"–")+" / "+(num(st.avgLoss)?pct(st.avgLoss):"–")],
+      ["Win/loss ratio",(num(st.avgWin)&&num(st.avgLoss)&&st.avgLoss!==0)?Math.abs(st.avgWin/st.avgLoss).toFixed(2):"–"]
     ]));
     h.push(btChart(r.result.equity,"Backtest value vs RSP (both = 100 at the first fill)"));
     if(r.result.trades&&r.result.trades.length){
