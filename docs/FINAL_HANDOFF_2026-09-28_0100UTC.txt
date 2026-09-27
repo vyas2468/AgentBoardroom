@@ -1,11 +1,12 @@
 ============================================================================
-SECTOR ROTATION TERMINAL + REALTEST BACKTESTING - HANDOFF (2026-09-28 01:00 UTC)
+SECTOR ROTATION TERMINAL + REALTEST BACKTESTING - HANDOFF (2026-09-28 01:20 UTC)
 Live page: https://claude.ai/artifact/JBivgL88qHWeaCSsepr7cN  (version 141 -- unchanged since
 last handoff; the trade-list addition below is committed to git but NOT yet published)
 Code: branch claude/artifact-access-question-f3s8rs, folder artifact/ (page) + realtest/ (RT scripts)
 Previous handoff: docs/FINAL_HANDOFF_2026-09-28_0000UTC.txt
 This handoff picks up right where that one left off: you had just gotten your first successful
 real-data backtest result (Dual momentum top 8), and I had started building a trade-list feature.
+UPDATE at 01:20 UTC: the 600-bar price-history CSV finished and is confirmed good (see Part A.4).
 ============================================================================
 
 ----------------------------------------------------------------------------
@@ -57,25 +58,43 @@ PART A. WHAT HAPPENED SINCE THE LAST HANDOFF
      subfolder. Fixed by calling it with its full path:
      C:\RealTest21_newerv2\RealTest.exe -apply -scan "C:\RealTest21_newerv2\Scripts\
      SectorTerminalScripts\AlexAligned_Unified_v7_E_History_600bars.rts"
-   - You ran that. STATUS AS OF THIS HANDOFF: not yet confirmed finished -- check
-     C:\RealTest21_newerv2\Scripts\SectorTerminalScripts for AlexAligned_Unified_v7E_history_
-     600bars.csv. It has no engines/correlation math so it should take well under a minute even
-     at 600 bars; if it's there, part E (longer history) is done.
+   - You ran that.
+
+4. THE 600-BAR CSV IS DONE AND CONFIRMED GOOD. AlexAligned_Unified_v7E_history_600bars.csv
+   finished generating. I checked it directly (not just trusted the filename): 342,526 rows
+   across 575 distinct symbols (close to the ~600-bar-per-symbol estimate the .rts file's own
+   header predicted), header exactly Date,Symbol,HOpen,HHigh,HLow,HClose as expected -- this is
+   a real, usable file, not a truncated or malformed one.
 
 ----------------------------------------------------------------------------
-PART B. WHAT YOU CAN TEST RIGHT NOW
+PART B. WHAT YOU CAN TEST RIGHT NOW -- ANSWER: YES, JUST SWAP THE FILE IN
 ----------------------------------------------------------------------------
-1. Confirm AlexAligned_Unified_v7E_history_600bars.csv exists and has a sane row count (roughly
-   573 symbols x 600 bars =~ 344,000 rows -- the .rts file's own header note estimates ~345,000).
-2. Once confirmed, retry one of the "smart"/cluster-diversified portfolios that were refused
-   earlier (e.g. "Build a smart 25 stock portfolio, improving, 2 per sector, signal convergence,
-   weighted" or "Build a smart 10 stock portfolio in an established uptrend with low beta, not
-   deteriorating") in the Backtest section, uploading this new 600-bar file as the price-history
-   input instead of the old 280-bar one. It should now pass the 252-bar pre-flight check and
-   actually run, instead of refusing instantly.
-3. Plain (non-cluster) portfolios like "Dual momentum top 8" still work exactly as before with
-   either the old or new price-history file -- no need to redo that one.
-4. The trade-list table is NOT visible on the live page yet (see Part A.2) -- it exists in code,
+Q: "I replace the attached part-E prices with this and run backtest and it should work for
+   other portfolios too?"
+A: Yes. This new file works as a drop-in replacement for ANY portfolio type, not only the
+   cluster-diversified ones it was specifically made to unlock:
+   - Plain portfolios (dual momentum, filter/rank, uptrend/pullback) will backtest exactly as
+     before, just now with more price history sitting behind the same replay window -- no
+     behaviour change expected, nothing to worry about.
+   - Cluster/correlation-diversified portfolios ("smart" builder, "low correlation", "1 per
+     cluster", "1 per hidden group") that were refused earlier with the 252-bar warning should
+     now pass that pre-flight check and actually run, since 600 bars comfortably covers the
+     252-bar warm-up plus the 260-bar replay window.
+
+STEPS:
+1. Portfolio Tracker tab -> Backtest (historical replay) section.
+2. Keep the SAME merged scan CSV as before: AlexAligned_Unified_v7F_History_260bars_Merged.csv
+   (no change needed there).
+3. For "Matching part-E price-history CSV", choose the NEW file instead of the old one:
+   AlexAligned_Unified_v7E_history_600bars.csv
+4. Pick a portfolio. Suggest trying a plain one first (e.g. "Dual momentum top 8" again) just to
+   confirm the swap didn't change anything it shouldn't -- then try one of the previously-refused
+   "smart" ones, e.g. "Build a smart 25 stock portfolio, improving, 2 per sector, signal
+   convergence, weighted" or "Build a smart 10 stock portfolio in an established uptrend with low
+   beta, not deteriorating".
+5. Click Run backtest. Report back what you see: a real result, or a different refusal reason
+   (which would be new information worth looking at).
+6. The trade-list table is NOT visible on the live page yet (see Part A.2) -- it exists in code,
    tested, committed, waiting for the next publish.
 
 ----------------------------------------------------------------------------
@@ -92,17 +111,19 @@ PART C. WHAT IS LEFT, AND WHY
    a launcher script matching the tested pattern of the other launchers, then comparing RT's
    resulting equity against the terminal's own backtest for the same portfolio/dates as a
    real cross-check. This closes the original three-part plan from the very start of this arc.
-3. Once the 600-bar price history is confirmed working, a real cluster-diversified portfolio
-   backtest against real data (today's dual-momentum test only proved the plain-portfolio path).
+3. A real cluster-diversified portfolio backtest against real data, using the now-confirmed
+   600-bar file (today's dual-momentum test only proved the plain-portfolio path so far) --
+   this is the item Part D.2 below asks you to try next.
 4. Older backlog, unchanged and still open: Portfolio Tracker Compare/Combined views, money/
    sizing/overlap in the tracker, a rebalance-frequency comparison view, the navy colour theme.
 
 ----------------------------------------------------------------------------
 PART D. PLAN OF ACTION, IN ORDER
 ----------------------------------------------------------------------------
-1. You: confirm the 600-bar CSV finished and looks sane (row count, no errors).
-2. You: try one "smart"/cluster portfolio backtest with the new 600-bar file and report what you
-   see -- pass, refuse with a different reason, or a real number this time.
+1. DONE: the 600-bar CSV finished and was confirmed sane (342,526 rows, 575 symbols).
+2. You: swap the price-history upload to the new 600-bar file (steps in Part B above) and try one
+   "smart"/cluster portfolio backtest, report what you see -- a real result, or a refusal with a
+   different reason.
 3. Me: build the Terminal_Weights.csv export + RealTest validation runner (Part C.2), and publish
    it together with the already-built trade-list table (Part C.1) in one combined publish, so the
    one required full-page read serves both.
