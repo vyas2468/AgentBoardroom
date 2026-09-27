@@ -81,6 +81,24 @@ Early Warning direction, convergence lenses, clusters, correlation penalties); o
 already does correctly). Phase-2 tracker settings need NO rework for this — they're already correct and tested for
 their own (browser, forward-tracking) purpose.
 
+## Step 3 done (27 Sep): part F historical scan export
+Files added (realtest/): `_generators/gen_v7_F_history.js` (generic generator: takes any existing
+part A/B/C/D script and changes ONLY NumBars and SaveScanAs, verified byte-for-byte identical
+otherwise against part C for real), `merge_v7_F_history.py` (Date+Symbol outer-join merge,
+tested on synthetic data including a mismatch case), `run_v7_F_history.ps1` +
+`Run_AlexAligned_v7_F_History.bat` (mirrors the proven part-E launcher pattern: preflight
+checks, batchlog/errorlog verification, PASS/FAIL banner), `README_v7_F_history.md`. Default
+NumBars 260 (~1 year), owner can start with just one part to gauge speed before running all
+four. Reuses the EXISTING A/B/C/D split rather than inventing a new one, since that split was
+already built for speed. Not yet run against the owner's real Windows RealTest install (only
+verifiable there) -- next time the owner runs it, confirm timing per part and adjust NumBars if
+any single part is too slow, per the README's guidance (never by hand-editing that part's
+Data:/Scan:).
+
+Still to build: step 4, the terminal's point-in-time replay + "Backtest this portfolio" (reads
+the merged part-F CSV this step produces + part E prices, replays each tracked portfolio's
+frozen query per rebalance date with no look-ahead); step 5, the RT validation runner.
+
 ## Task list (in order, and why)
 0. Backup the current page (v138) + tag the repo. (So any step can be reverted.)
 1. Quick fixes the owner found (small, user-facing, unblock tracking):
