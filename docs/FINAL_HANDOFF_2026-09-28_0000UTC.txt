@@ -1,0 +1,207 @@
+============================================================================
+SECTOR ROTATION TERMINAL + REALTEST BACKTESTING - HANDOFF (2026-09-28 00:00 UTC)
+Live page: https://claude.ai/artifact/JBivgL88qHWeaCSsepr7cN  (version 141)
+Code: branch claude/artifact-access-question-f3s8rs, folder artifact/ (page) + realtest/ (RT scripts)
+Previous handoff (everything before this one): docs/FINAL_HANDOFF_2026-09-27_2146UTC.txt
+Design doc: docs/RT_BACKTEST_PLAN_2026-09-27.md
+This handoff picks up exactly where that one left off: the terminal-side backtest engine
+(v104.js) was built and tested on synthetic data, and you had just started running the real
+RealTest part-F export on your own machine. Everything below is what happened since, in order,
+so a fresh session (or you) can continue without re-deriving any of it.
+============================================================================
+
+----------------------------------------------------------------------------
+PART A. THE FOLDER / SCRIPT SETUP YOU NOW HAVE ON YOUR MACHINE (Windows side)
+----------------------------------------------------------------------------
+You created a new folder, C:\RealTest21_newerv2\Scripts\SectorTerminalScripts, and moved the
+project's RealTest scripts into it (RealTest.exe itself, and the shared .rtd data file, are
+unaffected -- they live at C:\RealTest21_newerv2 and are not part of this folder). Moving scripts
+into a subfolder is safe: RealTest resolves DataFile: and ?scriptpath? correctly regardless of
+folder depth, and none of these scripts use Include:.
+
+What's in C:\RealTest21_newerv2\Scripts\SectorTerminalScripts right now (confirmed via `dir`):
+  Part A/B/C/D (your existing daily scan, unmodified):
+    AlexAligned_Unified_v7_A_Core_25.09.2026.rts
+    AlexAligned_Unified_v7_B_Corr_25.09.2026.rts
+    AlexAligned_Unified_v7_C_EngineFree_25.09.2026.rts
+    AlexAligned_Unified_v7_D_EngineDiag_25.09.2026.rts
+    AlexAligned_Unified_v7_column_map.json
+    run_v7_workflow.ps1, Run_AlexAligned_v7_Workflow.bat  (runs A-D + merge for the DAILY scan)
+  Part E (price history, single date's-worth of history, used to exist ONLY at 280 bars):
+    AlexAligned_Unified_v7_E_History_26.09.2026.rts
+    run_v7_history.ps1, Run_AlexAligned_v7_History.bat
+    (its actual CSV OUTPUT, AlexAligned_Unified_v7E_history.csv, is currently NOT in this
+     folder -- it's still sitting in the parent C:\RealTest21_newerv2\Scripts folder from when
+     you ran it there yesterday, 26/09 11:03, before the move. It works fine from there; you
+     don't need to move it or re-run it just to use it.)
+  Part F (NEW today, historical scan export -- reuses A-D's own formulas unmodified):
+    _generators\gen_v7_F_history.js         (the generator: NumBars 1 -> N, new SaveScanAs name)
+    generate_v7_F_history.ps1, Generate_AlexAligned_v7_F_History.bat
+                                             (finds your A/B/C/D scripts, generates the 4 part-F
+                                              .rts files automatically -- run this FIRST)
+    merge_v7_F_history.py                   (Date+Symbol outer-join of the 4 part-F CSVs)
+    run_v7_F_history.ps1, Run_AlexAligned_v7_F_History.bat
+                                             (runs all 4 part-F scripts + merges -- run SECOND)
+    README_v7_F_history.md                  (full instructions, updated today -- see Part B.4)
+    AlexAligned_Unified_v7F_A_History.rts, ..._B_..., ..._C_..., ..._D_...   (generated scripts)
+  Output of your real run today (all in this same folder):
+    AlexAligned_Unified_v7A_scan_F_History_260bars.csv   (192.8 MB, 148,919 rows)
+    AlexAligned_Unified_v7B_scan_F_History_260bars.csv   (89.2 MB,  148,919 rows)
+    AlexAligned_Unified_v7C_scan_F_History_260bars.csv   (92.7 MB,  148,919 rows)
+    AlexAligned_Unified_v7D_scan_F_History_260bars.csv   (12.8 MB,  148,919 rows)
+    AlexAligned_Unified_v7F_History_260bars_Merged.csv   (381.6 MB, 148,919 rows, 482 columns)
+                                                          <-- THIS is the file you upload to the
+                                                              terminal's Backtest section as the
+                                                              "Merged historical scan CSV"
+  _generators\gen_v7_E_history.js is ALSO in this SectorTerminalScripts\_generators subfolder
+  (you copied it there at one point during setup) -- fine to leave it there or delete it, since
+  the version that matters is the one in the main repo's realtest/_generators/, which is what
+  I've been editing (see Part C below). If you regenerate part E, copy the updated .js from the
+  repo over the one on your machine first, the same way you did for gen_v7_F_history.js.
+
+The rest of C:\RealTest21_newerv2\Scripts (NOT moved, and NOT part of this project) is your
+much larger pre-existing RealTest workspace -- dozens of unrelated strategy scripts, .rtd files,
+and scan CSVs from other work. None of that was touched or needs to be. The one item from it
+that DOES matter to this project is:
+    C:\RealTest21_newerv2\Scripts\AlexAligned_Unified_v7E_history.csv   (6.2 MB, from 26/09 run)
+                                                          <-- use this as the "Matching part-E
+                                                              price-history CSV" upload, for now
+                                                              (see Part C for its limitation)
+
+WORKFLOW ORDER, for next time (or a fresh person), to regenerate everything from scratch:
+  1. Run your normal daily workflow once (Run_AlexAligned_v7_Workflow.bat) so the shared .rtd
+     has data imported. Only needed if it isn't already populated.
+  2. To create a new/longer price-history file: run gen_v7_E_history.js with your desired
+     NumBars (see Part C) -- or double-click Run_AlexAligned_v7_History.bat for the existing
+     280-bar default.
+  3. To create the merged historical SCAN file: double-click Generate_AlexAligned_v7_F_History.bat
+     first (writes the 4 part-F .rts scripts), THEN Run_AlexAligned_v7_F_History.bat (runs them
+     and merges). Order matters -- Generate before Run.
+  4. Upload the part-F merged CSV + the part-E price-history CSV into the terminal's Backtest
+     (historical replay) section, pick a tracked portfolio, click Run backtest.
+
+----------------------------------------------------------------------------
+PART B. WHAT HAPPENED WHEN YOU ACTUALLY RAN THE BACKTEST TODAY
+----------------------------------------------------------------------------
+You tried the Backtest section on THREE "smart"-builder portfolios in a row:
+  - "Build a smart 25 stock portfolio, improving, 2 per sector, signal convergence, weighted."
+  - "Build a smart 10 stock portfolio in an established uptrend with low beta, not deteriorating"
+  - "Build a smart 8 stock portfolio of oversold stocks, anomaly"
+All three came back INSTANTLY with the same refusal:
+  "Not reproducible point-in-time: This portfolio's rules (kind "hsmart") diversify by Hidden
+  Group / price cluster, which needs a 252-bar (about one trading year) price history
+  immediately BEFORE the first replay date (2025-09-15) ... Only 20 prior bar(s) are available
+  ... Supply a longer price-history file ... or pick a later start date."
+This is the pre-flight reproducibility check working exactly as designed (see the previous
+handoff's "HONEST ABOUT ITS LIMITS" section) -- it is NOT a bug, and no real computation was
+attempted for these three. ALL "smart" (hsmart/adaptive builder) portfolios will hit this same
+wall until a longer price-history file exists, because that builder always diversifies by
+Hidden Group / price cluster by design.
+
+You then switched to "Dual momentum top 8" (a plain dual-momentum ranking, no cluster/
+correlation diversification) with the SAME merged scan CSV and the SAME 6.2 MB part-E file.
+This one passed the pre-flight check and was actually running a real replay -- STILL RUNNING
+(shown as "Running..." in the UI) when this handoff was written. This is expected to take
+longer than an instant refusal: the whole computation (parsing the 381.6 MB merged CSV, then
+replaying every eligible date) runs as a single uninterrupted block of JavaScript on the
+browser's main thread with no progress indicator, so the tab can look frozen/unresponsive for
+what could be anywhere from ~30 seconds to a few minutes given the file size. This is normal.
+If Chrome shows a "page unresponsive" dialog, choose "wait," don't close the tab.
+NO LLM CALL AND NO SESSION/TOKEN USAGE IS INVOLVED IN THIS STEP AT ALL -- it is pure
+client-side JavaScript replaying the already-frozen portfolio rules against the two uploaded
+CSVs, entirely inside the browser tab.
+
+WHAT SUCCESS LOOKS LIKE, once "Dual momentum top 8" finishes: the button reverts from
+"Running..." to "Run backtest," and a results block appears below it containing:
+  - A stats table: Period (start/end date + bar count), Value (starting at 100,000), Return %,
+    "RSP over the same days" (benchmark return %), Max drawdown %, Annualised volatility %,
+    Sharpe-style ratio, Closed trades count / win rate %.
+  - An equity curve chart (SVG) plotting the portfolio's value vs. RSP, both rebased to 100 at
+    the first fill.
+If it instead shows "Backtest error: ..." or a different "Not reproducible" message, that is
+new information we haven't seen yet and should be reported back exactly as shown.
+
+----------------------------------------------------------------------------
+PART C. TODAY'S CODE CHANGE: A PARAMETERIZED, LONGER PRICE-HISTORY GENERATOR
+----------------------------------------------------------------------------
+PROBLEM: the reproducibility check needs 252 bars of price history BEFORE the first replay
+date, on top of however many bars the replay window itself covers. Your part-E file only has
+280 bars total, and your part-F merged scan starts near the very beginning of that window, so
+only ~20 prior bars exist before the first backtest date -- nowhere near the 252 needed. This
+affects ONLY portfolios that diversify by Hidden Group / price cluster / correlation (the
+"smart" builder, "low correlation", "max N per cluster", "1 per hidden group" wording) --
+plain filter/rank/dual-momentum portfolios have no such requirement and don't need this.
+
+FIX (committed, pushed, NOT yet run on your machine): realtest/_generators/gen_v7_E_history.js
+now takes an optional third argument, NumBars (default 280, so nothing that already depends on
+the default 280-bar filename/behavior is affected). Verified:
+  - node -c syntax check: clean.
+  - Ran it against your real part-C script at the default (280) -- byte-identical output to
+    before except the two lines that were always meant to change (NumBars, SaveScanAs).
+  - Ran it again with 600 -- produces a correctly renamed output file
+    (AlexAligned_Unified_v7E_history_600bars.csv, so it can NEVER silently overwrite your
+    existing 280-bar file) with NumBars: 600 and matching Notes/comments.
+  - realtest/README_v7_F_history.md updated with a new section explaining this and giving the
+    exact command to run.
+Committed as c7ad186 on claude/artifact-access-question-f3s8rs (pushed).
+
+WHAT YOU HAVEN'T DONE YET: actually run this on your machine. When ready:
+    node _generators\gen_v7_E_history.js  AlexAligned_Unified_v7_C_....rts  AlexAligned_Unified_v7_E_History_bigger.rts  600
+(600 = 252 bars of warm-up + your 260-bar F window with margin to spare -- if you later
+generate part F with a bigger NumBars, use a correspondingly bigger number here, roughly
+252 + your F NumBars.) It has no engines/Correl/InList, so even 600+ bars should still run in
+well under a minute, nothing like part F's per-part run times (which were 1.5-32 minutes each
+because of the correlation/engine columns those parts compute). You'll need to copy the updated
+gen_v7_E_history.js from this repo onto your machine first (the copy at
+Scripts\SectorTerminalScripts\_generators\gen_v7_E_history.js is the OLD, un-parameterized one).
+
+----------------------------------------------------------------------------
+PART D. WHAT IS DONE AND VERIFIED, vs. WHAT IS NOT
+----------------------------------------------------------------------------
+DONE AND VERIFIED (by me, independently, not just taken on trust):
+  - Terminal-side backtest engine (v104.js, version 141 published): 28 new unit tests + the
+    existing 40 tracker tests all pass; full 348-question regression unchanged; tested against
+    real single-day sample data (identical-ingest correctness) and synthetic multi-date data
+    (no-look-ahead, restore-on-error, a hand-computed entry/exit/re-entry case).
+  - Part F (RealTest historical scan export): generator verified byte-for-byte against your
+    real part-C file (only NumBars/SaveScanAs differ); you ran the full real pipeline
+    successfully -- all 4 parts completed with 0 new error lines and the expected 148,919 rows
+    each, merge succeeded, "PART F PASSED".
+  - Part-E generator parameterization (today): verified via node -c and two real generator runs
+    against your actual part-C file (default 280 unchanged; custom 600 correctly renamed).
+  - The three "smart" portfolio refusals today: confirmed as the pre-flight check working
+    exactly as designed and documented, not a bug.
+NOT YET DONE / NOT YET KNOWN:
+  - Whether "Dual momentum top 8" actually completes successfully against your REAL 381.6 MB
+    merged data (it was still "Running..." when this handoff was written) -- this is the very
+    first real-data test of the backtest feature; everything before this was synthetic.
+  - Whether the browser can handle a file this large without crashing the tab (no evidence yet
+    either way -- if it hangs indefinitely or crashes, that means chunked/streaming parsing
+    needs to be added, which isn't built).
+  - The longer part-E price-history file (600+ bars) has NOT been generated or run on your
+    machine yet -- only the generator code was written and tested against the sample part-C
+    script, not run for real.
+  - The RealTest validation runner (Terminal_Weights.csv export + a .rts template using
+    DataValueFile/DynamicSizing/Commission to independently confirm the terminal's backtest
+    numbers against RealTest's own trade accounting) -- deliberately deferred, not started.
+    See docs/RT_BACKTEST_PLAN_2026-09-27.md and the previous handoff's Part C.1 for the full
+    design (this is unchanged from before).
+  - Older backlog, still open: Portfolio Tracker Compare/Combined views, money/sizing/overlap,
+    a rebalance-frequency comparison view, the navy colour theme.
+
+----------------------------------------------------------------------------
+PART E. PLAN OF ACTION, IN ORDER
+----------------------------------------------------------------------------
+1. You: let "Dual momentum top 8" finish and report back exactly what you see -- a full
+   success (stats table + chart), an error message, or the tab hanging/crashing. This is the
+   first real-data signal on whether the feature and the file sizes work together in practice.
+2. You (optional, in parallel): if you want to unlock the "smart"/cluster-diversified
+   portfolios, run the part-E regeneration command from Part C above (600 bars) on your
+   machine, using the updated gen_v7_E_history.js from this repo, then retry one of the three
+   "smart" portfolios with the new file as the price-history upload.
+3. Me: once real-data results are in (success or a specific failure), fix anything that needs
+   fixing (e.g. add chunked parsing if the tab genuinely can't handle 380 MB), or confirm the
+   feature is solid and move on to the RealTest validation runner (Part D above, the one
+   remaining deliberately-deferred piece).
+4. Later, as time/budget allows: the older backlog items listed in Part D.
+============================================================================
