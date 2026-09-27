@@ -149,6 +149,22 @@ qmParseX=function(q){
        ["oversold",/\bnot oversold\b/,function(f){ return /^oversold/.test(f.txt||""); },null]].forEach(function(c){
         if(!c[1].test(tn)) return; var rest=tn.replace(new RegExp(c[1].source,"g")," "); if(new RegExp("\\b"+c[0].replace("trend"," ?trend")+"\\b").test(rest)) return;
         var hit=sp0.filters.filter(c[2]); if(hit.length!==1) return; var f=hit[0], inv={">=":"<","<=":">",">":"<=","<":">=","=":"!="}[f.op]; if(!inv) return; f.op=inv; f.txt=c[3]||("not "+String(f.txt||c[0]).replace(/\((.*)\)/,function(m,x){ return "(the opposite of "+x+")"; })); }); } }catch(e){}
+  /* "Build a portfolio of TICK1, TICK2, ...": base parser only fills onlyTk for "among/from/only/within/pick from/choose from/out of";
+     when 3+ named tickers from the scan are given and none of those trigger words apply, restrict to just those names. */
+  try{
+    if(sp0&&!sp0._err&&sp0.kind==="portfolio"&&(!sp0.onlyTk||!sp0.onlyTk.length)){
+      var A102=window.__hxApi, ctx102=(typeof QM_CTX!=="undefined"&&QM_CTX)||(typeof qmBuildCtx==="function"?qmBuildCtx():null);
+      if(A102&&ctx102){
+        var tks102=(A102.tickers(q)||[]).filter(function(u){ return ctx102.bySym&&ctx102.bySym[u]; });
+        if(tks102.length>=3){
+          sp0.onlyTk=tks102;
+          var t102=qmT(q);
+          if(!qmNX(t102)) sp0.n=tks102.length;
+          if(/\bweighted\b/.test(t102)&&!sp0.weight) sp0.weight="score";
+        }
+      }
+    }
+  }catch(e){}
   return sp0;
 };
 QMX_KINDS.hx102=1;

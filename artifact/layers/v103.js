@@ -106,7 +106,7 @@ function picksOf(res){
   (res.extra||[]).forEach(function(x){ var tt=String(x.title||""); if(/^short\b/i.test(tt)) fromTable(x.table,"short"); else if(/^etfs?\b/i.test(tt)) fromTable(x.table,"long"); });
   return out;
 }
-function trackable(res){ var sp=res&&res.spec; if(!sp) return null; var k=TRACK_KINDS[sp.kind]; if(!k) return null; if(sp.kind==="hx102"&&!/^(?:dual|topsec)$/.test(sp.mode)) return null; if(sp.kind==="hcport"&&!/port|block|cluster/i.test(String(sp.mode||""))) return null; if(sp.kind==="dual") k="portfolio"; if(sp.kind==="hx102"&&sp.mode==="dual") k="portfolio"; return k; }
+function trackable(res){ var sp=res&&res.spec; if(!sp) return null; var k=TRACK_KINDS[sp.kind]; if(!k) return null; if(sp.kind==="hx102"&&!/^(?:dual|topsec)$/.test(sp.mode)) return null; if(sp.kind==="hcport"&&!/^oneper$/.test(String(sp.mode||""))&&!/port|block|cluster/i.test(String(sp.mode||""))) return null; if(sp.kind==="dual") k="portfolio"; if(sp.kind==="hx102"&&sp.mode==="dual") k="portfolio"; return k; }
 var REG={}, RID=0;
 var _html=qmHtml;
 qmHtml=function(res){ var h=_html(res); try{ var k=trackable(res), pk=k?picksOf(res):[]; if(k&&pk.length){ var id="t"+(++RID); REG[id]={spec:JSON.parse(JSON.stringify(res.spec)),picks:pk,kind:k};
