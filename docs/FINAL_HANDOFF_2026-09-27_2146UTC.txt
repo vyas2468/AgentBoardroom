@@ -1,0 +1,171 @@
+============================================================================
+SECTOR ROTATION TERMINAL + REALTEST BACKTESTING - HANDOFF (2026-09-27 21:46 UTC)
+Live page: https://claude.ai/artifact/JBivgL88qHWeaCSsepr7cN  (version 141)
+Code: branch claude/artifact-access-question-f3s8rs, folder artifact/ (page) + realtest/ (RT scripts)
+Prior handoff (everything before today): docs/FINAL_HANDOFF_2026-09-26_2235UTC.txt
+Design docs for this arc: docs/RT_BACKTEST_PLAN_2026-09-27.md, docs/TRACKER_PLAN_2026-09-26.txt
+============================================================================
+
+HOW EVERYTHING WAS KEPT SAFE TODAY
+- Every change was a new layer (v103 tracker phase 2, v104 backtest) or a narrowly-scoped,
+  tested edit. The base page and every existing layer were never rewritten.
+- Before every publish: the full 348-question regression (49 base + 207 tiles + 12 breakout +
+  16 setup + 64 newer tiles) was re-run and confirmed byte-for-byte unchanged, independently by
+  me, not just trusted from a subagent's report.
+- A backup of the page from before this arc started is saved at
+  artifact/backup/index_v138_before_rt_backtest.html (tag v138-before-rt-backtest).
+- Speed: nothing new runs on page load or during normal use; the backtest code only executes
+  when you open its section and press Run. Confirmed by the regression itself - if it had added
+  any per-question overhead or behavior change, at least one of the 348 saved answers would
+  have differed, and none did.
+
+----------------------------------------------------------------------------
+PART A. WHAT WAS DONE TODAY, STEP BY STEP
+----------------------------------------------------------------------------
+1. TWO BUG FIXES (version 139), found by the owner's own testing:
+   - "Track this portfolio" was missing on one-per-cluster / block portfolios (hcport "oneper"
+     mode) - fixed: the button now shows for every portfolio-shaped hcport answer.
+   - "Build a portfolio of <named tickers>, weighted" was ignoring the named list (picking from
+     the whole market instead) and ignoring "weighted" (always equal-weighting) - fixed: it now
+     builds only from the named tickers and reads "weighted" as score weighting.
+
+2. PORTFOLIO TRACKER PHASE 2 (version 140): rebalance rhythm (daily / weekly / monthly /
+   quarterly / yearly) and weight source (equal / rank / inverse-volatility), both EDITABLE AT
+   ANY TIME on an already-tracked portfolio via a new in-page "Settings" button (no browser
+   pop-ups - those are blocked on claude.ai, which is why the old Delete/Rename looked broken
+   before they were fixed). Changing settings recomputes instantly from the same recorded
+   history - nothing is re-tracked or lost. Defaults (daily, equal weight) are unchanged for
+   every portfolio tracked before this, so nothing already running was affected.
+   - Rebalance rhythm only decides WHICH of a portfolio's daily decision records become trades;
+     skipped days still mark the position to market.
+   - Weight only changes the size of a FRESH buy; existing holdings keep their original size.
+   - 40 engine tests (19 original phase-1 + 21 new), all pass.
+   Fixed the same day: dual momentum now obeys "max N per cluster/sector/subsector/hidden
+   group", "weighted"/"inverse volatility", extra conditions, a named sector/subsector, "signals
+   converge", "positive sector breadth", "low volatility", "low correlation" - every rule is
+   listed in the answer, and a wrong "cluster conditions not applied" note was removed. Also
+   fixed: "Plot the rolling correlation of every sector" now draws all 11 sectors.
+
+3. RT DESIGN DECISION (documented, no code): the Portfolio Tracker's rebalance/cost/weight
+   settings drive the BROWSER's live estimate only. RealTest will use its OWN native tools for
+   the real backtest - EndOfWeek/Month/Quarter/Year for timing, Commission/Slippage for costs,
+   a Quantity formula for weighting - fed by a plain daily export of eligible picks from the
+   terminal, rather than re-implementing RT's own engine in JavaScript. See
+   docs/RT_BACKTEST_PLAN_2026-09-27.md for the full reasoning.
+
+4. PART F: HISTORICAL SCAN EXPORT (RealTest side, realtest/ folder) - lets RealTest export what
+   its own indicators looked like on every PAST bar, not just today's, reusing your EXISTING
+   part A/B/C/D scripts unmodified (only NumBars and the output filename are changed - verified
+   byte-for-byte identical otherwise against your real part C file). Files:
+   _generators/gen_v7_F_history.js (the generator), generate_v7_F_history.ps1 +
+   Generate_AlexAligned_v7_F_History.bat (finds your A/B/C/D scripts automatically, no typing a
+   node command), merge_v7_F_history.py (Date+Symbol outer-join merge, tested on synthetic
+   mismatch data), run_v7_F_history.ps1 + Run_AlexAligned_v7_F_History.bat (runs all four and
+   merges, mirrors your proven part-E launcher pattern), README_v7_F_history.md.
+   STATUS: you ran this today. Parts A (32.3 min), B (1.5 min), C (7.7 min) all passed with
+   148,919 rows each; part D was running when this handoff was written - check its own window
+   for the final "PART F PASSED" line and the merged CSV path.
+   NOTE for next time: NumBars 260 was used (about one year). This matters for what you can
+   backtest - see Part B below.
+
+5. THE MOVE TO SectorTerminalScripts (troubleshooting, resolved): moving all project scripts
+   into their own subfolder is safe (RealTest resolves DataFile: and ?scriptpath? correctly
+   regardless of folder depth; no Include: statements in these scripts to break). The launchers'
+   hardcoded SCR/$Scr path had to be edited to point at the new subfolder in
+   Run_AlexAligned_v7_F_History.bat and run_v7_F_history.ps1 (and the same edit applies to your
+   older run_v7_history.ps1 / Run_AlexAligned_v7_History.bat if you use those from the new
+   folder too). Both were fixed with direct PowerShell one-liners after a Notepad save issue
+   masked the first attempt; confirmed working, the pipeline ran successfully end to end.
+
+6. BACKTEST (HISTORICAL REPLAY) - THE TERMINAL SIDE (version 141): a new layer, v104.js, adds
+   a "Backtest this portfolio" section to the Portfolio Tracker tab. Given a merged historical
+   scan CSV (part F's output) and a price-history CSV, it replays a tracked portfolio's exact
+   frozen rules on every date it's eligible to rebalance (respecting that portfolio's OWN
+   rebalance-rhythm setting from step 2), using ONLY data that existed on that date, and feeds
+   the resulting historical picks through the SAME engine that drives live tracking.
+   HOW IT REUSES YOUR OWN CODE (not a reimplementation): it found and reused `upParseCSV`, the
+   exact function your page's own "Update" button already uses to read a scan CSV, and
+   `hxParseCsv`, the same one "Load price history" uses - substituting them into the page's
+   shared global state for one computation, then restoring the original state afterward,
+   wrapped in try/finally so an error mid-replay can never corrupt what's currently loaded.
+   TESTED (28 new checks, plus the existing 40 tracker checks, all re-verified by me
+   independently before publishing, not just taken on trust):
+    - Proven identical to the real ingest path, field by field, on your real sample data.
+    - No-look-ahead: a full run and the same run with later dates deleted give byte-identical
+      results for every date they share.
+    - Restore-on-error: forcing a crash mid-replay (twice, two different ways) leaves the live
+      scan and price history completely unchanged afterward.
+    - A real entry/exit/re-entry case on synthetic data matches hand-computed expectations.
+   HONEST ABOUT ITS LIMITS: if a portfolio's rules need correlation/cluster diversification
+   (Hidden Groups, price clusters - the "low correlation", "1 per cluster" kind of rule) and
+   there isn't enough price history before the first backtest date (252 bars needed), it REFUSES
+   with a clear explanation rather than quietly producing a wrong number. Plain filter/rank
+   portfolios (uptrend, pullback, improving, momentum, dual momentum, sector/subsector
+   conditions) have no such limit - they read straight from each date's own scan data.
+   Full 348-question regression: unchanged. 40 tracker tests + 28 new backtest tests: all pass.
+
+----------------------------------------------------------------------------
+PART B. WHAT YOU CAN TEST RIGHT NOW
+----------------------------------------------------------------------------
+1. Wait for part D to finish and the "PART F PASSED" merge message (check that window).
+2. In the terminal, track a PLAIN portfolio (not one using "low correlation", "1 per cluster",
+   "1 per hidden group" or the adaptive smart builder's default diversification) - e.g. "Show me
+   top 10 stocks in an uptrend, pulling back, rank by strength" or a dual-momentum question.
+3. Open the Portfolio Tracker tab, find that portfolio, open its new "Backtest (historical
+   replay)" section, upload the merged part-F CSV and your part-E price history CSV, press Run.
+4. IMPORTANT CAVEAT: today's part F run used NumBars 260 (about one year), and the cluster
+   check needs 252 bars of price history BEFORE the first backtest date. With only 260 bars
+   total, a cluster-diversified portfolio will likely be refused outright, or have almost no
+   usable window (0-8 days). This is expected, not a bug - it is exactly the honesty check
+   working as designed. Plain filter/rank portfolios do not have this limit and should backtest
+   across nearly the whole 260-bar window.
+5. If you want to backtest cluster-diversified portfolios properly later, you'll need a LARGER
+   NumBars (e.g. 512+, so there's a real window left after the 252-bar warm-up) - re-run
+   Generate_AlexAligned_v7_F_History.bat with a bigger number when ready; today's data is still
+   useful for every plain portfolio in the meantime.
+6. What you CANNOT test yet: nothing in RealTest itself validates the backtest's numbers yet -
+   that is the one remaining piece (item 3 below).
+
+----------------------------------------------------------------------------
+PART C. WHAT IS LEFT, AND WHY
+----------------------------------------------------------------------------
+1. THE REALTEST VALIDATION RUNNER (the last of the three original steps). Purpose: feed the
+   terminal's own historical picks back into RealTest so RT's real trade accounting (commission,
+   fills) can confirm the terminal's numbers, and so RT's fuller statistics (Sharpe, CAGR, MAR
+   etc.) become available. This was DELIBERATELY not built today: it needs to consume the EXACT
+   shape the replay engine produces, and I only learned that shape once the terminal side was
+   finished (an `ups[]` array of {date, picks:[{symbol,side}]}, fed into the same engine() as
+   live tracking). Building it blind first would have risked a mismatch and wasted work.
+   NEXT STEP: (a) add a "Download Terminal_Weights.csv" export next to the Backtest button
+   (Date, Symbol, target weight, one row per rebalance date per pick - straightforward, the data
+   already exists in the replay's `ups[]`); (b) write a small .rts template (DataValueFile +
+   DynamicSizing + Commission, no re-import needed since it can reuse the existing shared .rtd
+   for prices) that trades exactly those weights; (c) a launcher script matching the same tested
+   pattern as part F's; (d) validate: same portfolio, same dates, RT's equity should be close to
+   the terminal's own (small differences from real slippage/fills are expected and fine; a large
+   difference would mean something is wrong).
+2. REAL END-TO-END TEST WITH REAL DATA. Everything backtest-side was tested on synthetic
+   multi-date data (built from your real single-day sample) because the real merged part-F file
+   didn't exist yet when it was built. Once your merge finishes, the very next thing to do is
+   run a real backtest against it and confirm the results look sane (reasonable trade counts,
+   no missing symbols, dates in range) before trusting it for anything real.
+3. LARGER NumBars for cluster-diversified portfolios, once you're ready (see Part B.5).
+4. Everything else already listed as open in the previous handoff and still open: Compare /
+   Combined tracker views, money/sizing/overlap in the tracker, the rebalance-frequency
+   comparison view, the navy colour theme, the remaining older query-fix backlog items.
+
+----------------------------------------------------------------------------
+PART D. PLAN OF ACTION, IN ORDER
+----------------------------------------------------------------------------
+1. You: let part D finish, confirm "PART F PASSED", note the merged CSV's path and row count.
+2. You: try a real backtest on a plain portfolio (Part B above) and tell me what you see -
+   this is the first time this feature will run against real data, not synthetic.
+3. Me: build the Terminal_Weights.csv export + the RealTest validation runner (item C.1), with
+   the same testing discipline as everything else this session (tested on made-up data with
+   exact expected numbers first, then checked against your real export).
+4. You: run the validation runner once and compare its numbers to the terminal's own backtest
+   for the same portfolio - this closes the loop Gemini's original idea was reaching for,
+   properly grounded in what RealTest and this codebase can actually do.
+5. Later, as time/budget allows: a larger NumBars run for cluster-diversified portfolios, then
+   the remaining tracker features (Compare/Combined, money/sizing) from the earlier plan.
+============================================================================
