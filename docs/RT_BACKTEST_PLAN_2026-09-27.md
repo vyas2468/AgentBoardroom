@@ -39,6 +39,23 @@ Half right.
 - Warm-up: the first test day needs a full lookback; earlier days are skipped, not approximated.
 - It is a test of the rules, not a forecast.
 
+## Scale and RAM (worth planning for up front)
+- **RT side (part F + validation runner):** RT is built for large universes over many years, so a ~575-symbol,
+  1-3 year daily scan history is well within its normal range — no special handling needed there. Two script-level
+  choices keep it lean anyway: (a) `NumBars` sized to what's actually needed (e.g. 260 for one year, not the whole
+  history) so the export doesn't grow unbounded; (b) the validation runner is its OWN small script (just
+  `DataValueFile` + `DynamicSizing`), not folded into parts A-D, so a big backtest run never touches the live import.
+- **Browser side (the terminal doing the replay) is the real constraint**, not RT: one merged scan CSV per rebalance
+  date, held in the browser's JS heap and IndexedDB. Mitigations already in the plan (and to enforce in code):
+  - Only fetch/keep the point-in-time data for rebalance dates actually needed for one replay, not the whole part F
+    file at once (stream per-date rows, discard after use).
+  - Heavy O(n²) engines (correlation penalty, price clusters, Hidden Groups) recompute only on rebalance dates
+    (weekly/monthly), never daily, and only over the candidate shortlist, not the full ~575-symbol universe.
+  - Store part F in IndexedDB like part E already does (not localStorage, which is far smaller), and cap how many
+    days a single browser session replays in one go (chunk a multi-year backtest into yearly slices if needed).
+  - A daily-rebalance, multi-year replay of a heavy-engine portfolio is the worst case; test that combination early
+    (not just monthly) to see the real ceiling before promising it works for every rhythm.
+
 ## Task list (in order, and why)
 0. Backup the current page (v138) + tag the repo. (So any step can be reverted.)
 1. Quick fixes the owner found (small, user-facing, unblock tracking):
