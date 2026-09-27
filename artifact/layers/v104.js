@@ -312,6 +312,13 @@ function btSection(){
       ["Closed trades / win rate",st.trades+" / "+(num(st.win)?st.win.toFixed(0)+"%":"–")]
     ]));
     h.push(btChart(r.result.equity,"Backtest value vs RSP (both = 100 at the first fill)"));
+    if(r.result.trades&&r.result.trades.length){
+      h.push('<h4 style="margin:14px 0 4px">Closed trades</h4>'+btTbl(
+        ["Symbol","Side","Entry date","Entry price","Exit date","Exit price","Return","Bars held","Why it was sold"],
+        r.result.trades.map(function(t){ return [t.s,t.side,t.inD,num(t.inPx)?t.inPx.toFixed(2):"–",t.outD,num(t.outPx)?t.outPx.toFixed(2):"–",pct(t.ret),String(t.days),t.why]; })
+      ));
+      h.push('<p class="mini">No "reason for entry" column yet — the engine only records why a position was SOLD (the "Why it was sold" column, same as the live Portfolio Tracker\'s own closed-trades table), not why it was originally picked. Ask if you want that added.</p>');
+    }
   }
   return h.join("");
 }
