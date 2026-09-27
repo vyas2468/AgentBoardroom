@@ -56,6 +56,31 @@ Half right.
   - A daily-rebalance, multi-year replay of a heavy-engine portfolio is the worst case; test that combination early
     (not just monthly) to see the real ceiling before promising it works for every rhythm.
 
+## Design decision: the tracker's settings vs. RealTest's native equivalents
+Confirmed (27 Sep, after the owner asked): the Portfolio Tracker's phase-2 settings (rebalance rhythm, entry fill,
+cost bps, weight source) exist ONLY to drive the browser's live, forward-tracking estimate. They are NOT ported
+into the RT backtest, and RT does NOT need a JS-equivalent re-implementation of any of them — RT already has
+better, native tools for all four, using the SAME price series it trades with (no risk of the two engines
+disagreeing on e.g. how volatility was measured):
+- Rebalance timing -> RT's built-in `EndOfWeek` / `EndOfMonth` / `EndOfQuarter` / `EndOfYear`, gating
+  `EntrySetup`/`ExitRule` or a `DynamicSizing` `Quantity` formula (documented RT pattern, "Rotational / Monthly
+  Rebalance" example in realtest_script_language.md).
+- Costs -> RT's native `Commission:` / `Slippage:` settings (real per-transaction accounting), not a bps deduction
+  in a JS loop.
+- Weighting -> an RT `Quantity:` formula: `100/Positions` (equal), `#Rank`-based (rank), or a native
+  `StDev()`/return-based formula (inverse volatility) — computed by RT itself from the imported OHLC.
+
+Consequence for the design in "Architecture" above: the terminal's replay/export (step 4) exports a DAILY,
+cadence-agnostic list of the frozen query's eligible picks (+ rank, if the RT-side weighting needs it) — it does
+NOT pre-bake rebalance timing, costs or weighting into the export. The RT validation-runner generator (step 5)
+translates each tracked portfolio's OWN settings (settings.rebalance, settings.cost, settings.weight) into the
+matching native RT directives when it writes that portfolio's `.rts` file (e.g. `settings.rebalance:"monthly"` ->
+`Rotate: EndOfMonth` in the generated Data: section; `settings.cost` bps -> a `Commission:`/`Slippage:` formula;
+`settings.weight` -> the matching `Quantity:` formula). One job stays in JS (selection logic RT cannot compute:
+Early Warning direction, convergence lenses, clusters, correlation penalties); one job stays in RT (everything RT
+already does correctly). Phase-2 tracker settings need NO rework for this — they're already correct and tested for
+their own (browser, forward-tracking) purpose.
+
 ## Task list (in order, and why)
 0. Backup the current page (v138) + tag the repo. (So any step can be reverted.)
 1. Quick fixes the owner found (small, user-facing, unblock tracking):
