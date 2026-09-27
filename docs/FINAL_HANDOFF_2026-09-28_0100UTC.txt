@@ -1,0 +1,112 @@
+============================================================================
+SECTOR ROTATION TERMINAL + REALTEST BACKTESTING - HANDOFF (2026-09-28 01:00 UTC)
+Live page: https://claude.ai/artifact/JBivgL88qHWeaCSsepr7cN  (version 141 -- unchanged since
+last handoff; the trade-list addition below is committed to git but NOT yet published)
+Code: branch claude/artifact-access-question-f3s8rs, folder artifact/ (page) + realtest/ (RT scripts)
+Previous handoff: docs/FINAL_HANDOFF_2026-09-28_0000UTC.txt
+This handoff picks up right where that one left off: you had just gotten your first successful
+real-data backtest result (Dual momentum top 8), and I had started building a trade-list feature.
+============================================================================
+
+----------------------------------------------------------------------------
+PART A. WHAT HAPPENED SINCE THE LAST HANDOFF
+----------------------------------------------------------------------------
+1. YOUR FIRST REAL BACKTEST SUCCEEDED. "Dual momentum top 8" ran against your real 381.6 MB
+   merged part-F scan and your real part-E price history: 260 rebalance-eligible dates found,
+   fills starting 2025-11-10 (dual momentum needs a formation lookback before it can rank
+   anything, so the first ~40 dates produce no trades -- expected, not a bug), ending at
+   2026-09-25 with +5.11% return against RSP's +12.13%, -9.77% max drawdown, 11 closed trades,
+   64% win rate. This is the first real-data proof the whole backtest feature (built and
+   published as v104.js in the previous session) actually works end to end, not just on
+   synthetic test data.
+
+2. TRADE-LIST FEATURE -- BUILT, TESTED, COMMITTED, BUT NOT YET PUBLISHED. You asked for a
+   RealTest-style trade list (entry/exit date and price, symbol, bars held, reason for exit) on
+   the Backtest results, since you liked the stats table but wanted the underlying trades too.
+   I added a "Closed trades" table to v104.js reusing the exact same trades array the LIVE
+   Portfolio Tracker's own closed-trades table already renders (proven shape, not new code):
+   Symbol, Side, Entry date, Entry price, Exit date, Exit price, Return, Bars held, Why it was
+   sold. Verified: 40 tracker engine tests + 28 backtest engine tests, all pass; the full
+   348-question regression, byte-identical, unchanged. Committed to git (commit e833ef7).
+   WHY IT IS NOT LIVE YET: publishing to the artifact requires the tool to first re-read the
+   entire current live page (about 28,000 lines / over a million tokens) to guard against
+   overwriting anything changed elsewhere. I started that read, it was consuming a huge share of
+   the session's budget for a small addition, and you flagged it -- so I stopped, committed the
+   code safely to git instead, and deferred publishing. THE LIVE TERMINAL RIGHT NOW LOOKS
+   IDENTICAL TO BEFORE -- no visible change, nothing broken, nothing lost. The trade-list code
+   will go live the next time I publish, ideally bundled with the RealTest validation runner (see
+   Part C.1) so one full-page read pays for two features instead of one.
+   NOTE: there is no "reason for entry" column -- the engine only ever recorded why a position
+   was SOLD, never why it was originally picked (same limitation the live tracker already has).
+   Adding that would be a real, untested new feature, not a reuse of existing code, so it was
+   deliberately left out rather than guessed at.
+
+3. LONGER PRICE-HISTORY GENERATOR -- YOU RAN IT TODAY. The part-E generator
+   (_generators/gen_v7_E_history.js) was parameterized in the previous session so it can ask for
+   more than the default 280 bars (needed because cluster/correlation-diversified portfolios --
+   "smart" builder, "low correlation", "1 per cluster" -- require 252 bars of price history
+   BEFORE the first backtest date, which the original 280-bar file could not supply). Today you:
+   - Downloaded the updated gen_v7_E_history.js and replaced the old copy in
+     Scripts\SectorTerminalScripts\_generators\.
+   - Ran: node _generators\gen_v7_E_history.js AlexAligned_Unified_v7_C_EngineFree_25.09.2026.rts
+     AlexAligned_Unified_v7_E_History_600bars.rts 600
+     -- produced the correct .rts file (confirmed by inspection: 600 bars, writes
+     AlexAligned_Unified_v7E_history_600bars.csv, everything else byte-identical to the pattern).
+   - Hit one small snag: running RealTest.exe directly from the SectorTerminalScripts folder
+     failed ("not recognized") because RealTest.exe lives in C:\RealTest21_newerv2, not in that
+     subfolder. Fixed by calling it with its full path:
+     C:\RealTest21_newerv2\RealTest.exe -apply -scan "C:\RealTest21_newerv2\Scripts\
+     SectorTerminalScripts\AlexAligned_Unified_v7_E_History_600bars.rts"
+   - You ran that. STATUS AS OF THIS HANDOFF: not yet confirmed finished -- check
+     C:\RealTest21_newerv2\Scripts\SectorTerminalScripts for AlexAligned_Unified_v7E_history_
+     600bars.csv. It has no engines/correlation math so it should take well under a minute even
+     at 600 bars; if it's there, part E (longer history) is done.
+
+----------------------------------------------------------------------------
+PART B. WHAT YOU CAN TEST RIGHT NOW
+----------------------------------------------------------------------------
+1. Confirm AlexAligned_Unified_v7E_history_600bars.csv exists and has a sane row count (roughly
+   573 symbols x 600 bars =~ 344,000 rows -- the .rts file's own header note estimates ~345,000).
+2. Once confirmed, retry one of the "smart"/cluster-diversified portfolios that were refused
+   earlier (e.g. "Build a smart 25 stock portfolio, improving, 2 per sector, signal convergence,
+   weighted" or "Build a smart 10 stock portfolio in an established uptrend with low beta, not
+   deteriorating") in the Backtest section, uploading this new 600-bar file as the price-history
+   input instead of the old 280-bar one. It should now pass the 252-bar pre-flight check and
+   actually run, instead of refusing instantly.
+3. Plain (non-cluster) portfolios like "Dual momentum top 8" still work exactly as before with
+   either the old or new price-history file -- no need to redo that one.
+4. The trade-list table is NOT visible on the live page yet (see Part A.2) -- it exists in code,
+   tested, committed, waiting for the next publish.
+
+----------------------------------------------------------------------------
+PART C. WHAT IS LEFT, AND WHY
+----------------------------------------------------------------------------
+1. PUBLISH THE TRADE-LIST ADDITION (deliberately deferred this session, see Part A.2). Small,
+   already done and tested -- just needs one publish. Plan: bundle it with item 2 below so the
+   mandatory full-page read before publishing is spent once, covering both changes.
+2. THE REALTEST VALIDATION RUNNER (the last of the three original steps from two sessions ago,
+   still not started): a "Download Terminal_Weights.csv" export next to the Backtest button
+   (Date, Symbol, target weight, one row per rebalance date per pick -- the data already exists
+   in the replay's ups[] array), a small .rts template using DataValueFile + DynamicSizing +
+   Commission to trade exactly those weights (reusing the existing shared .rtd, no new import),
+   a launcher script matching the tested pattern of the other launchers, then comparing RT's
+   resulting equity against the terminal's own backtest for the same portfolio/dates as a
+   real cross-check. This closes the original three-part plan from the very start of this arc.
+3. Once the 600-bar price history is confirmed working, a real cluster-diversified portfolio
+   backtest against real data (today's dual-momentum test only proved the plain-portfolio path).
+4. Older backlog, unchanged and still open: Portfolio Tracker Compare/Combined views, money/
+   sizing/overlap in the tracker, a rebalance-frequency comparison view, the navy colour theme.
+
+----------------------------------------------------------------------------
+PART D. PLAN OF ACTION, IN ORDER
+----------------------------------------------------------------------------
+1. You: confirm the 600-bar CSV finished and looks sane (row count, no errors).
+2. You: try one "smart"/cluster portfolio backtest with the new 600-bar file and report what you
+   see -- pass, refuse with a different reason, or a real number this time.
+3. Me: build the Terminal_Weights.csv export + RealTest validation runner (Part C.2), and publish
+   it together with the already-built trade-list table (Part C.1) in one combined publish, so the
+   one required full-page read serves both.
+4. You: run the validation runner and compare its numbers to the terminal's own backtest for the
+   same portfolio -- closes the original three-part plan.
+5. Later, as time/budget allows: the older backlog in Part C.4.
+============================================================================
