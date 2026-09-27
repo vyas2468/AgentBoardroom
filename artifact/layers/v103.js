@@ -253,6 +253,10 @@ document.addEventListener("click",function(e){ var t=e.target&&e.target.closest?
   try{ var g=TG_GROUPS.filter(function(x){ return x.k==="trk"; })[0]; if(g&&g.tabs.indexOf("ptk")<0) g.tabs.push("ptk"); }catch(e){}
 })();
 window.addEventListener("hxchange",function(){ try{ var pn=document.getElementById("pane-ptk"); if(pn&&!pn.hidden) render(); }catch(e){} });
-try{ window.__trk={engine:engine,picksOf:picksOf,state:function(){ return ST; },updateAll:updateAll,render:render}; }catch(e){}
+try{ window.__trk={engine:engine,picksOf:picksOf,state:function(){ return ST; },updateAll:updateAll,render:render,
+  /* v104 hook: pkeyOf/filterRebal are the period-key + rebalance-eligible-entry filters used by engine() above.
+     Exposed so the backtest replay engine (a later layer) reuses the SAME weekly/monthly/quarterly/yearly logic to
+     pick eligible historical replay dates, instead of duplicating it. */
+  pkeyOf:pkeyOf,filterRebal:filterRebal}; }catch(e){}
 }catch(e){ try{ console.warn("v103 layer disabled: "+(e&&e.message)); }catch(e2){} }
 })();
