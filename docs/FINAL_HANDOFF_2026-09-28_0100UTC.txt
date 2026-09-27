@@ -118,6 +118,75 @@ PART C. WHAT IS LEFT, AND WHY
    sizing/overlap in the tracker, a rebalance-frequency comparison view, the navy colour theme.
 
 ----------------------------------------------------------------------------
+PART E. HOW THE BACKTEST ACTUALLY WORKS, STEP BY STEP (asked for explicitly this session)
+----------------------------------------------------------------------------
+The short version: it is NOT a separate backtest engine re-implementing the rules. It replays
+the SAME code the live Portfolio Tracker already uses, one historical day at a time, with hard
+guarantees against ever seeing the future. In order:
+
+1. SPLIT THE MERGED SCAN BY DATE. The 600-bar (or 260-bar) merged CSV has one row per symbol per
+   date. The very first step groups it into one "daily snapshot" per date -- 260 of them -- each
+   looking exactly like a normal single-day scan upload.
+
+2. DECIDE WHICH DATES ACTUALLY GET TESTED. Using the portfolio's own rebalance setting (daily /
+   weekly / monthly / quarterly / yearly -- the exact same setting the live tracker's Settings
+   button controls), it filters down to only the dates that would trigger a real rebalance. Daily
+   keeps every date; monthly keeps only the first trading day of each month; and so on. Skipped
+   dates are never even computed, which is also why this stays fast.
+
+3. THE NO-LOOK-AHEAD SWAP (the core safety mechanism). For each eligible date, oldest to newest,
+   the page's live in-memory scan and price history are TEMPORARILY swapped out for ONLY that
+   date's own scan row and price bars UP TO AND INCLUDING that date -- using the exact same
+   parsing functions (upParseCSV, hxParseCsv) the real "Update" button and "Load price history"
+   already use, so there is no separate, riskier re-implementation of the CSV-reading logic.
+   Nothing from any later date is ever loaded or visible during that date's replay. This is not
+   just a design claim: it was directly tested by running the same replay twice -- once with the
+   full file, once with every later date deleted -- and confirming the results for every
+   shared date come out byte-for-byte identical.
+
+4. RUN THE PORTFOLIO'S FROZEN QUESTION. With that one historical snapshot standing in for "today",
+   the engine runs the portfolio's exact saved query -- the same ranking and filtering rules,
+   completely unchanged since the moment you clicked "Track this portfolio" -- so on each date it
+   picks whichever names would genuinely have qualified back then, using only that day's own
+   numbers. Nothing about the rules is re-tuned or re-guessed with hindsight.
+
+5. RESTORE, ALWAYS. Immediately after each date's replay, the live scan and price history are put
+   back exactly as they were, inside a try/finally block so even a crash mid-replay can never
+   leave your actual loaded data corrupted. This was also directly tested (deliberately forcing
+   errors mid-replay, twice, two different ways, and confirming the live data was untouched).
+
+6. THE CLUSTER / CORRELATION SAFETY CHECK (why "smart" and clustering portfolios need more bars).
+   Any rule that diversifies by Hidden Group, price cluster, or correlation (the "smart" adaptive
+   builder, "1 per cluster", "1 per hidden group", "low correlation") needs 252 bars of REAL price
+   history immediately BEFORE the first date it tries to replay, to compute the same rolling
+   cluster/correlation grouping the live page would use on that date. Before running anything at
+   all, the engine checks whether you actually have that much history available. If you don't, it
+   refuses outright with an explicit, named reason (never a silent, wrong approximation) -- this
+   is exactly the wall you hit with the original 280-bar file, and exactly why the parameterized
+   part-E generator and today's 600-bar file exist: 600 bars comfortably covers 252 bars of
+   warm-up plus the full 260-bar replay window on top.
+
+7. WEIGHTING AND TRADES -- REUSES THE LIVE TRACKER, NOT A COPY. Once a date's picks are known,
+   they are fed into the SAME engine() function that drives live tracking. That function decides
+   position sizing (equal weight / rank-weighted / inverse-volatility -- applied ONLY to brand-new
+   buys; a position you already held keeps its original size, never re-weighted mid-life) and
+   turns the resulting sequence of daily decisions into actual trades: entry date and price, exit
+   date and price, return, days held, and why a position was eventually sold. This is the same
+   underlying data the Closed trades table (built and committed this session, not yet published --
+   see Part A.2/C.1) displays.
+
+8. COSTS AND FILLS. Entry fill timing (open vs close of the signal day) and the cost in basis
+   points both come from the portfolio's own settings and are applied the same way engine()
+   already applies them for live tracking -- not a separately re-derived cost model.
+
+NET EFFECT: every number in a backtest result is produced by the exact same weighting, rebalance
+and trade-construction logic already proven correct for live tracking, just replayed against
+historical snapshots one day at a time, with (a) a hard no-look-ahead guarantee proven by a real
+before/after-truncation test, (b) guaranteed restoration of live data even on failure, and (c) an
+honest refusal instead of a silent wrong answer whenever a portfolio's rules need more price
+history than has actually been supplied.
+
+----------------------------------------------------------------------------
 PART D. PLAN OF ACTION, IN ORDER
 ----------------------------------------------------------------------------
 1. DONE: the 600-bar CSV finished and was confirmed sane (342,526 rows, 575 symbols).
