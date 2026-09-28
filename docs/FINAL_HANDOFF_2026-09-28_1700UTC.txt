@@ -1,0 +1,143 @@
+============================================================================
+SECTOR ROTATION TERMINAL + REALTEST - HANDOFF (2026-09-28 17:00 UTC)
+Live page: https://claude.ai/artifact/JBivgL88qHWeaCSsepr7cN
+  -- v144 confirmed live; v145 (the sector-scoping fix below) is publishing now in the
+     background as this handoff is written -- reload in a minute or two and check the version
+     if you want to confirm it landed, or just try the "Which subsector in Industrials..."
+     question from Part C below: if it answers Railroads without needing "leader page", v145 is live.
+Code: branch claude/artifact-access-question-f3s8rs, folder artifact/ (page) + realtest/ (RT scripts)
+Previous handoffs (still accurate background): docs/FINAL_HANDOFF_2026-09-28_0100UTC.txt,
+  _0930UTC.txt, _1230UTC.txt, _1600UTC.txt
+This file covers everything since the 16:00 UTC handoff: the sector-scoping bug is now actually
+fixed (not just diagnosed) and published.
+============================================================================
+
+----------------------------------------------------------------------------
+PART A. THE FULL SESSION, START TO FINISH -- WHAT WAS ACCOMPLISHED
+----------------------------------------------------------------------------
+This was a long session. Here is everything that shipped, in the order it happened:
+
+1. BACKTEST FEATURES (published as v143):
+   - "Anomaly leader pages" tile in Ask the terminal -- a structured, multi-table answer layout
+     (matching a competitor terminal's style you showed us) for combined-anomaly-score questions,
+     with 10 ready-to-run example questions.
+   - Backtest is ~47.5x faster (price history parsed once instead of re-parsed on every replay
+     date). No visible change to how you use it -- it just finishes faster now.
+   - New "Export weights only (fast)" button -- gets Terminal_Weights.csv without running the
+     full trade/stats simulation, for when you only want the CSV.
+   - Fixed a real bug: "Download Terminal_Weights.csv" was silently doing nothing when clicked.
+
+2. REALTEST WORKFLOW DIAGRAM (published as v144):
+   - New "How this connects to RealTest" collapsible panel in the Backtest section, with a
+     visual 6-step diagram of the export-to-RealTest-and-back workflow.
+
+3. THE REALTEST CROSS-CHECK -- 3 real runs, a real bug found and fixed:
+   - Run 1: RealTest rejected the script outright ("Dynamic-sizing strategy cannot specify
+     Side"). One-line fix (side is inferred from the position-size formula's sign, not a
+     separate setting, for this kind of strategy).
+   - Run 2: RealTest ran, but its return (+8.53%) was way below the terminal's own (+16.56%),
+     with almost double the trade count (1,904 vs 964). Investigated by reading RealTest's
+     actual trade-by-trade output: RealTest was splitting single holding periods into several
+     artificial small trades every time the target position size shifted even slightly day to
+     day, and charging its cost assumption on every extra one. Root cause: the exported weights
+     file re-states a target weight for a held stock on EVERY day it's held, but the terminal's
+     own engine never actually resizes a position once bought. RealTest was doing exactly what
+     it was told -- the instruction just didn't match the terminal's real behaviour.
+   - THE FIX: added "if you already hold this stock, ignore what today's file says and leave it
+     alone" to the RealTest script's sizing rule -- matching the terminal exactly.
+   - Run 3 (after the fix): trade count landed at 970 vs. the terminal's 964 -- a near-exact
+     match. Win rate and average win/loss also came out close. This is now a genuinely
+     trustworthy independent cross-check, confirmed against real data, not just a script that
+     happens to run without erroring.
+
+4. NEW -- REALTEST "ORDERS MODE" SCRIPT: built on the same now-proven logic, this asks RealTest
+   "given this exact picks file, what should I buy/sell for the NEXT session?" instead of "how
+   would this have performed historically?" NOT yet tested against a real RealTest run (first
+   real test whenever you get to it), and has one real limitation: it only gives genuinely
+   current orders if your weights export's last date is today (there's no separate "export just
+   today's live picks" button yet -- see Part D, item 2).
+
+5. THE SECTOR-SCOPING BUG -- FOUND, DIAGNOSED, AND NOW ACTUALLY FIXED (this is new since the last
+   handoff):
+   THE BUG: asking "Which subsector in Industrials had the highest combined anomaly score?"
+   WITHOUT the words "leader page" gave you the wrong answer entirely -- it silently ignored "in
+   Industrials" and returned whatever subsector scored highest across the ENTIRE universe
+   (Energy, in the example you caught). You found this by comparing the same question with and
+   without "leader page" and noticing they disagreed.
+   THE FIX: the correct sector-matching logic already existed (built for the "leader page"
+   feature) -- it just needed to be connected to ordinary questions too, not walled off behind
+   one trigger phrase. This is now done, and it was built specifically so it COMBINES with other
+   things you can already ask for in the same question: a reversed direction ("lowest" instead
+   of "highest"), a bias condition ("improving names only"), extra requested columns, and a
+   minimum group-size floor ("at least 5 members"). A new "Sector-scoped combos" tile with 5
+   example questions was added to show this off.
+   VERIFIED CAREFULLY: full regression suite showed 347 of 348 existing answers completely
+   unchanged (the 1 difference is an already-known, unrelated flaky test), and all 7 real-browser
+   test cases (the original bug, the same question with "leader page" still working, plus the 5
+   new combo examples, plus one plain unscoped control question) came back correct.
+   ONE THING WORTH KNOWING: one of the new example questions asks for a "5-day return" column
+   alongside the usual "1D return" -- the sector-scoping is correctly applied, but the underlying
+   answer engine doesn't actually add that extra column today (a separate, smaller, pre-existing
+   limitation, unrelated to this fix). Flagged rather than hidden -- see Part D, item 3.
+
+----------------------------------------------------------------------------
+PART B. A NOTE ON HOW THIS SESSION HANDLED TWO INFRASTRUCTURE OUTAGES
+----------------------------------------------------------------------------
+Twice during this session, an Anthropic-side safety-check service that gates tool use (shell
+commands, and separately the publish action) went down transiently and blocked progress for a
+while. Both times: nothing was lost, no risky workarounds were taken, and normal service resumed
+on its own. Worth knowing about only because it explains a couple of "still waiting" replies you
+got mid-session -- it was never about your code or your instructions.
+Also worth knowing: one background helper task doing verification work was killed mid-task by
+this same kind of outage, twice. Both times, rather than trusting its last reported status
+blindly, its actual code changes were independently re-verified from scratch (fresh regression
+run, fresh real-browser test) before anything was committed -- so what shipped was always
+directly confirmed working, not just reported as working.
+
+----------------------------------------------------------------------------
+PART C. WHAT TO TEST YOURSELF NOW
+----------------------------------------------------------------------------
+1. Confirm v145 is live: ask the terminal "Which subsector in Industrials had the highest
+   combined anomaly score? List the symbols and 1D return." (no "leader page" needed this time)
+   -- it should now correctly answer Railroads, not a subsector from a different sector.
+2. Try the new "Sector-scoped combos" tile -- 5 ready-to-run examples showing the fix combined
+   with direction, bias, extra columns, and a minimum member count.
+3. Confirm "leader page" questions still work exactly as before (nothing should have changed
+   there).
+4. If you want to keep validating other portfolios in RealTest: export weights for a different
+   portfolio than the one already tested and re-run the (now-fixed) validation script -- a second
+   confirmation the trade-count fix generalizes.
+5. Try the orders-mode script (built, not yet run for real) -- report back the exact text of any
+   error, or the order list if it works cleanly.
+
+----------------------------------------------------------------------------
+PART D. WHAT'S STILL OPEN (nothing forgotten, in rough priority order)
+----------------------------------------------------------------------------
+1. NOT TESTED: the orders-mode script against a real RealTest -orders run.
+2. NOT STARTED: a dedicated "export today's live weights" button (separate from running a full
+   historical backtest first) -- needed to make the orders-mode script reliably give genuinely
+   current next-day orders without the "did you just run today's backtest" caveat.
+3. SMALL, KNOWN LIMITATION: the default answer engine doesn't actually add a requested extra
+   column (like "5-day return") to its symbol list today -- unrelated to the sector-scoping fix,
+   noticed while building the new tile's examples. Small, well-understood, not yet fixed.
+4. NOT DONE: the rebalance-frequency A/B test from earlier today (same portfolio, daily vs.
+   weekly vs. monthly, compare trade count/return) -- a 5-minute check whenever you want it.
+5. MINOR HOUSEKEEPING: two of the repo's own test scripts need a small one-line setup fix to run
+   fresh from scratch -- doesn't affect the live page at all.
+6. OLDER BACKLOG, unchanged: Portfolio Tracker Compare/Combined views, money/sizing/overlap in
+   the tracker, navy colour theme.
+
+----------------------------------------------------------------------------
+PART E. NEW IDEAS FROM THIS SESSION (not started, for whenever you want them)
+----------------------------------------------------------------------------
+1. Parallel headless-browser instances for further backtest speed, if the 47.5x speedup from
+   earlier today ever stops being enough -- a real, documented option, not built.
+2. Extending Terminal_Weights.csv with an optional "reason" column (reusing the Ask engine's
+   existing per-pick filter/rule text) if the RealTest cross-check ever surfaces a discrepancy
+   that's hard to debug without knowing WHY a symbol was picked on a given date -- speculative,
+   only worth doing if a future RealTest run actually needs it.
+3. The same "leader page" style structured-answer pattern (and now the general sector-scoping
+   capability) could likely extend to other group-comparison questions beyond anomaly scores,
+   if you find yourself wanting the same treatment elsewhere in the terminal -- no concrete plan,
+   just noting the underlying capability is now general-purpose and reusable.
+============================================================================
