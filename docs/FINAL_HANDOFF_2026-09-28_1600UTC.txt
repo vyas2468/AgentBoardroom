@@ -1,0 +1,128 @@
+============================================================================
+SECTOR ROTATION TERMINAL + REALTEST - HANDOFF (2026-09-28 16:00 UTC)
+Live page: https://claude.ai/artifact/JBivgL88qHWeaCSsepr7cN  -- NOW VERSION 144
+Code: branch claude/artifact-access-question-f3s8rs, folder artifact/ (page) + realtest/ (RT scripts)
+Previous handoffs (still accurate background, not repeated here):
+  docs/FINAL_HANDOFF_2026-09-28_0100UTC.txt, _0930UTC.txt, _1230UTC.txt
+This file covers everything since the last handoff: v144 publish, the RealTest cross-check
+(3 real runs, a real bug found and fixed), the new orders-mode script, and what's still open.
+============================================================================
+
+----------------------------------------------------------------------------
+PART A. WHAT'S LIVE RIGHT NOW (v144)
+----------------------------------------------------------------------------
+Two publishes happened since the last handoff:
+
+v143 (earlier today):
+  1. "Anomaly leader pages" tile in Ask the terminal -- 10 example questions, a structured
+     multi-table layout (Leader summary / group table / every-member table / Coverage checklist
+     / Metric footnote) matching the style you saw from a competitor's terminal.
+  2. Backtest speed: ~47.5x faster (price history is now parsed once instead of re-parsed on
+     every replay date). The existing "Run backtest" button is just faster now, nothing else
+     changed about it.
+  3. New "Export weights only (fast)" button -- gets you Terminal_Weights.csv without running
+     the full trade/stats simulation.
+  4. Fixed: "Download Terminal_Weights.csv" doing nothing when clicked (it now uses the correct
+     claude.ai download mechanism).
+
+v144 (just now):
+  5. New "How this connects to RealTest" panel in the Backtest section -- click to expand a
+     visual step-by-step diagram (6 steps, grouped into "in the browser" vs "on your machine")
+     showing exactly how to take a backtest's weights and cross-check them in RealTest.
+
+----------------------------------------------------------------------------
+PART B. THE REALTEST CROSS-CHECK -- WHAT HAPPENED AND WHAT WAS FOUND
+----------------------------------------------------------------------------
+You ran the RealTest validation script 3 times today against real data. Here's the story, short:
+
+RUN 1 (before any fix): RealTest errored immediately -- "Dynamic-sizing strategy cannot specify
+Side". Fixed: RealTest infers long/short from the sign of the position size formula, not a
+separate Side setting, when a strategy auto-sizes its own positions. One-line fix, re-sent.
+
+RUN 2 (after that fix): It ran, but gave a WILDLY different number from the terminal's own
+backtest -- RealTest showed only +8.53% return where the terminal showed +16.56%, with almost
+DOUBLE the trade count (1,904 vs 964). Investigated by reading RealTest's actual trade-by-trade
+output: RealTest was splitting single holding periods into multiple small trades every time the
+target position size shifted even slightly day to day -- and charging its trading-cost
+assumption on every one of those extra artificial trades. Root cause: the exported weights file
+gives RealTest a fresh "hold this weight" instruction for a stock on every day it's held, but the
+terminal's own engine never actually resizes a position once bought -- only brand-new buys get
+sized. RealTest was faithfully doing what it was told (which is why this is not a RealTest bug),
+it's just that what it was told didn't quite match how the terminal actually behaves.
+
+THE FIX: one added condition in the RealTest script -- "if already holding this stock, leave it
+alone, no matter what the file says that day" -- exactly matching the terminal's real behaviour.
+
+RUN 3 (after that fix): Trade count landed at 970 vs the terminal's 964 -- a near-exact match.
+Win rate, average win, and average loss all came out close too. The remaining difference in
+overall return is now a believable, explainable one (RealTest's assumed trading cost is somewhat
+heavier than the terminal's own), not a sign the two engines disagree about anything real. This
+is now a genuinely trustworthy independent cross-check, not just a script that runs.
+
+----------------------------------------------------------------------------
+PART C. NEW -- REALTEST "ORDERS MODE" SCRIPT (for next-session trade orders)
+----------------------------------------------------------------------------
+You asked whether RealTest could generate next-day BUY/SELL orders, since it has an "orders
+mode" separate from backtesting. Built and sent: a companion script using the exact same proven
+logic as the validation script, but asking RealTest "given this exact picks file, what should I
+buy/sell for the NEXT trading session?" instead of "how would this have performed historically?"
+
+IMPORTANT CAVEAT, not yet resolved: this only gives genuinely useful "tomorrow's orders" if your
+weights export's last date IS today (i.e. you ran the backtest through today's date right before
+exporting). The terminal doesn't yet have a separate "export just today's live picks" button --
+that's a real, reasonable next feature, not built yet.
+ALSO NOT YET TESTED against a real RealTest run (unlike the validation script, which was tested
+3 times today) -- its syntax was checked carefully against the reference manual but this is its
+first real-world test, whenever you get to it.
+
+----------------------------------------------------------------------------
+PART D. A REAL BUG FOUND AND DIAGNOSED -- FIX IN PROGRESS RIGHT NOW
+----------------------------------------------------------------------------
+You caught this by testing the new leader-page feature: asking the terminal "Which subsector in
+Industrials had the highest combined anomaly score?" WITHOUT the words "leader page" gives you
+the WRONG sector entirely (it silently ignores "in Industrials" and just returns whatever the
+single best-scoring industry is across the ENTIRE universe, which happened to be in Energy).
+Add the words "leader page" to the same question, and it correctly scopes to Industrials.
+
+So the fix already exists and works -- it's just walled off behind one trigger phrase. A
+background task is running RIGHT NOW to generalize that same fix so it works on ordinary
+questions too, and so it combines properly with other things you might ask for in the same
+question (e.g. "...among improving names only", "...the LOWEST score instead", "...and also list
+the 5-day return"). This is being built carefully with a full before/after regression comparison
+so nothing that already works today can break. NOT PUBLISHED YET on purpose -- you should see
+example outputs first before this goes live, since it changes how ordinary questions behave.
+
+----------------------------------------------------------------------------
+PART E. WHAT TO TEST YOURSELF NOW
+----------------------------------------------------------------------------
+1. Reload the terminal. Open Backtest (historical replay) on any tracked portfolio, and look for
+   the new "How this connects to RealTest" panel -- click it open and check the diagram makes
+   sense and looks right in whatever light/dark mode you use.
+2. If you want to keep validating other portfolios in RealTest: export weights for a DIFFERENT
+   portfolio than the one already tested, run it through the (now-fixed) validation script, and
+   see if trade count again lands close to the terminal's own number. This would be a second,
+   independent confirmation the fix generalizes beyond the one portfolio tested today.
+3. Try the orders-mode script (Part C) if you want to see what it produces -- first real test of
+   that one. Report back the exact text of any error, or the order list if it works.
+4. Wait for the sector-scoping fix (Part D) to finish -- I'll show you example before/after
+   outputs before publishing it, per your instruction.
+
+----------------------------------------------------------------------------
+PART F. EVERYTHING STILL OPEN (nothing forgotten, in rough priority order)
+----------------------------------------------------------------------------
+1. IN PROGRESS: sector-scoping fix for default Ask answers (Part D) -- background task running,
+   will report back with examples before publishing.
+2. NOT STARTED: a dedicated "export today's live weights" button, separate from running a full
+   historical backtest -- needed to make the orders-mode script (Part C) reliably useful without
+   the "did you just run today's backtest" caveat.
+3. NOT TESTED: the orders-mode script against a real RealTest -orders run (Part C).
+4. NOT DONE: the rebalance-frequency A/B test from two handoffs ago (same portfolio, daily vs.
+   weekly vs. monthly, compare trade count/return) -- 5 minutes whenever you want to check it.
+5. MINOR HOUSEKEEPING: the repo's own copies of two test scripts (trkunit.js, backtest_unit.js)
+   are missing a small setup step needed to run them fresh -- doesn't affect the live page at
+   all, only makes re-running these two specific test files from scratch need an extra fix first.
+6. OLDER BACKLOG, unchanged: Portfolio Tracker Compare/Combined views, money/sizing/overlap in
+   the tracker, navy colour theme.
+7. IDEA, not started: parallel headless-browser instances for further backtest speed, if the
+   47.5x speedup from today ever stops being enough -- documented as an option, not built.
+============================================================================
