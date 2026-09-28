@@ -5,15 +5,17 @@ Notes:
 	this run's results sit next to the cost-inclusive run's for direct comparison, not overwriting
 	them.
 
-	WHY THIS EXISTS: a first real run showed a real, verified difference in trade counting between
-	the two engines -- RealTest logs one trade per LOT closed (a position trimmed in stages creates
-	several trade records), while the web terminal logs one trade per continuous holding period
-	(entry to final exit). Because Commission/Slippage are charged per RealTest trade record, that
-	difference means RealTest pays cost drag on roughly TWICE as many discrete fills as the
-	terminal's own cost model likely assumes for the same underlying exposure. This run isolates
-	that: with cost forced to zero, any remaining gap in return/drawdown against the terminal's own
-	numbers is NOT a cost-model artifact -- it would point to something more structural (e.g. fill
-	timing, or an actual disagreement in picks/weights) worth digging into further.
+	WHY THIS EXISTS: the first two real runs (with cost, then zero cost) swung wildly apart (+8.53%
+	then +56.98%, vs the terminal's own +16.56%), which turned out to be a real semantic bug in the
+	Quantity formula, now fixed (see the cost-inclusive script's Notes: for the full explanation --
+	the CSV recomputes a fresh weight for a held symbol every date, but the terminal never re-weights
+	an existing holding, so the old formula was constantly nibbling position sizes and RealTest was
+	correctly logging each nibble as its own partial-exit trade). With that fixed (Shares <> 0 now
+	skips resizing an existing holding), trade count should sit much closer to the terminal's own
+	~960, at which point cost drag is a much smaller, more realistic factor. This zero-cost run still
+	isolates it cleanly: with cost forced to zero, any remaining gap in return/drawdown against the
+	terminal's own numbers is not a cost-model artifact -- it would point to something more
+	structural (e.g. fill timing, or an actual disagreement in picks/weights) worth digging into.
 
 	BEFORE RUNNING: same steps as the cost-inclusive script -- Terminal_Weights.csv must already be
 	sitting next to this file in C:\RealTest21_newerv2\Scripts\SectorTerminalScripts, and the
@@ -48,7 +50,10 @@ Strategy: TerminalWeights
 	MaxPositions:	60
 	QtyType:	Percent
 	DynamicSizing:	True
-	Quantity:	Select(RebalCount = 0, nan, IsNaN(Weight), 0, Weight * 100)
+	// Shares <> 0 skips resizing an existing holding -- matches the terminal's own engine(),
+	// which only weights brand-new buys, never re-weights a position already held. See the
+	// cost-inclusive script's Notes: for the full explanation of why this fix was needed.
+	Quantity:	Select(RebalCount = 0, nan, IsNaN(Weight), 0, Shares <> 0, nan, Weight * 100)
 	Reduce:	0.01 * S.Alloc
 
 	// The only difference from the cost-inclusive script: both forced to zero.

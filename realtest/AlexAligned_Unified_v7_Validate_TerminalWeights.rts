@@ -40,11 +40,31 @@ Notes:
 	via DataFile: below, exactly like part E does. Run part C with -import first if that file does
 	not exist yet on this machine.
 
-	UNVALIDATED: this script has not been run against a real RealTest.exe (not available in the
-	environment that wrote it). Its DataValueFile:/DynamicSizing:/Select() syntax was checked
-	against the RealTest 2.1 script language reference line by line, but if RealTest reports any
-	parse error the first time you run it, please report the exact error text back so the script
-	can be corrected -- do not hand-edit around a parse error without checking the reference too.
+	FIX (this version): a first real run showed RealTest generating far more trades than the
+	terminal's own backtest (~1,900 vs ~960) for the same portfolio/window, with the SAME symbol
+	entered once but exited in several pieces on different dates ("reduce position" then "zero
+	position"). This was traced to a real semantic mismatch, not a RealTest bug: the CSV recomputes
+	and writes a FRESH weight for a held symbol on every date it's held (so "no row" unambiguously
+	means "exit"), but the terminal's own engine() NEVER re-weights an existing holding -- weighting
+	is applied only at the moment of a brand-new buy, and a position already held keeps its original
+	size for its whole life. The old Quantity formula below treated every date's recomputed weight
+	as a fresh resize command, so RealTest was correctly, faithfully doing what it was told: trimming
+	the position a little every time the recomputed equal-weight fraction shifted (which happens
+	whenever the basket size changes by one name) -- each trim becoming its own closed trade, exactly
+	as RealTest's own partial-exit accounting is documented to do (ExitQty/ExitLimitQty/ExitStopQty
+	are first-class concepts; a trade record can only carry one exit date/price). The fix is the
+	`Shares <> 0` check added to Quantity below: a symbol already holding shares is left alone
+	(NaN = no change) regardless of that date's recomputed weight, matching the terminal's real
+	"weight fixed at purchase" semantics exactly. Only a symbol with zero shares (a genuine new
+	entry) gets sized from the CSV's Weight.
+
+	VALIDATED SYNTAX, STILL UNVALIDATED END-TO-END: `Shares` as a position variable readable in a
+	DynamicSizing Quantity formula is documented in the RealTest 2.1 script language reference
+	(STRATEGY ELEMENTS, position variables: "Shares -- current shares/contracts in position"). The
+	rest of the script (DataValueFile:/DynamicSizing:/Select()) was confirmed against a real run
+	already (the earlier "cannot specify Side" and successful runs). This specific change --
+	Shares <> 0 skipping a resize -- has not itself been run yet; if RealTest reports any parse
+	error, please report the exact text back before hand-editing around it.
 
 Settings:
 	DataFile:	C:\RealTest21_newerv2\Data\alexaligned_unified_v7.rtd
@@ -99,10 +119,16 @@ Strategy: TerminalWeights
 	MaxPositions:	60
 	QtyType:	Percent
 	DynamicSizing:	True
-	// NaN = no change (not a rebalance date), 0 = exit (rebalance date, symbol absent from the
-	// CSV that date), positive = set position to that target weight (rebalance date, symbol
-	// present). Weight is a 0-1 fraction in the CSV; QtyType: Percent wants 0-100, hence * 100.
-	Quantity:	Select(RebalCount = 0, nan, IsNaN(Weight), 0, Weight * 100)
+	// NaN = no change, 0 = exit, positive = set position to that target weight. In order:
+	//   RebalCount = 0   -> not a rebalance date at all -> NaN (no change)
+	//   IsNaN(Weight)    -> rebalance date, symbol absent from the CSV -> 0 (exit)
+	//   Shares <> 0      -> rebalance date, symbol present, ALREADY HELD -> NaN (no change --
+	//                       matches the terminal's own engine(), which never re-weights an
+	//                       existing holding; only a brand-new buy gets sized)
+	//   else             -> rebalance date, symbol present, NOT currently held -> a genuine new
+	//                       entry -> Weight * 100 (Weight is a 0-1 fraction in the CSV; QtyType:
+	//                       Percent wants 0-100, hence * 100)
+	Quantity:	Select(RebalCount = 0, nan, IsNaN(Weight), 0, Shares <> 0, nan, Weight * 100)
 	// Minimum position value if DynamicSizing needs to shrink a target weight to fit inside
 	// MaxExposure/MaxPositions -- see the DynamicSizing example in the RealTest 2.1 reference.
 	Reduce:	0.01 * S.Alloc
