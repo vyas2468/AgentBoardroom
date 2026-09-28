@@ -1,0 +1,97 @@
+============================================================================
+SECTOR ROTATION TERMINAL - HANDOFF (2026-09-28 19:12 UTC)
+Live page: https://claude.ai/artifact/JBivgL88qHWeaCSsepr7cN
+  -- v146 confirmed live (trailing-horizon fix + hierarchy/return-split diagnostic).
+     v147 (leader-page-by-default layout + anomaly-count metric) is publishing now in
+     the background as this handoff is written -- reload in a minute and try the
+     "Which subsector in Industrials had the highest combined anomaly score?" question
+     from Part C below (no "leader page" words needed): if it comes back as the full
+     structured diagnostic page (title, Leader, summary table, member table, coverage,
+     metric footnote) rather than a short paragraph, v147 is live.
+Code: branch claude/artifact-access-question-f3s8rs, folder artifact/ (page)
+Previous handoff (still accurate background): docs/FINAL_HANDOFF_2026-09-28_1700UTC.txt
+This file covers everything since the 17:00 UTC handoff.
+============================================================================
+
+----------------------------------------------------------------------------
+PART A. WHAT SHIPPED THIS SEGMENT
+----------------------------------------------------------------------------
+1. TRAILING-HORIZON RETURNS FIXED (v107, live as v146):
+   THE BUG: naming one subsector (e.g. "Software infrastructure") with a return question
+   that used a time horizon the engine didn't recognise -- "trailing 12m return", "trailing
+   30d returns", or bare "trailing returns" -- silently answered with the wrong sort: a
+   plain 1-day return, or (when no return word was used at all) strength percentile. Root
+   cause: the horizon-detection helper the engine's own "which stocks in this subsector..."
+   path uses only understood 1/3/5/10-day and "week" phrasing -- everything longer fell
+   through to a default.
+   THE FIX: that helper now also recognises 30 days, 1/3/6/12 months and YTD, reusing the
+   same per-symbol fields the tear sheet already computes for 1M/3M/6M/12M/YTD returns, plus
+   one new field this fix adds -- an actual 30-session return (distinct from the existing
+   "1 month" field, which is 21 sessions). A bare "trailing returns" with no number now
+   defaults to a full trailing year. Nothing about how a horizon it already understood
+   behaves has changed.
+2. NEW: HIERARCHY + RETURN SPLIT DIAGNOSTIC (v107, live as v146):
+   Ask things like "Hierarchy and return split for Industrials, trailing 12M return" or
+   "Cluster return split for Software infrastructure, YTD" to get every Hidden Group
+   (the existing cluster feature) inside that sector, ranked by mean return on your chosen
+   horizon, with a positive/negative member split per group and a full per-name table
+   tagged with its cluster ID, sector and return figure.
+3. LEADER-PAGE LAYOUT BY DEFAULT (v108, publishing now as v147):
+   You confirmed the sector-scoping fix works ("Which subsector in Industrials had the
+   highest combined anomaly score?" now correctly answers Railroads), but wanted the rich,
+   structured layout (matching the competitor screenshot you shared) WITHOUT needing to
+   say "leader page". That's now the default for exactly this question shape -- a single
+   named-sector "combined anomaly score" leader ask. A top-N list, or a different metric
+   entirely, is unaffected and keeps its old plain-table answer.
+4. NEW: "ANOMALY COUNT" METRIC (v108, publishing now as v147):
+   Distinct from the existing "combined anomaly score" (a MEAN reading), you can now ask
+   "which sector/subsector had the highest anomaly count" or "...the most anomalies" to
+   rank by how many members are individually flagged anomalous, not by the group's average
+   score. Renders as the same plain ranked table every other count-like metric already uses.
+
+----------------------------------------------------------------------------
+PART B. VERIFICATION
+----------------------------------------------------------------------------
+Both v107 and v108 went through the full regression suite (348 questions across 5 test
+files spanning the whole page, not just the Ask engine) before publishing: every existing
+answer came back byte-for-byte identical except one already-known, pre-existing flaky
+answer (a "Save as PNG" button's timing, unrelated to anything touched this session).
+Real-browser smoke tests covered: the three originally-reported broken queries, the same
+queries with explicit horizons, the original sector-scoping bug question (still correct),
+every "leader page" combo tile question now defaulting correctly without the trigger
+phrase, an unscoped control question (confirmed unchanged), the two new hierarchy/return-
+split example questions, and both new anomaly-count phrasings.
+
+----------------------------------------------------------------------------
+PART C. WHAT TO TEST YOURSELF NOW
+----------------------------------------------------------------------------
+1. "Software infrastructure trailing 12m return." / "...trailing 30d returns." / "...
+   trailing returns." -- all three should now sort by the correct horizon (12M, 30D, and
+   a defaulted 12M respectively), not 1-day return or strength percentile.
+2. "Which subsector in Industrials had the highest combined anomaly score? List the
+   symbols and 1D return." -- should now come back as the full structured diagnostic page,
+   not a short paragraph (once v147 is live -- see the note at the top of this file).
+3. "Hierarchy and return split for Industrials, trailing 12M return." and "Cluster return
+   split for Software infrastructure, YTD." -- new diagnostic, Hidden Groups crossed with
+   return and a positive/negative split.
+4. "Which sector had the highest anomaly count?" and "Which subsector in Industrials had
+   the most anomalies?" -- new count-based metric, distinct from the mean-score ranking.
+5. Confirm nothing else moved: try a handful of your own regular questions from before
+   today and check they still look the same.
+
+----------------------------------------------------------------------------
+PART D. WHAT'S STILL OPEN
+----------------------------------------------------------------------------
+1. NOT STARTED: a general "list extra columns" capability for group-level rankings (e.g.
+   "top 10 subsectors ranked by breadth, with correlation, return, and scorecard columns")
+   -- today a group ranking's table columns are fixed by whichever single metric you
+   ranked on; asking for several unrelated extra columns at once isn't supported yet.
+   Flagged as a follow-up, not started.
+2. OLDER, SMALL, KNOWN LIMITATION (unchanged): the default answer engine still doesn't add
+   an arbitrary extra column to a plain SYMBOL list on request; the "leader page" layout's
+   own extra-column support (5-day return, sector, volume) is unaffected by this.
+3. OLDER BACKLOG, unchanged from the 17:00 UTC handoff: the RealTest orders-mode script
+   still untested against a real -orders run; a dedicated "export today's live weights"
+   button; the rebalance-frequency A/B test; minor test-script housekeeping; Portfolio
+   Tracker Compare/Combined views, money/sizing/overlap, navy theme.
+============================================================================
