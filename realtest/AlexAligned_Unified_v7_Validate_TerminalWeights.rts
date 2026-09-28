@@ -87,7 +87,12 @@ Data:
 	RebalCount:	#Count Weight
 
 Strategy: TerminalWeights
-	Side:	Long
+	// No Side: line -- RealTest rejects "Side" on a DynamicSizing strategy (confirmed by a real
+	// run: "Dynamic-sizing strategy TerminalWeights cannot specify Side"). Side is implied by the
+	// SIGN of Quantity instead (RealTest 2.1 reference, DynamicSizing section: positive = long,
+	// negative = short) -- our Quantity below is always positive (Weight * 100, Weight a 0-1
+	// fraction from Terminal_Weights.csv), so this strategy is long-only exactly as before,
+	// just without the now-illegal explicit Side: line.
 	// Generous headroom above whatever BasketN/MBPositions the terminal used -- DynamicSizing
 	// positions are still capped by MaxPositions, so raise this if RealTest ever reports it
 	// could not open all the CSV's held names on some date.
