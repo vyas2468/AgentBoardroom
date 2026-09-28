@@ -1,0 +1,59 @@
+Notes:
+	ZERO-COST variant of AlexAligned_Unified_v7_Validate_TerminalWeights.rts -- identical in every
+	way EXCEPT Commission and Slippage are both 0. Same Terminal_Weights.csv, same StartDate/
+	EndDate, same Quantity/DynamicSizing logic, own separate output files (suffix _ZeroCost) so
+	this run's results sit next to the cost-inclusive run's for direct comparison, not overwriting
+	them.
+
+	WHY THIS EXISTS: a first real run showed a real, verified difference in trade counting between
+	the two engines -- RealTest logs one trade per LOT closed (a position trimmed in stages creates
+	several trade records), while the web terminal logs one trade per continuous holding period
+	(entry to final exit). Because Commission/Slippage are charged per RealTest trade record, that
+	difference means RealTest pays cost drag on roughly TWICE as many discrete fills as the
+	terminal's own cost model likely assumes for the same underlying exposure. This run isolates
+	that: with cost forced to zero, any remaining gap in return/drawdown against the terminal's own
+	numbers is NOT a cost-model artifact -- it would point to something more structural (e.g. fill
+	timing, or an actual disagreement in picks/weights) worth digging into further.
+
+	BEFORE RUNNING: same steps as the cost-inclusive script -- Terminal_Weights.csv must already be
+	sitting next to this file in C:\RealTest21_newerv2\Scripts\SectorTerminalScripts, and the
+	StartDate/EndDate below must match the window that CSV actually covers.
+
+	Run Run_AlexAligned_v7_Validate_TerminalWeights_ZeroCost.bat (or the matching .ps1 directly).
+
+Settings:
+	DataFile:	C:\RealTest21_newerv2\Data\alexaligned_unified_v7.rtd
+	BarSize:	Daily
+	EndDate:	Latest
+	AccountSize:	100000
+	UseAvailableBars:	False
+	SaveTradesAs:	?scriptpath?\AlexAligned_Unified_v7_Validate_TerminalWeights_ZeroCost_Trades.csv
+	SaveTestListAs:	?scriptpath?\AlexAligned_Unified_v7_Validate_TerminalWeights_ZeroCost_Results.csv
+	SaveStatsAs:	?scriptpath?\AlexAligned_Unified_v7_Validate_TerminalWeights_ZeroCost_Equity.csv
+
+TestSettings:
+	// CONFIRM these against the Terminal_Weights.csv you actually downloaded before running --
+	// must match the cost-inclusive run's window exactly for a fair side-by-side comparison.
+	StartDate:	2025-09-15
+	EndDate:	2026-09-25
+
+Data:
+	DataValueFile:	?scriptpath?\Terminal_Weights.csv
+	Weight:	#DataValueFile
+	RebalCount:	#Count Weight
+
+Strategy: TerminalWeights
+	// No Side: line -- RealTest rejects "Side" on a DynamicSizing strategy; side is implied by the
+	// sign of Quantity instead (always positive here, so long-only).
+	MaxPositions:	60
+	QtyType:	Percent
+	DynamicSizing:	True
+	Quantity:	Select(RebalCount = 0, nan, IsNaN(Weight), 0, Weight * 100)
+	Reduce:	0.01 * S.Alloc
+
+	// The only difference from the cost-inclusive script: both forced to zero.
+	Commission:	0
+	Slippage:	0
+
+Graphs:
+	Equity:	Combined(S.Equity)
