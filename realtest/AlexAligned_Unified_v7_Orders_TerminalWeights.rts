@@ -1,0 +1,110 @@
+Notes:
+	AlexAligned Unified v7, RealTest ORDERS-mode companion to
+	AlexAligned_Unified_v7_Validate_TerminalWeights.rts. Same portfolio (the SAME
+	Terminal_Weights.csv, the SAME proven DynamicSizing/Quantity logic -- see that script's
+	Notes: for the full explanation of the Shares <> 0 fix that makes this correctly match the
+	web terminal's "weight fixed at purchase, never re-weighted while held" semantics), but run
+	with RealTest's `-orders` mode instead of `-test`, to get an actual NEXT-SESSION ORDER LIST
+	instead of a historical equity curve.
+
+	WHAT THIS DOES: `-orders` mode replays the strategy through the data up to the LAST date it
+	has, then emits real orders (buy/sell, share counts) for the NEXT trading session, based on
+	what the strategy's Quantity formula says on that final bar. Because Quantity here reads
+	Terminal_Weights.csv, the "next session" it emits orders for is the day AFTER the CSV's own
+	last dated row -- so this only gives genuinely current, actionable orders if
+	Terminal_Weights.csv's last row is close to today's actual date.
+
+	IMPORTANT CAVEAT, READ BEFORE USING FOR REAL ORDERS: the web terminal's Backtest section
+	currently only exports HISTORICAL rebalance dates from a finished backtest run -- it does not
+	yet have a separate "export TODAY's live picks" button. In practice this means:
+	  - If you run a backtest through today's date and export Terminal_Weights.csv immediately,
+	    its last row already IS today's live picks (the terminal's live tracker and its backtest
+	    replay use the exact same frozen spec, so a backtest whose window ends today reproduces
+	    today's own live recommendation as its final rebalance date). In that case this script's
+	    -orders output is a genuine, actionable next-session order list, AND an independent
+	    RealTest-side cross-check of the terminal's own "Latest update" BUY/SELL/HOLD section.
+	  - If Terminal_Weights.csv is stale (exported some days ago, or from a shorter backtest
+	    window), the orders generated here are for the day after WHATEVER its last row is -- not
+	    necessarily tomorrow. Always check the CSV's own last date before trusting this output.
+	  - A cleaner, more robust version of this (a dedicated "export today's live weights" button
+	    in the terminal, independent of running a full historical backtest first) is a real,
+	    planned next feature -- not built yet. Treat this script as a working first version built
+	    on what already exists, not the final intended design.
+
+	ALSO REQUIRES: the shared alexaligned_unified_v7.rtd data file must itself be fresh enough to
+	cover the order date (i.e. part C / the main workflow must have been re-imported recently) --
+	orders mode prices the next session using the data file's own latest bars, same as any other
+	RealTest use, this is not specific to this script.
+
+	BEFORE RUNNING:
+	1. Same as the Validate script: Terminal_Weights.csv must be sitting next to this script in
+	   C:\RealTest21_newerv2\Scripts\SectorTerminalScripts.
+	2. Confirm the TestSettings StartDate below covers the CSV's date range (EndDate is
+	   deliberately Latest here, not a fixed date, so order generation always uses the most
+	   recent data/CSV row available -- unlike the Validate script's fixed EndDate window).
+	3. Run Run_AlexAligned_v7_Orders_TerminalWeights.bat (or the matching .ps1). It calls
+	   RealTest.exe with `-orders`, never `-test` and never `-import`.
+	4. Read the order list from AlexAligned_Unified_v7_Orders_TerminalWeights_Orders.csv (or the
+	   OrdersFile path below) -- one row per symbol RealTest wants to buy, sell, or resize for the
+	   next session.
+
+	UNVALIDATED: unlike the Validate script (confirmed against three real RealTest.exe -test runs
+	today, including the Shares <> 0 fix that eliminated the earlier lot-splitting bug), this
+	script's OrderSettings:/OrdersMode:/OrdersFile: syntax has NOT been run against a real
+	RealTest.exe -orders invocation yet -- it was checked against the RealTest 2.1 script language
+	reference's own worked OrderSettings example line by line, but -orders mode has enough of its
+	own mechanics (order dating, the Orders window/file format) that a first real run is the actual
+	test. If RealTest reports any parse or runtime error, please report the exact text back before
+	hand-editing around it.
+
+Settings:
+	DataFile:	C:\RealTest21_newerv2\Data\alexaligned_unified_v7.rtd
+	BarSize:	Daily
+	EndDate:	Latest
+	AccountSize:	100000
+	UseAvailableBars:	False
+
+TestSettings:
+	// CONFIRM this covers the CSV's earliest date -- unlike the Validate script, EndDate is left
+	// as Latest (Settings: above) so order generation always looks at the newest available data
+	// and the newest row in Terminal_Weights.csv, not a historical fixed window.
+	StartDate:	2025-09-15
+
+OrderSettings:
+	// Overrides EndDate specifically for order generation (RealTest 2.1 reference,
+	// ORDERSETTINGS SECTION) -- Latest here means "generate orders for the session after the
+	// most recent date this run actually has data and CSV rows for", the correct behaviour for
+	// a next-session order list rather than a fixed historical cutoff.
+	EndDate:	Latest
+	// Text = the default plain order list (also written to OrdersFile below when set, per the
+	// reference's own worked OrderSettings example). Switch to Template (with an OrdersTemplate:
+	// CSV) for a broker-specific column layout, or Rebalance for Interactive Brokers' DES-format
+	// portfolio rebalance tool, if/when a real brokerage integration is wanted -- Text is the
+	// safest first step since it needs no extra template file.
+	OrdersMode:	Text
+	OrdersFile:	?scriptpath?\AlexAligned_Unified_v7_Orders_TerminalWeights_Orders.csv
+
+Data:
+	// Identical to the Validate script -- see its Notes: for the full explanation.
+	DataValueFile:	?scriptpath?\Terminal_Weights.csv
+	Weight:	#DataValueFile
+	RebalCount:	#Count Weight
+
+Strategy: TerminalWeights
+	// No Side: line -- see the Validate script's Notes:. Side is implied by the sign of
+	// Quantity (always positive here, so long-only).
+	MaxPositions:	60
+	QtyType:	Percent
+	DynamicSizing:	True
+	// Shares <> 0 skips resizing an existing holding -- the same fix validated in the Validate
+	// script today (confirmed to bring RealTest's trade count to within 1% of the terminal's
+	// own, 970 vs 964, once this was added). Matches the terminal's own engine(), which only
+	// weights brand-new buys, never re-weights a position already held.
+	Quantity:	Select(RebalCount = 0, nan, IsNaN(Weight), 0, Shares <> 0, nan, Weight * 100)
+	Reduce:	0.01 * S.Alloc
+
+	// Same generic cost assumption as the Validate script's cost-inclusive version. Orders mode
+	// does not simulate P&L, so these mainly affect nothing here -- left in only for consistency
+	// with the Validate script; safe to remove if RealTest flags them as unused in -orders mode.
+	Commission:	Max(1, 0.005 * Shares)
+	Slippage:	0.002 * FillPrice

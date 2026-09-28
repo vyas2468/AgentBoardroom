@@ -454,6 +454,74 @@ function btChart(E,title){
     '<text x="'+(W-mr)+'" y="'+(H-6)+'" font-size="10" text-anchor="end" fill="var(--muted)">'+hE(P.length?E[E.length-1].d:"")+'</text>'+
     '</svg>';
 }
+/* v106: pure documentation -- a small hand-drawn SVG process map for the RealTest cross-check workflow the user
+   now uses. No state, no event handlers, no new logic; only the strings this function returns change what's on
+   screen, and only inside a collapsed <details> panel (closed by default) so it never adds visual noise for anyone
+   who doesn't open it. Two step→step arrows are drawn in var(--accent) because they are the ones that actually
+   cross a boundary worth calling out (browser -> your filesystem/RealTest, then RealTest -> back to the terminal
+   for comparison); the other three step→step arrows are plain var(--muted) since they stay on one side. */
+function btRtDiagram(){
+  var W=760,H=222;
+  function stepBox(x,y,w,hgt,n,main,sub){
+    var s='<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+hgt+'" rx="6" fill="var(--surface)" stroke="var(--line)" stroke-width="1.2"/>'+
+      '<circle cx="'+(x+9)+'" cy="'+(y+9)+'" r="7" fill="var(--panel)" stroke="var(--line)" stroke-width="1"/>'+
+      '<text x="'+(x+9)+'" y="'+(y+12)+'" text-anchor="middle" font-size="9" font-weight="700" fill="var(--ink)">'+n+'</text>';
+    if(sub){
+      s+='<text x="'+(x+w/2)+'" y="'+(y+hgt/2+1)+'" text-anchor="middle" font-size="12" font-weight="600" fill="var(--ink)">'+hE(main)+'</text>'+
+        '<text x="'+(x+w/2)+'" y="'+(y+hgt/2+15)+'" text-anchor="middle" font-size="10.5" fill="var(--muted)">'+hE(sub)+'</text>';
+    } else {
+      s+='<text x="'+(x+w/2)+'" y="'+(y+hgt/2+4)+'" text-anchor="middle" font-size="12" font-weight="600" fill="var(--ink)">'+hE(main)+'</text>';
+    }
+    return s;
+  }
+  function arrow(x1,y1,x2,y2,marker,color){
+    return '<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+'" stroke="'+color+'" stroke-width="1.6" marker-end="url(#'+marker+')"/>';
+  }
+  var ml=15,colW=100,gap=26,step=colW+gap;
+  function colX(i){ return ml+i*step; }
+  var topY=44,botY=140,boxH=50;
+  var b1=[colX(0),topY], b2=[colX(1),topY], b3=[colX(2),botY], b4=[colX(3),botY], b5=[colX(4),botY], b6=[colX(5),topY];
+  var midTop=topY+boxH/2, midBot=botY+boxH/2;
+  var claim="The same two RealTest scripts validate any tracked portfolio unmodified -- only the weights export and date-window check change per run.";
+  var s=['<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+hE(claim)+'" style="width:100%;height:auto;max-width:'+W+'px;display:block;background:var(--surface)">'];
+  s.push('<defs>'+
+    '<marker id="rtArrowM" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="var(--muted)"/></marker>'+
+    '<marker id="rtArrowA" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="var(--accent)"/></marker>'+
+    '</defs>');
+  s.push('<rect x="8" y="22" width="'+(W-16)+'" height="84" rx="8" fill="var(--panel)" fill-opacity="0.5"/>');
+  s.push('<rect x="8" y="118" width="'+(W-16)+'" height="84" rx="8" fill="var(--panel)" fill-opacity="0.28"/>');
+  s.push('<line x1="8" y1="112" x2="'+(W-8)+'" y2="112" stroke="var(--line)" stroke-width="1" stroke-dasharray="4 4"/>');
+  s.push('<text x="16" y="34" font-size="10.5" font-weight="700" fill="var(--muted)">TERMINAL — in the browser</text>');
+  s.push('<text x="16" y="130" font-size="10.5" font-weight="700" fill="var(--muted)">YOUR MACHINE — RealTest</text>');
+  s.push(stepBox(b1[0],b1[1],colW,boxH,"1","Run backtest","(or export)"));
+  s.push(stepBox(b2[0],b2[1],colW,boxH,"2","Download CSV",null));
+  s.push(stepBox(b3[0],b3[1],colW,boxH,"3","Move CSV","into Scripts"));
+  s.push(stepBox(b4[0],b4[1],colW,boxH,"4","Check dates","match CSV"));
+  s.push(stepBox(b5[0],b5[1],colW,boxH,"5","Run launcher",".bat"));
+  s.push(stepBox(b6[0],b6[1],colW,boxH,"6","Compare stats","vs backtest"));
+  s.push(arrow(b1[0]+colW,midTop,b2[0],midTop,"rtArrowM","var(--muted)"));
+  s.push(arrow(b2[0]+colW,b2[1]+boxH,b3[0],b3[1],"rtArrowA","var(--accent)"));
+  s.push(arrow(b3[0]+colW,midBot,b4[0],midBot,"rtArrowM","var(--muted)"));
+  s.push(arrow(b4[0]+colW,midBot,b5[0],midBot,"rtArrowM","var(--muted)"));
+  s.push(arrow(b5[0]+colW,b5[1],b6[0],b6[1]+boxH,"rtArrowA","var(--accent)"));
+  s.push('<text x="'+((b5[0]+colW+b6[0])/2)+'" y="103" text-anchor="middle" font-size="10.5" font-style="italic" fill="var(--accent)">cross-check</text>');
+  s.push('</svg>');
+  return '<figure style="margin:10px 0 4px">'+s.join("")+
+    '<figcaption class="mini" style="margin-top:6px;max-width:'+W+'px">The same RealTest scripts validate any tracked portfolio unmodified — only the weights export (step 2) and the date-window check (step 4) change per run.</figcaption>'+
+    '</figure>';
+}
+function btRtHowTo(){
+  return '<details style="margin:10px 0"><summary class="mini" style="cursor:pointer">How this connects to RealTest</summary>'+
+    '<div style="padding:8px 2px 2px">'+
+    btRtDiagram()+
+    '<p class="mini" style="max-width:760px;margin-top:6px">1) Terminal: run "Run backtest" or "⚡ Export weights only (fast)" for a tracked portfolio. '+
+    '2) Click "Download Terminal_Weights.csv". '+
+    '3) Move the file into RealTest’s Scripts folder as Terminal_Weights.csv (same folder as the validation .rts + launcher). '+
+    '4) Confirm the .rts’s StartDate/EndDate match the CSV’s date window (edit if needed). '+
+    '5) Run the launcher .bat → RealTest reads the CSV via DataValueFile, drives DynamicSizing (sizing only brand-new buys, matching the terminal’s own weighting — never resizing an existing holding). '+
+    '6) Compare RealTest’s Results CSV (return/drawdown/trades/win-rate) against the terminal’s own Backtest stats for the same portfolio/window.</p>'+
+    '</div></details>';
+}
 function btTbl(head,body){
   var h='<table class="tbl"><thead><tr>'+head.map(function(x){ return "<th>"+hE(x)+"</th>"; }).join("")+"</tr></thead><tbody>";
   body.forEach(function(r){ h+="<tr>"+r.map(function(x){ return "<td>"+hE(x)+"</td>"; }).join("")+"</tr>"; });
@@ -480,6 +548,7 @@ function btSection(){
     (BT.wRunning?"Computing weights…":"⚡ Export weights only (fast)")+'</button> '+
     '<span class="mini">Same picks, same weight formula, but skips the trade/cost/P&amp;L simulation — just the picks and their target weights, faster for a large price-history file. Produces the same Terminal_Weights.csv.</span></p>');
   if(BT.wErr) h.push('<p class="mini" style="color:var(--neg)">Could not compute weights: '+hE(BT.wErr)+'</p>');
+  h.push(btRtHowTo());
   var wr=BT.wOut;
   if(wr&&wr.notReproducible){
     h.push('<div class="mini" style="margin:8px 0;padding:8px 10px;border-left:3px solid var(--neg)"><b>Not reproducible point-in-time:</b> '+hE(wr.notReproducible)+'</div>');
