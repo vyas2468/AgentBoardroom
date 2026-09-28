@@ -243,5 +243,24 @@ try{
   }
   if(!gdInit()){ var tries=0, iv=setInterval(function(){ tries++; if(gdInit()||tries>40) clearInterval(iv); },250); }
 }catch(e){ try{ console.warn("v105 tile disabled: "+(e&&e.message)); }catch(e2){} }
+
+/* v106 hook: the two pieces of this layer's "leader page" parsing that a later layer needs to reuse are
+   (1) reading a NAMED PARENT SECTOR out of the question text and checking it is a real sector in the loaded
+   scan (the same phrase-matching + validation gdParse/qmValidateAny105 already do above, via qmSecMentions().inn
+   and ctx.secStats), and (2) the "at least N members" minimum-group-size phrase (the same regex `o.minN` above
+   already parses). Exposed once here so v106 (general sector + minimum-size scoping on the default Ask answer)
+   does not re-implement either match a second time; nothing above changes shape or behaviour. */
+try{
+  window.__gaScope=window.__gaScope||{};
+  window.__gaScope.parentSecOf=function(t,ctx){
+    ctx=ctx||QM_CTX; if(!ctx) return null;
+    var SM=qmSecMentions(t); if(!SM.inn.length) return null;
+    var k=SM.inn[0];
+    return (ctx.secStats&&ctx.secStats[k])?k:null;
+  };
+  window.__gaScope.minNOf=function(t){
+    var mn=t.match(/\bat least (\d{1,2})\b[^.]{0,24}\bmembers?\b/); return mn?parseInt(mn[1],10):null;
+  };
+}catch(e){}
 }catch(e){ try{ console.warn("v105 layer disabled: "+(e&&e.message)); }catch(e2){} }
 })();
