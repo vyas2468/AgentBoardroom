@@ -184,14 +184,19 @@ function checkReproducibility(port,scanGroup,allHistDatesAsc,eligible){
      ok:bool, notReproducible:string|null, error:string|null, dates:[...], ups:[...], result:(engine() output) }
    Never mutates port. Never leaves S/U/SEC/SYM/HX/HXM/HXC/QM_CTX changed after it returns (every substitution goes
    through replayDate(), which restores in a finally). */
-function backtestPortfolio(port,mergedHistoricalCsvText,priceHistoryCsvText){
-  var out={ok:false,notReproducible:null,error:null,dates:[],ups:null,result:null,advisory:null};
+function backtestPortfolio(port,mergedHistoricalCsvText,priceHistoryCsvText,preGroupedScan){
+  var out={ok:false,notReproducible:null,error:null,dates:[],ups:null,result:null,advisory:null,group:null};
   var trk=window.__trk;
   if(!trk||typeof trk.picksOf!=="function"||typeof trk.filterRebal!=="function"||typeof trk.engine!=="function"){
     out.error="The portfolio tracker engine is not available."; return out;
   }
+  /* v104 SPEED note: preGroupedScan (if supplied by the caller) is the already-computed groupScanByDate() result for
+     this exact merged scan CSV text, reused as-is to skip a full re-parse when the same file is run again. out.group
+     is always set to whatever grouping ends up used, so the caller can cache it keyed to the file's identity. */
   var g;
-  try{ g=groupScanByDate(mergedHistoricalCsvText); }catch(e){ out.error="Could not read the merged historical scan CSV: "+e.message; return out; }
+  if(preGroupedScan){ g=preGroupedScan; }
+  else { try{ g=groupScanByDate(mergedHistoricalCsvText); }catch(e){ out.error="Could not read the merged historical scan CSV: "+e.message; return out; } }
+  out.group=g;
   if(!g.dates.length){ out.error="No usable dated rows found in the historical scan CSV."; return out; }
   var mode=(port.settings&&port.settings.rebalance)||"daily";
   var eligible;
@@ -258,6 +263,13 @@ window.__bt={replayDate:replayDate,backtestPortfolio:backtestPortfolio,groupScan
    picker (not the tracker's private SEL, which is not exported) so this never depends on which portfolio the live
    tracker view happens to be showing. */
 var BT={portId:null,f1:null,f2:null,running:false,out:null,err:null};
+/* v104 SPEED: in-memory cache of the parsed file inputs, keyed by (name+size+lastModified) so re-clicking "Run
+   backtest" with the SAME two File objects (BT.f1/BT.f2 persist across clicks) skips the FileReader read and, for
+   the merged scan CSV, the groupScanByDate() re-parse -- reusing the exact same parsed structure instead. Picking a
+   different file (any of name/size/lastModified differs) or clearing the input naturally misses the cache, since
+   the key no longer matches; nothing needs to be explicitly invalidated. */
+var FCACHE={f1:null,f2:null};
+function fkeyOf(f){ return f?(f.name+"|"+f.size+"|"+f.lastModified):null; }
 
 function btChart(E,title){
   if(!E||E.length<2) return '<p class="mini">Not enough bars to draw a curve.</p>';
@@ -292,7 +304,8 @@ function btSection(){
     '</select></label></p>');
   h.push('<p style="margin:6px 0"><label>Merged historical scan CSV (one row per symbol per date, many dates): <input type="file" id="bt104File1" accept=".csv,text/csv"></label></p>');
   h.push('<p style="margin:6px 0"><label>Matching part-E price-history CSV (Date,Symbol,HOpen,HHigh,HLow,HClose): <input type="file" id="bt104File2" accept=".csv,text/csv"></label></p>');
-  h.push('<p style="margin:6px 0"><button type="button" class="btn" id="bt104Run"'+(BT.running?" disabled":"")+'>'+(BT.running?"Running…":"Run backtest")+'</button>'+
+  h.push('<p style="margin:6px 0"><button type="button" class="btn" id="bt104Run"'+(BT.running?" disabled":"")+'>'+(BT.running?"Running…":"Run backtest")+'</button> '+
+    '<button type="button" class="btn ghost" id="bt104Weights"'+(BT.out&&BT.out.ok?"":" disabled")+'>Download Terminal_Weights.csv</button>'+
     (BT.f1&&BT.f2?' <span class="mini">'+hE(BT.f1.name)+" + "+hE(BT.f2.name)+"</span>":' <span class="mini">Choose both files first.</span>')+'</p>');
   if(BT.err) h.push('<p class="mini" style="color:var(--neg)">Could not run: '+hE(BT.err)+'</p>');
   var r=BT.out;
@@ -321,6 +334,13 @@ function btSection(){
       ));
       h.push('<p class="mini">No "reason for entry" column yet — the engine only records why a position was SOLD (the "Why it was sold" column, same as the live Portfolio Tracker\'s own closed-trades table), not why it was originally picked. Ask if you want that added.</p>');
     }
+    if(r.result.holdings&&r.result.holdings.length){
+      h.push('<h4 style="margin:14px 0 4px">Open positions at end of backtest</h4>'+btTbl(
+        ["Symbol","Entry date","Entry price","Current/last price","Unrealized return","Days held"],
+        r.result.holdings.map(function(x){ return [x.s,x.d,num(x.px)?x.px.toFixed(2):"–",num(x.last)?x.last.toFixed(2):"–",pct(x.ret),String(x.days)]; })
+      ));
+      h.push('<p class="mini">Still open when the replay window ended — never sold, so not in the closed-trades table above (this is what a result like "0 closed trades, +72.73% return" is actually holding).</p>');
+    }
   }
   return h.join("");
 }
@@ -330,6 +350,29 @@ function btAppendUI(){
   var div=document.getElementById("bt104Wrap");
   if(!div){ div=document.createElement("div"); div.id="bt104Wrap"; pane.appendChild(div); }
   div.innerHTML=btSection();
+}
+
+/* Terminal_Weights.csv contract (for the RealTest DataValueFile a teammate builds from this): header
+   "Date,Symbol,Weight", one row per (rebalance date, symbol) pick, Date=YYYY-MM-DD, Weight=decimal fraction of
+   portfolio value (0.125 = 1/8). One row per date per symbol HELD that date -- a symbol still held on a later
+   date without a changed weight still gets its own fresh row for that later date, not only on the date it was
+   bought. r.result.weights (added additively to engine()'s output, v103.js) already carries exactly this: it is
+   populated for every current pick on every rebalance date the replay actually processed, using the SAME eq/rank/iv
+   formula the engine uses to size real buys -- reused here verbatim, never recomputed differently. */
+function weightsCsvOf(r){
+  var rows=(r&&r.result&&r.result.weights)||[];
+  var sorted=rows.slice().sort(function(a,b){ return a.d<b.d?-1:(a.d>b.d?1:(a.s<b.s?-1:(a.s>b.s?1:0))); });
+  var L=["Date,Symbol,Weight"];
+  sorted.forEach(function(w){ L.push([w.d,csvQuote(w.s),num(w.weight)?w.weight.toFixed(6):"0"].join(",")); });
+  return L.join("\r\n");
+}
+function bkDownload(name,text){
+  try{
+    var a=document.createElement("a");
+    a.href=URL.createObjectURL(new Blob([text],{type:"text/csv"}));
+    a.download=name;
+    document.body.appendChild(a); a.click(); a.remove();
+  }catch(e){}
 }
 
 function readFile(f){
@@ -352,11 +395,26 @@ document.addEventListener("click",function(e){
   var ST=window.__trk.state(), port=(ST&&ST.ports||[]).filter(function(p){ return p.id===BT.portId; })[0];
   if(!port){ BT.err="Pick a portfolio first."; btAppendUI(); return; }
   BT.running=true; BT.err=null; BT.out=null; btAppendUI();
-  Promise.all([readFile(BT.f1),readFile(BT.f2)]).then(function(texts){
+  var k1=fkeyOf(BT.f1), k2=fkeyOf(BT.f2);
+  var c1=(FCACHE.f1&&FCACHE.f1.key===k1)?FCACHE.f1:null;
+  var c2=(FCACHE.f2&&FCACHE.f2.key===k2)?FCACHE.f2:null;
+  var p1=c1?Promise.resolve(c1.text):readFile(BT.f1);
+  var p2=c2?Promise.resolve(c2.text):readFile(BT.f2);
+  Promise.all([p1,p2]).then(function(texts){
+    if(!c1){ c1={key:k1,text:texts[0],group:null}; FCACHE.f1=c1; }
+    if(!c2){ c2={key:k2,text:texts[1]}; FCACHE.f2=c2; }
     var res;
-    try{ res=backtestPortfolio(port,texts[0],texts[1]); }catch(err){ BT.err=err&&err.message?err.message:String(err); BT.running=false; btAppendUI(); return; }
+    try{ res=backtestPortfolio(port,texts[0],texts[1],c1.group); }catch(err){ BT.err=err&&err.message?err.message:String(err); BT.running=false; btAppendUI(); return; }
+    if(res&&res.group) c1.group=res.group;
     BT.out=res; BT.running=false; btAppendUI();
   },function(err){ BT.err=err&&err.message?err.message:String(err); BT.running=false; btAppendUI(); });
+});
+document.addEventListener("click",function(e){
+  var t=e.target&&e.target.closest?e.target.closest("#bt104Weights"):null; if(!t) return;
+  if(!BT.out||!BT.out.ok) return;
+  var ST=window.__trk.state(), port=(ST&&ST.ports||[]).filter(function(p){ return p.id===BT.portId; })[0];
+  var slug=((port&&port.name)||BT.portId||"portfolio").replace(/[^a-z0-9]+/gi,"_").replace(/^_+|_+$/g,"").slice(0,40)||"portfolio";
+  bkDownload("Terminal_Weights_"+slug+".csv",weightsCsvOf(BT.out));
 });
 
 /* v103's own click handlers call its LOCAL render() function directly (a closure variable), not

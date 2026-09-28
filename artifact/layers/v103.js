@@ -39,7 +39,7 @@ function filterRebal(list,mode){ if(!mode||mode==="daily"||!list.length) return 
   list.forEach(function(u){ var k=pkeyOf(u.d,mode); if(prevKey===null||k!==prevKey){ outp.push(u); prevKey=k; } }); return outp; }
 function engine(port,hx,bench){
   var S=port.settings||{}, entry=S.entry||"open", bps=num(S.cost)?S.cost:10, N0=S.notional||100000, rebal=S.rebalance||"daily", wm=S.weight||"eq";
-  var out={equity:[],trades:[],holdings:[],pending:[],flags:[],orders:null,stats:null,fillNote:""};
+  var out={equity:[],trades:[],holdings:[],pending:[],flags:[],orders:null,stats:null,fillNote:"",weights:[]};
   var upsAll=(port.ups||[]).slice().sort(function(a,b){ return a.d<b.d?-1:(a.d>b.d?1:0); });
   if(!upsAll.length) return out;
   var ups=filterRebal(upsAll,rebal);
@@ -83,7 +83,15 @@ function engine(port,hx,bench){
          which reduces to the original V/n equal-weight target exactly. Held positions keep their original
          entry sizing untouched; only a fresh buy's target size uses the normalized weight. */
       var V=cash; Object.keys(pos).forEach(function(k){ var p=pos[k], px=execPx(p.s,i)||lastClose(p.s,i)||p.px; V+=p.sh*px; });
-      var n=x.u.picks.length, buys=x.u.picks.filter(function(p){ return !pos[key(p)]; }); if(!n||!buys.length) return;
+      var n=x.u.picks.length, buys=x.u.picks.filter(function(p){ return !pos[key(p)]; });
+      /* v104 hook (additive, no effect on sizing/cash below): record the target weight (eq/rank/iv, same formula
+         the actual buy sizing uses just below) for EVERY current pick on EVERY rebalance date, not only ones with a
+         new buy, so a CSV export of "date, symbol, weight" can be built downstream without recomputing this formula
+         and without needing a fresh row only on trade days. */
+      if(n){ var raws0=x.u.picks.map(function(p,idx){ if(wm==="rank") return (n-idx)+n/2; if(wm==="iv"){ var vol0=volOf(p.s,i); return (num(vol0)&&vol0>0)?1/vol0:1; } return 1; });
+        var sumRaw0=raws0.reduce(function(a,b){ return a+b; },0)||1;
+        x.u.picks.forEach(function(p,idx){ out.weights.push({d:D[i],s:p.s,side:p.side,weight:raws0[idx]/sumRaw0}); }); }
+      if(!n||!buys.length) return;
       var raws=x.u.picks.map(function(p,idx){ if(wm==="rank") return (n-idx)+n/2; if(wm==="iv"){ var vol=volOf(p.s,i); return (num(vol)&&vol>0)?1/vol:1; } return 1; });
       var sumRaw=raws.reduce(function(a,b){ return a+b; },0)||1, wgt={}; x.u.picks.forEach(function(p,idx){ wgt[key(p)]=raws[idx]/sumRaw; });
       var needL=0; buys.forEach(function(p){ if(p.side!=="short") needL+=V*wgt[key(p)]*(1+bps/1e4); });
