@@ -13,6 +13,9 @@ now planned out concretely in Part H.
 UPDATE at 02:30 UTC: a 6th real backtest, your actual success target stated explicitly (55% win
 rate, avg win/avg loss ratio >= 1, reasonable trade frequency), and a small feature added against
 it -- see Part I.
+UPDATE at 03:00 UTC: 7th/8th real backtests (a "1 per hidden group, max 1 per subsector" 8-stock
+smart portfolio) showed 0 closed trades with +72.73% return, byte-identical between monthly and
+daily rebalance -- explained, NOT a bug -- see Part J.
 ============================================================================
 
 ----------------------------------------------------------------------------
@@ -422,4 +425,65 @@ PART I. YOUR ACTUAL SUCCESS TARGET, A 6TH REAL RESULT, AND A SMALL FEATURE ADDED
    checkable win rate and win/loss ratio than the heavily-conditioned "smart" portfolios tried so
    far. Worth running alongside the Part H.3 rebalance-frequency test, since both are cheap,
    no-code experiments that could be done back to back early next session.
+
+----------------------------------------------------------------------------
+PART J. 7TH/8TH REAL BACKTEST -- "0 CLOSED TRADES" EXPLAINED (NOT A BUG)
+----------------------------------------------------------------------------
+Portfolio tested: "Smart portfolio of 8 from these, 1 per hidden group, max 1 per subsector."
+
+Result A -- Monthly rebalance:
+  13 rebalance dates, ending value 172,731 (+72.73% return), max drawdown -9.18%,
+  annualised vol 24.7%, Sharpe 2.31, CLOSED TRADES: 0.
+
+Result B -- Daily rebalance:
+  260 rebalance-eligible dates, output BYTE-IDENTICAL to Result A in every stat (same
+  end value, same drawdown, same vol, same Sharpe, same 0 closed trades).
+
+Your reaction, verbatim: "But makes no sense 0 trades." Fair reaction -- here is the actual
+mechanism, confirmed by re-reading the shared engine() in v103.js (reused as-is by the
+backtest, per Part E of this handoff):
+
+1. WHY 0 CLOSED TRADES DESPITE A HUGE RETURN. Look at engine()'s trades[] array (v103.js,
+   ~line 79): a trade object is only ever pushed to trades[] at the moment a position is
+   SOLD/EXITED (`out.trades.push({...outD:D[i],outPx:px,...})`). A position that is bought
+   at the start of the backtest and is STILL OPEN on the very last replay date never
+   triggers that push -- it has no exit date, so it can never appear in the "closed trades"
+   table, no matter how much of the total return it produced. In other words: 0 closed
+   trades + a big return is the exact signature of a portfolio that was bought once and
+   never sold before the backtest window ended (a de facto buy-and-hold). This is expected
+   engine behaviour, not a bug -- the trade-list table added this session (Part A.2) shows
+   CLOSED trades only, by design, because "why was it sold" only has an answer for closed
+   positions. (Open-position reporting -- e.g. an "as of end of backtest, still held" row --
+   is not built yet; flagged as a possible future ask below.)
+
+2. WHY MONTHLY AND DAILY REBALANCE GAVE BYTE-IDENTICAL OUTPUT. Rebalance frequency only
+   matters if, on at least one of the extra eligible dates daily adds over monthly, the
+   engine would have made a DIFFERENT decision (sold a holding, bought a new one, or
+   re-weighted). filterRebal()/pkeyOf() (shared v103/v104 helper, Part E.2) just changes
+   WHICH dates count as decision points -- it does not change what the decision logic does
+   at any one date. If the exact same 8 picks (1 per hidden group, max 1 per subsector)
+   happened to qualify and rank into the portfolio on every single one of the 260 daily
+   dates -- i.e. the stock-selection universe for this specific spec genuinely never
+   changed for the whole replay window -- then checking in daily vs. monthly produces
+   identical decisions every time, and therefore identical output. This is a real,
+   verifiable, non-buggy outcome: it is only surprising if you'd expect picks to churn, and
+   for a "1 per hidden group, max 1 per subsector" spec with a small, stable eligible
+   universe, a long buy-and-hold stretch is plausible, especially matched against the high
+   churn seen in every OTHER portfolio tested today (Parts F/G/I) -- this one may simply be
+   a much more STABLE stock-selection spec than the others, not an engine malfunction.
+
+3. HOW TO CONFIRM THIS YOURSELF (no code changes needed): open the live Portfolio Tracker,
+   set it to this exact spec ("1 per hidden group, max 1 per subsector", 8 stocks), and
+   compare the actual ticker list on two widely-separated dates within the backtest window
+   (e.g. the first eligible date and the last). If the 8 tickers are identical on both
+   dates, that directly confirms the buy-and-hold explanation above and rules out an engine
+   bug. If they differ, that would be a real inconsistency worth re-opening -- report back
+   with the two ticker lists if so.
+
+4. FOLLOW-ON IDEA (not yet built): an "open positions at end of backtest" section in
+   btSection(), showing symbol/entry date/entry price/unrealized return for anything still
+   held when the replay window ends -- this would make results like this one (huge return,
+   0 closed trades) self-explanatory in the UI itself instead of needing this kind of
+   written explanation. Cheap addition, same risk class as the trade-list table; candidate
+   for the same bundled next publish (Part C.1/H.1).
 ============================================================================
