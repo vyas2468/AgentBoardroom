@@ -1,0 +1,124 @@
+============================================================================
+SECTOR ROTATION TERMINAL + REALTEST BACKTESTING - HANDOFF (2026-09-28 09:30 UTC)
+Live page: https://claude.ai/artifact/JBivgL88qHWeaCSsepr7cN  (NOW VERSION 142 -- published
+this session, version id 1790583937-5b6e)
+Code: branch claude/artifact-access-question-f3s8rs, folder artifact/ (page) + realtest/ (RT scripts)
+Previous handoff: docs/FINAL_HANDOFF_2026-09-28_0100UTC.txt (Parts A-J -- all still accurate
+background; this file only covers what changed THIS session)
+============================================================================
+
+----------------------------------------------------------------------------
+PART A. WHAT THIS SESSION DID (worked via two parallel background agents to save tokens)
+----------------------------------------------------------------------------
+Picked priorities myself (you said you weren't sure) -- went with the two biggest open items
+from the last handoff: (1) finally publish the backlog of already-tested-but-unpublished
+features, bundled with new ones, and (2) build the RealTest validation runner. Both are done.
+
+----------------------------------------------------------------------------
+PART B. THE TERMINAL IS LIVE AT VERSION 142 -- 5 FEATURES SHIPPED IN ONE PUBLISH
+----------------------------------------------------------------------------
+Bundled into a single publish (one mandatory full-page read, spent once for all 5):
+1. Closed trades table (from the previous session, was committed but unpublished) -- Symbol,
+   Side, Entry date, Entry price, Exit date, Exit price, Return, Bars held, Why it was sold.
+2. Avg win / avg loss + Win/loss ratio stats rows (previous session, unpublished until now) --
+   lets you check your >=1.0 target directly on the results page.
+3. NEW -- Open positions table: shows anything still held when the backtest window ends
+   (Symbol, Entry date, Entry price, Current/last price, Unrealized return, Days held). This is
+   exactly what explains a result like Part J's "0 closed trades, +72.73% return" -- that
+   portfolio's 8 positions will now show up here instead of being invisible.
+4. NEW -- Speed: file-parse caching. Re-running a backtest with the SAME two files (scan CSV +
+   price-history CSV) now skips re-parsing them entirely (cache keyed by filename+size+
+   lastModified). Only picking a DIFFERENT file triggers a re-parse. This directly fixes the
+   speed complaint from two sessions ago.
+5. NEW -- "Download Terminal_Weights.csv" button next to "Run backtest": exports one row per
+   (rebalance date, symbol) pick as Date,Symbol,Weight -- this feeds the new RealTest validation
+   runner (Part C below).
+
+VERIFIED before publish: full 348-question regression byte-identical, trkunit.js 40/40,
+backtest_unit.js 28/28, plus a headless-browser smoke test confirming all 3 new features render
+and work. One scope note: to make the weights export reuse the already-computed weight values
+(instead of recalculating them, which would have been new untested logic) a small additive hook
+(`out.weights`) was added to the shared engine() in v103.js as well as v104.js -- same pattern
+already used there for pkeyOf/filterRebal, zero behavior change to existing logic, covered by
+the same passing regression.
+Committed: 15287c2. Pushed to origin/claude/artifact-access-question-f3s8rs.
+
+WHAT TO DO: reload the terminal, open Backtest (historical replay) on any portfolio you've
+already tested, and you should see the 3 new pieces (open positions, faster re-runs, the
+download button) without anything else changing. If a previously-run "0 trades" result like
+Part J's now shows open positions with a large unrealized return, that confirms the buy-and-hold
+explanation directly.
+
+----------------------------------------------------------------------------
+PART C. NEW -- REALTEST VALIDATION RUNNER (closes the original 3-part plan from weeks ago)
+----------------------------------------------------------------------------
+New files in realtest/ (nothing else touched), committed as b0270bd, pushed:
+  - AlexAligned_Unified_v7_Validate_TerminalWeights.rts
+  - Run_AlexAligned_v7_Validate_TerminalWeights.bat
+  - run_v7_Validate_TerminalWeights.ps1
+  - README_v7_Validate_TerminalWeights.md
+
+WHAT IT DOES: reuses your existing shared data file (alexaligned_unified_v7.rtd, no re-import),
+reads Terminal_Weights.csv via RealTest's DataValueFile feature, and uses DynamicSizing to make
+RealTest hold exactly the weight sequence the terminal's backtest picked -- an independent
+second opinion on the terminal's own numbers, computed by a completely different engine.
+
+HOW TO RUN IT (from C:\RealTest21_newerv2\Scripts\SectorTerminalScripts):
+1. In the terminal's Backtest section, run the portfolio you want to cross-check, then click the
+   new "Download Terminal_Weights.csv" button.
+2. Move/rename that file to Terminal_Weights.csv in the SectorTerminalScripts folder (same
+   folder as the new .rts file).
+3. Run Run_AlexAligned_v7_Validate_TerminalWeights.bat (it calls RealTest.exe by its full path,
+   C:\RealTest21_newerv2\RealTest.exe, same fix as before for the "not recognized" issue).
+4. Compare RealTest's ending value/return/drawdown against the terminal's own Backtest numbers
+   for that same portfolio and date range.
+
+IMPORTANT CAVEAT -- UNVALIDATED SYNTAX: RealTest.exe isn't available in this environment, so
+this script's DataValueFile/DynamicSizing/Commission syntax was checked line-by-line against the
+RealTest 2.1 script-language reference you uploaded, but never actually run. Specific things to
+check when you run it for the first time:
+  - StartDate/EndDate are hardcoded to 2025-09-15 / 2026-09-25 (last known backtest window) --
+    EDIT THESE to match whatever window your actual Terminal_Weights.csv export covers before
+    running, or RealTest may error or silently truncate.
+  - Commission/Slippage values are placeholders from the reference doc's own example (the part-C
+    reference script has no Strategy section to copy real values from) -- zero them out if you
+    want a friction-free comparison, or set them to match your real broker assumptions.
+  - MaxPositions is set to 60 (generous headroom) -- lower it if you know your real basket size.
+  - If RealTest throws ANY parse error on first run, please paste the exact error text back --
+    that's the fastest way to fix the one or two syntax details that couldn't be confirmed
+    without a real run.
+
+----------------------------------------------------------------------------
+PART D. STANDING BACKLOG (carried forward, not started)
+----------------------------------------------------------------------------
+1. Rebalance-frequency A/B test (Part C.5/H.3 of previous handoff) -- still not run cleanly on
+   the SAME portfolio. Quick, 5-minute check you can do yourself: pick any non-buy-and-hold
+   portfolio, run backtest at daily then again at monthly, compare trade count/return.
+2. Ask-engine output layout -- NEW ASK, added this session (task #10): you shared a screenshot
+   of Alex's (@hughesanalytics) terminal answer for "Which subsector in Industrials had the
+   highest combined anomaly score" -- a structured "leader page" layout (Leader summary
+   paragraph -> Subsector summary table -> Every-company table -> Coverage checklist table ->
+   Metric footnote), noticeably more structured than our current compact/prose-style Ask
+   answers (see your Energy/Oil&Gas example in the same message). You want singular, combined,
+   and filtered/added-condition queries to be able to render this kind of multi-table layout.
+   NOT STARTED -- real design work, not a quick tweak. Next-session plan:
+     a) Pull a few more of Alex's example outputs if available (different query shapes) to
+        confirm the pattern generalizes rather than designing around one screenshot.
+     b) Design a reusable "leader page" template (summary/group table/member table/coverage
+        table/metric footnote) that layers on top of the existing Ask engine's already-computed
+        data (gaMean, r1, drill filters, etc. -- the JSON "rules" trace shown under your example
+        already has everything a leader-page render would need) rather than a new query engine.
+     c) Ship as an alternate/richer render mode so existing compact answers aren't disrupted.
+3. Older backlog, unchanged: Portfolio Tracker Compare/Combined views, money/sizing/overlap in
+   the tracker, navy colour theme.
+
+----------------------------------------------------------------------------
+PART E. HOW THIS SESSION STAYED TOKEN-EFFICIENT (for reference)
+----------------------------------------------------------------------------
+Both the publish work (code + regression + ONE full-page read + publish + commit/push) and the
+RealTest validation runner (new files, reference-doc lookup, commit) were delegated to two
+parallel background subagents with fully self-contained briefs, rather than done inline -- this
+kept the main session's token use to plan-and-verify only. Their commits were pushed
+sequentially (validation runner first, since it touched only realtest/, then the publish agent's
+v103.js/v104.js commit) to avoid a race on the shared branch.
+============================================================================
