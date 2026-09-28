@@ -1,0 +1,118 @@
+Notes:
+	AlexAligned Unified v7, RealTest cross-check for the web terminal's Backtest section.
+	This script does NOT reimplement the terminal's rotation logic. It trades a FIXED, externally
+	supplied sequence of portfolio weights -- one row per (rebalance date, symbol held on that
+	date) -- coming straight from the terminal's own "Download Terminal_Weights.csv" export in
+	the Backtest tab. RealTest's job here is only to price that exact sequence of positions with
+	its own fill/commission/slippage model and report the resulting equity curve, return, and
+	drawdown, as an independent second engine checking the terminal's own numbers for the SAME
+	portfolio and date range.
+
+	BEFORE RUNNING:
+	1. In the web terminal, open the Backtest section for the portfolio you want to check and use
+	   its "Download Terminal_Weights.csv" export.
+	2. Copy that file, unchanged, next to this script: C:\RealTest21_newerv2\Scripts\SectorTerminalScripts\Terminal_Weights.csv
+	   (same folder this .rts file lives in -- the DataValueFile: line below finds it with
+	   ?scriptpath?, so it does not matter which drive/folder that is, as long as the CSV sits
+	   right next to the script).
+	3. Confirm the StartDate/EndDate in TestSettings below actually cover the CSV's date range
+	   (see the comment there) -- if the terminal's Backtest window has moved on since this file
+	   was written, edit those two dates to match before running.
+	4. Run Run_AlexAligned_v7_Validate_TerminalWeights.bat (or run_v7_Validate_TerminalWeights.ps1
+	   directly). It calls RealTest.exe in Test mode (-test), never -import, so it never touches
+	   the shared alexaligned_unified_v7.rtd data file -- it only reads it.
+
+	HOW THE WEIGHTS DRIVE POSITION SIZE:
+	Terminal_Weights.csv has header Date,Symbol,Weight (Weight a decimal fraction of portfolio
+	value, e.g. 0.125). It is loaded with DataValueFile: below into a Data item named exactly
+	"Weight" (RealTest's DataValueFile: matches by CSV column header = Data item name). A symbol
+	still held on a later rebalance date gets a fresh row for that date too -- the CSV never
+	relies on "no row = still held". That means: on a date where the CSV has ANY row at all (a
+	rebalance date), a symbol with NO row that date is being told to exit; a symbol WITH a row is
+	being told to hold exactly that target weight. On any other date (no rows at all -- not a
+	rebalance date), nothing should change. RebalCount below (a #Count breadth check) tells the
+	strategy's Quantity formula which of those three cases it is in, using the DynamicSizing
+	rebalance idiom from the RealTest 2.1 script reference ("DynamicSizing for position
+	adjustment" example): NaN = leave position alone, 0 = exit, positive = set target size.
+
+	DATA REUSE: this script does NOT re-import anything. It reuses the shared .rtd file that
+	part C's Import: block already builds (see AlexAligned_Unified_v7_C_EngineFree_25.09.2026.rts)
+	via DataFile: below, exactly like part E does. Run part C with -import first if that file does
+	not exist yet on this machine.
+
+	UNVALIDATED: this script has not been run against a real RealTest.exe (not available in the
+	environment that wrote it). Its DataValueFile:/DynamicSizing:/Select() syntax was checked
+	against the RealTest 2.1 script language reference line by line, but if RealTest reports any
+	parse error the first time you run it, please report the exact error text back so the script
+	can be corrected -- do not hand-edit around a parse error without checking the reference too.
+
+Settings:
+	DataFile:	C:\RealTest21_newerv2\Data\alexaligned_unified_v7.rtd
+	BarSize:	Daily
+	EndDate:	Latest
+	AccountSize:	100000
+	UseAvailableBars:	False
+	SaveTradesAs:	?scriptpath?\AlexAligned_Unified_v7_Validate_TerminalWeights_Trades.csv
+	SaveTestListAs:	?scriptpath?\AlexAligned_Unified_v7_Validate_TerminalWeights_Results.csv
+	SaveStatsAs:	?scriptpath?\AlexAligned_Unified_v7_Validate_TerminalWeights_Equity.csv
+
+	// StartDate lives in TestSettings only, matching the convention in parts C/E of this repo
+	// (a StartDate directly in Settings has caused problems for those scripts' ScanSettings
+	// interaction; this script has no ScanSettings section at all, but TestSettings is kept
+	// here anyway for consistency and because it is the documented place to override dates
+	// for Test-mode runs).
+TestSettings:
+	// CONFIRM these against the Terminal_Weights.csv you actually downloaded before running.
+	// 2025-09-15 / 2026-09-25 is the last documented terminal Backtest window as of this
+	// writing (docs/FINAL_HANDOFF_2026-09-28_0100UTC.txt, Part F: "Replayed 260
+	// rebalance-eligible dates, 2025-09-15 to 2026-09-25"). If the portfolio you exported used
+	// a different window, edit both lines below to match it -- a mismatched window will not
+	// error, it will just silently compare the wrong stretch of the terminal's own numbers.
+	StartDate:	2025-09-15
+	EndDate:	2026-09-25
+
+Data:
+	// Loads Terminal_Weights.csv (header Date,Symbol,Weight) via DataValueFile:. The Data item
+	// name below MUST be "Weight" -- DataValueFile: matches by CSV column header = Data item
+	// name (RealTest 2.1 script reference, DataValueFile section). Rows for a date/symbol not
+	// in the CSV leave Weight as NaN for that symbol on that date, exactly as documented.
+	DataValueFile:	?scriptpath?\Terminal_Weights.csv
+	Weight:	#DataValueFile
+
+	// RebalCount = 0 on any date the CSV has no rows at all for ANY symbol (i.e. not one of the
+	// terminal's rebalance dates); > 0 on an actual rebalance date. #Count expr counts symbols
+	// where expr is not NaN (breadth operators section of the reference), so this is a genuine
+	// cross-sectional check, not a per-symbol one -- every symbol sees the same RebalCount value
+	// on a given date.
+	RebalCount:	#Count Weight
+
+Strategy: TerminalWeights
+	Side:	Long
+	// Generous headroom above whatever BasketN/MBPositions the terminal used -- DynamicSizing
+	// positions are still capped by MaxPositions, so raise this if RealTest ever reports it
+	// could not open all the CSV's held names on some date.
+	MaxPositions:	60
+	QtyType:	Percent
+	DynamicSizing:	True
+	// NaN = no change (not a rebalance date), 0 = exit (rebalance date, symbol absent from the
+	// CSV that date), positive = set position to that target weight (rebalance date, symbol
+	// present). Weight is a 0-1 fraction in the CSV; QtyType: Percent wants 0-100, hence * 100.
+	Quantity:	Select(RebalCount = 0, nan, IsNaN(Weight), 0, Weight * 100)
+	// Minimum position value if DynamicSizing needs to shrink a target weight to fit inside
+	// MaxExposure/MaxPositions -- see the DynamicSizing example in the RealTest 2.1 reference.
+	Reduce:	0.01 * S.Alloc
+
+	// No documented Commission:/Slippage: convention to copy from
+	// AlexAligned_Unified_v7_C_EngineFree_25.09.2026.rts -- that script is Import/Scan only and
+	// has no Strategy section at all, so there is nothing to match for "a fair comparison" as
+	// instructed. These two lines are instead the reference doc's own worked example values
+	// (STRATEGY EXAMPLES, Example 3's Template: common block), a reasonable generic assumption
+	// for a US equity account -- $1 minimum or 0.5% of trade value commission, 0.2% of fill
+	// price slippage. Edit both to 0 if you want a zero-friction comparison against the
+	// terminal's own numbers (the terminal's Backtest section may not model costs at all).
+	Commission:	Max(1, 0.005 * Shares)
+	Slippage:	0.002 * FillPrice
+
+Graphs:
+	// Required for SaveStatsAs to produce anything (reference doc, CSV OUTPUT SETTINGS section).
+	Equity:	Combined(S.Equity)
