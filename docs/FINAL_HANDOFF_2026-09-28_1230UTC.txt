@@ -1,0 +1,181 @@
+============================================================================
+SECTOR ROTATION TERMINAL + REALTEST BACKTESTING - HANDOFF (2026-09-28 12:30 UTC)
+Live page: https://claude.ai/artifact/JBivgL88qHWeaCSsepr7cN  -- NOW VERSION 143
+(version id 1790587460-5aeb), published this session.
+Code: branch claude/artifact-access-question-f3s8rs, folder artifact/ (page) + realtest/ (RT scripts)
+Previous handoffs: docs/FINAL_HANDOFF_2026-09-28_0100UTC.txt (Parts A-J) and
+docs/FINAL_HANDOFF_2026-09-28_0930UTC.txt (v142 publish, RealTest validation runner) -- both
+still accurate background; this file covers everything since v142.
+============================================================================
+
+----------------------------------------------------------------------------
+PART A. WHAT'S LIVE NOW AT VERSION 143 -- 4 NEW THINGS ON TOP OF v142
+----------------------------------------------------------------------------
+This publish bundled two feature commits (63d370c, 87afb0d) that were built, independently
+verified, and held back earlier in the session specifically so they could go live together in
+one mandatory full-page-read publish instead of two.
+
+1. NEW -- "Anomaly leader pages" tile in Ask the terminal. You shared a screenshot of a
+   competitor's ("Alex", @hughesanalytics) structured multi-table answer style for a query like
+   "Which subsector in Industrials had the highest combined anomaly score?" and asked for the
+   same capability here. Built as a genuinely alternate render mode (existing compact-style
+   answers are completely unchanged) triggered by the phrase "leader page" in a question. Open
+   Ask the terminal -> look for the new "Anomaly leader pages" details/tile (same visual style as
+   the existing "Examples by theme" tiles) with 10 ready-to-run example questions spanning:
+     - Singular (one named group): "Show the anomaly leader page for the Travel Services subsector."
+     - Combined (rank all peers, return the winner): "Which subsector in Industrials had the
+       highest combined anomaly score? Show the leader page."
+     - Combined + filter (min member count, or improving-only bias)
+     - Combined + added columns (extra return windows, or a liquidity/turnover column)
+   Each answer renders: Title -> context bar (cutoff date | metric | parent scope) -> Leader
+   summary paragraph -> one-row group-summary table -> every-member table (rank/symbol/score/1D
+   return) -> Coverage checklist (proves data completeness, not decoration) -> Metric footnote.
+   Reuses the SAME group-ranking data (gaMean, r1, bias, counts) the compact style already
+   computes -- no second calculation engine. Two small, real additions were needed to the base
+   engine to make some of the 10 examples work: scoping a ranking to one named parent sector
+   ("in Energy") and a minimum-member-count filter, since the existing compact style silently
+   ignores both.
+   ADAPTATIONS FROM THE ORIGINAL SCREENSHOT (be aware of these when comparing to Alex's version):
+     - No "Company" column -- our loaded scan has no company-name field, only tickers, so nothing
+       was fabricated to fill it in.
+     - "Volume" in one example maps to the scan's real 20-day turnover/liquidity percentile field
+       (labeled honestly as "Liquidity (20D turnover) pctl"), not raw share volume, which the
+       data doesn't have.
+     - A "last 5 trading days" example became "using the 5-day return" -- there's no time-windowed
+       anomaly aggregate in the data, only a per-symbol 5D return field.
+
+2. NEW -- Backtest is up to ~47x faster. The old code re-parsed the ENTIRE raw price-history CSV
+   text from scratch on every single rebalance-eligible date (260 times for a daily-rebalance
+   backtest over a year) -- that was the real bottleneck, not the trade/stats simulation as
+   originally assumed. Now the price history is parsed ONCE and sliced from an already-parsed,
+   date-indexed structure per date instead. Verified byte-identical to the old method across every
+   date in two test fixtures (396 dates total) before being switched on by default. Measured
+   speedup on the real fixture: 77.6 seconds -> 1.6 seconds (47.5x). This makes the EXISTING "Run
+   backtest" button faster with zero change in output -- nothing to do differently, it just runs
+   quicker now, especially noticeable on daily-rebalance portfolios with lots of eligible dates.
+
+3. NEW -- "⚡ Export weights only (fast)" button in the Backtest section, next to "Run backtest".
+   This came out of your question about whether there's a cheaper path to just the weights CSV
+   without a full backtest run. Answer: yes, partially -- it still has to run the same no-look-
+   ahead pick-selection loop (that IS what determines the weights, can't be skipped), but it skips
+   the full trade/cost/P&L/drawdown/stats simulation entirely, computing only the target weights
+   via the exact same formula engine() uses (now shared, extracted into reusable helpers so the
+   two paths can never drift apart). Verified byte-identical Terminal_Weights.csv output vs. the
+   full "Run backtest" -> download path, across equal/rank/inverse-vol weighting and daily/weekly
+   rebalance (16/16 tests). Use this when you only want the CSV for RealTest and don't need the
+   terminal's own stats/trade list for that run.
+
+4. FIXED -- "Download Terminal_Weights.csv" doing nothing when clicked (the bug you reported).
+   Root cause: the button's download code only tried a raw anchor-click browser download, which
+   this claude.ai Artifact's sandboxed iframe silently blocks (no error thrown, so it looked like
+   nothing happened at all -- exactly what you saw). Fixed by reusing the ALREADY-WORKING pattern
+   sitting right next to it in the live Portfolio Tracker's own CSV export, which tries the
+   proper claude.ai "downloads" capability first and only falls back to the anchor-click trick if
+   that's unavailable. The publish explicitly declared that capability for this artifact to make
+   sure it's actually available (it turned out to already be declared from earlier work, so this
+   was a safety confirmation, not a net-new grant).
+
+VERIFICATION ON THE FULLY-COMBINED BUILD (all three commits together for the first time, this is
+the integration check, not just each piece tested alone):
+  - Full 348-question regression: 347/348 identical. The 1 diff is the same pre-existing,
+    already-documented flaky test-state counter (a "saved runs" count that increments across test
+    runs, unrelated to anything changed) -- confirmed NOT caused by this work by reproducing the
+    identical flake on a build with all three new features removed.
+  - A recurring "Cannot read properties of undefined (reading 'universe')" pageerror in every test
+    run was checked and confirmed pre-existing harness noise (reproduces even on an old v102-only
+    build with none of this session's work present) -- not a regression.
+  - trkunit.js: 40/40 PASS. backtest_unit.js: 28/28 PASS (both against the fully-combined build).
+  - Smoke-checked in a real headless browser: the "Anomaly leader pages" tile is present and its
+    first example question produces a real structured answer; the "⚡ Export weights only (fast)"
+    button is present in the actual shipped markup.
+
+----------------------------------------------------------------------------
+PART B. WHAT TO TEST YOURSELF NOW
+----------------------------------------------------------------------------
+1. Reload the terminal (confirm it's now v143 if that's visible anywhere, or just note the new
+   features appearing is itself confirmation).
+2. Ask the terminal: open the new "Anomaly leader pages" tile, click through a couple of the 10
+   example questions, and compare the layout against Alex's screenshot -- tell me if it's close
+   enough to what you had in mind or if you want the layout tightened further.
+3. Backtest: re-run a portfolio you've already tested before (e.g. Dual momentum top 8) and see
+   if it visibly finishes faster than it used to, especially if it's daily-rebalance with lots of
+   eligible dates.
+4. Click "Download Terminal_Weights.csv" after a backtest finishes -- this should now actually
+   trigger a real save/download (via claude.ai's own download mechanism, which may look slightly
+   different from a normal browser download -- e.g. a save prompt rather than an automatic file
+   landing in your Downloads folder, depending on how the client surfaces it).
+5. Try the new "⚡ Export weights only (fast)" button on a portfolio and confirm the CSV it
+   produces looks sane (Date,Symbol,Weight rows) -- it should be faster than running a full
+   backtest just to get weights.
+6. If you want to close the RealTest cross-check loop from the last handoff: export weights (via
+   either button), drop Terminal_Weights.csv into C:\RealTest21_newerv2\Scripts\
+   SectorTerminalScripts, edit the .rts file's StartDate/EndDate to match your export's window,
+   and run Run_AlexAligned_v7_Validate_TerminalWeights.bat -- report back the numbers or any
+   parse error.
+
+----------------------------------------------------------------------------
+PART C. OUTSTANDING / NOT DONE
+----------------------------------------------------------------------------
+1. RealTest validation runner is still UNVALIDATED against a real RealTest.exe run (not available
+   in this environment) -- its DataValueFile/DynamicSizing syntax was checked line-by-line against
+   the RealTest 2.1 reference doc but never executed for real. First real run is the test.
+2. The rebalance-frequency A/B test from two handoffs ago (same portfolio, daily vs. weekly vs.
+   monthly, compare trade count/return) still hasn't been run cleanly -- quick, 5 minutes, whenever
+   you want to check whether high trade counts are a genuine property of a portfolio type or a
+   daily-rebalance artifact.
+3. Minor housekeeping found during this publish, not yet fixed: the repo's own copies of
+   artifact/tools/trkunit.js and artifact/tools/backtest_unit.js are missing a small
+   localStorage-seeding step before first use, which makes them crash immediately if run as-is
+   (window.__trk/window.__bt come back undefined). The correct, working versions (which do seed
+   localStorage first) exist in this session's scratchpad history and were used for verification,
+   but the fix was never pushed back into the actual repo copies. Low priority (doesn't affect the
+   live page at all, only affects re-running these two test scripts fresh), but worth a 5-minute
+   fix next session so future verification doesn't have to rediscover this.
+4. Older backlog, unchanged: Portfolio Tracker Compare/Combined views, money/sizing/overlap in the
+   tracker, navy colour theme.
+5. Ask-engine leader page: only checked against the loaded scan's real fields, not against every
+   possible sector/subsector name or edge case (e.g. a subsector with 1 member, or a sector with
+   no qualifying groups) -- if you hit a leader-page question that errors or looks odd, send it
+   over and it can be hardened.
+
+----------------------------------------------------------------------------
+PART D. NEW IDEAS THAT CAME UP THIS SESSION (not started, for future consideration)
+----------------------------------------------------------------------------
+1. Parallel headless-browser instances for further backtest speed. Came out of your "can this run
+   outside the browser with multithreading" question. Short answer: a full Node/multithread port
+   isn't a quick win, because every function this replay reuses (upParseCSV, qmRun, engine(), etc.)
+   deliberately lives inside the page's own closure -- that's what gives the no-look-ahead
+   guarantee its teeth, and porting it out would mean either duplicating that logic (the exact risk
+   this codebase has avoided everywhere) or a real extraction project. A cheaper middle ground: now
+   that Optimization A makes each eligible date's pick-selection independent of the others (given
+   the shared pre-parsed history), you could in principle run several headless-browser instances in
+   parallel (same tooling this project's own test suite already uses), each handling a different
+   date range or portfolio -- real wall-clock parallelism with zero reimplementation risk, since
+   it's still the actual browser code running, just several copies at once. Not built, just a
+   documented option if backtest wall-clock time is ever still a pain point after this session's
+   47.5x sequential speedup.
+2. "Open positions" follow-through: now that the open-positions table exists (from the previous
+   publish) and the leader-page render pattern exists (from this session), a similar structured
+   "what's still open and why" summary could eventually be applied elsewhere in the terminal where
+   useful -- no concrete plan yet, just noting the pattern is now available to reuse.
+3. Given the RealTest validation runner is about to get its first real test run, it might be worth
+   extending Terminal_Weights.csv's contract slightly (e.g. an optional "reason" column reusing the
+   Ask engine's existing per-pick filter/rule text) if the RT cross-check reveals discrepancies that
+   are hard to debug without knowing WHY a symbol was picked on a given date -- speculative, only
+   worth doing if the first real RT run surfaces an actual need for it.
+
+----------------------------------------------------------------------------
+PART E. SESSION WORKFLOW NOTE (how this stayed token-efficient)
+----------------------------------------------------------------------------
+All four pieces of work this session (Ask leader-page tile, backtest speed optimization,
+weights-only export + download fix, and the final combined publish) were built and verified by
+background subagents working in parallel on non-overlapping files, with commits held locally and
+pushed in sequence to avoid races on the shared branch. One subagent doing the speed-optimization
+work was killed mid-task by an unrelated infrastructure hiccup (the safety-check service stopped
+responding) -- rather than blindly retrying or discarding its unverified partial work, the actual
+diff was inspected directly, its two new correctness-verification test files were located and
+RE-RUN from scratch to get a fresh, definitive pass/fail (47.5x speedup confirmed, 16/16 and 3/3
+tests passing) before anything was committed. This is the same "verify before trusting, especially
+after an abnormal stop" discipline worth carrying into any future session that also uses
+background agents.
+============================================================================
