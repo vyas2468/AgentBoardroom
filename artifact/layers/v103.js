@@ -37,6 +37,27 @@ function pkeyOf(d,mode){ if(mode==="weekly"){ var m=String(d||"").match(/^(\d{4}
    positions to market every day from hx, and the stored ups[] itself is never touched. */
 function filterRebal(list,mode){ if(!mode||mode==="daily"||!list.length) return list; var outp=[], prevKey=null;
   list.forEach(function(u){ var k=pkeyOf(u.d,mode); if(prevKey===null||k!==prevKey){ outp.push(u); prevKey=k; } }); return outp; }
+/* ================= v105 hooks: engine() internals split out, reused verbatim by both engine() itself and the
+   new "weights only" fast path (v104.js backtestWeightsOnly()) so the two can never drift apart. Each is a pure
+   extraction of code engine() already ran inline -- same inputs, same formula, same output -- not a rewrite. */
+function idxAfterOf(D,d){ var L=D.length-1; for(var i=0;i<=L;i++) if(D[i]>d) return i; return -1; }
+function idxOnOrAfterOf(D,d){ var L=D.length-1; for(var i=0;i<=L;i++) if(D[i]>=d) return i; return -1; }
+/* realized volatility of daily returns, trailing window ending at bar i: up to 63 returns, min 20 required
+   (fewer/gaps -> null, and callers fall back to raw weight 1 for that symbol only) */
+function makeVolOf(C){ return function volOf(s,i){ var c=C[s]; if(!c) return null; var rets=[];
+    for(var j=i;j>0&&rets.length<63;j--){ var a=c[j],b=c[j-1]; if(num(a)&&num(b)&&b!==0) rets.unshift((a-b)/b); }
+    if(rets.length<20) return null;
+    var m=rets.reduce(function(x,y){ return x+y; },0)/rets.length, va=rets.reduce(function(x,y){ return x+(y-m)*(y-m); },0)/(rets.length-1);
+    return Math.sqrt(va); }; }
+/* the eq/rank/iv target-weight formula: raw weight per pick in picks[] order (already rank order), normalized to
+   sum to 1 across ALL current picks -- "eq" gives raw=1 for every pick (plain 1/n), "rank" favors earlier-ranked
+   picks, "iv" favors lower trailing volatility. Returns [{s,side,weight}] in picks[] order. */
+function weightRowsFor(picks,wm,i,volOf){
+  var n=picks.length; if(!n) return [];
+  var raws=picks.map(function(p,idx){ if(wm==="rank") return (n-idx)+n/2; if(wm==="iv"){ var vol=volOf(p.s,i); return (num(vol)&&vol>0)?1/vol:1; } return 1; });
+  var sumRaw=raws.reduce(function(a,b){ return a+b; },0)||1;
+  return picks.map(function(p,idx){ return {s:p.s,side:p.side,weight:raws[idx]/sumRaw}; });
+}
 function engine(port,hx,bench){
   var S=port.settings||{}, entry=S.entry||"open", bps=num(S.cost)?S.cost:10, N0=S.notional||100000, rebal=S.rebalance||"daily", wm=S.weight||"eq";
   var out={equity:[],trades:[],holdings:[],pending:[],flags:[],orders:null,stats:null,fillNote:"",weights:[]};
@@ -51,18 +72,12 @@ function engine(port,hx,bench){
   if(!hx||!hx.dates||!hx.dates.length) return out;
   var D=hx.dates, L=D.length-1, C=hx.syms||{}, O=hx.opens||null;
   if(entry==="open"&&!O) out.fillNote="The loaded part E history has no opens, so orders fill at the next day's close. Load the part E file again to fill at the open.";
-  function idxAfter(d){ for(var i=0;i<=L;i++) if(D[i]>d) return i; return -1; }
-  function idxOnOrAfter(d){ for(var i=0;i<=L;i++) if(D[i]>=d) return i; return -1; }
+  function idxAfter(d){ return idxAfterOf(D,d); }
+  function idxOnOrAfter(d){ return idxOnOrAfterOf(D,d); }
   function close(s,i){ var c=C[s]; return c&&num(c[i])?c[i]:null; }
   function lastClose(s,i){ var c=C[s]; if(!c) return null; for(var j=i;j>=0;j--) if(num(c[j])) return c[j]; return null; }
   function execPx(s,i){ if(entry==="open"){ if(O&&O[s]&&num(O[s][i])) return O[s][i]; return close(s,i); } return close(s,i); }
-  /* realized volatility of daily returns, trailing window ending at bar i: up to 63 returns, min 20 required
-     (fewer/gaps -> null, and callers fall back to raw weight 1 for that symbol only) */
-  function volOf(s,i){ var c=C[s]; if(!c) return null; var rets=[];
-    for(var j=i;j>0&&rets.length<63;j--){ var a=c[j],b=c[j-1]; if(num(a)&&num(b)&&b!==0) rets.unshift((a-b)/b); }
-    if(rets.length<20) return null;
-    var m=rets.reduce(function(x,y){ return x+y; },0)/rets.length, va=rets.reduce(function(x,y){ return x+(y-m)*(y-m); },0)/(rets.length-1);
-    return Math.sqrt(va); }
+  var volOf=makeVolOf(C);
   var sched=ups.map(function(u){ return {u:u,i:entry==="open"?idxAfter(u.d):idxOnOrAfter(u.d)}; });
   sched.filter(function(x){ return x.i<0; }).forEach(function(x){ out.pending.push({d:x.u.d,n:x.u.picks.length,msg:entry==="open"?(O?"fills at the next open after ":"fills at the next close after (no opens in the loaded history) ")+x.u.d+" (not in the loaded history yet)":"fills at the close of "+x.u.d+" (not in the loaded history yet)"}); });
   var run=sched.filter(function(x){ return x.i>=0; }); if(!run.length) return out;
@@ -88,12 +103,10 @@ function engine(port,hx,bench){
          the actual buy sizing uses just below) for EVERY current pick on EVERY rebalance date, not only ones with a
          new buy, so a CSV export of "date, symbol, weight" can be built downstream without recomputing this formula
          and without needing a fresh row only on trade days. */
-      if(n){ var raws0=x.u.picks.map(function(p,idx){ if(wm==="rank") return (n-idx)+n/2; if(wm==="iv"){ var vol0=volOf(p.s,i); return (num(vol0)&&vol0>0)?1/vol0:1; } return 1; });
-        var sumRaw0=raws0.reduce(function(a,b){ return a+b; },0)||1;
-        x.u.picks.forEach(function(p,idx){ out.weights.push({d:D[i],s:p.s,side:p.side,weight:raws0[idx]/sumRaw0}); }); }
+      var wrows=n?weightRowsFor(x.u.picks,wm,i,volOf):[];
+      if(n) wrows.forEach(function(w){ out.weights.push({d:D[i],s:w.s,side:w.side,weight:w.weight}); });
       if(!n||!buys.length) return;
-      var raws=x.u.picks.map(function(p,idx){ if(wm==="rank") return (n-idx)+n/2; if(wm==="iv"){ var vol=volOf(p.s,i); return (num(vol)&&vol>0)?1/vol:1; } return 1; });
-      var sumRaw=raws.reduce(function(a,b){ return a+b; },0)||1, wgt={}; x.u.picks.forEach(function(p,idx){ wgt[key(p)]=raws[idx]/sumRaw; });
+      var wgt={}; wrows.forEach(function(w){ wgt[w.s+"|"+(w.side||"long")]=w.weight; });
       var needL=0; buys.forEach(function(p){ if(p.side!=="short") needL+=V*wgt[key(p)]*(1+bps/1e4); });
       var scale=needL>0?Math.min(1,Math.max(0,cash)/needL):1; if(scale<0.999) out.flags.push(D[i]+": not enough cash for full-size buys; buys scaled to "+(scale*100).toFixed(0)+"%");
       buys.forEach(function(p){ var px=execPx(p.s,i); if(!num(px)){ out.flags.push(D[i]+": "+p.s+" had no price, not bought"); return; }
@@ -265,6 +278,17 @@ try{ window.__trk={engine:engine,picksOf:picksOf,state:function(){ return ST; },
   /* v104 hook: pkeyOf/filterRebal are the period-key + rebalance-eligible-entry filters used by engine() above.
      Exposed so the backtest replay engine (a later layer) reuses the SAME weekly/monthly/quarterly/yearly logic to
      pick eligible historical replay dates, instead of duplicating it. */
-  pkeyOf:pkeyOf,filterRebal:filterRebal}; }catch(e){}
+  pkeyOf:pkeyOf,filterRebal:filterRebal,
+  /* v104 hook: download() is the ALREADY-PROVEN CSV export path this file's own "Download CSV" button uses --
+     tries the claude.ai `downloads` runtime capability first (window.claude.use("downloads") -> dl.save({filename,
+     data})), only falling back to a raw anchor-click Blob download (silently blocked in this Artifact's sandboxed
+     iframe) if that capability is unavailable. Exposed so later layers' own CSV downloads (v104's
+     Terminal_Weights.csv) reuse this exact working mechanism instead of a second, broken reimplementation. */
+  download:download,
+  /* v105 hooks (Optimization B, weights-only fast backtest export): the exact pieces of engine()'s own logic the
+     eq/rank/iv target-weight computation needs (fill-index lookup, trailing-volatility and the weight formula
+     itself), extracted verbatim above and reused by engine() itself -- so a "skip the trade/cost/P&L simulation,
+     just compute picks' weights" path can reuse the SAME functions instead of a second, driftable copy. */
+  idxAfterOf:idxAfterOf,idxOnOrAfterOf:idxOnOrAfterOf,makeVolOf:makeVolOf,weightRowsFor:weightRowsFor}; }catch(e){}
 }catch(e){ try{ console.warn("v103 layer disabled: "+(e&&e.message)); }catch(e2){} }
 })();

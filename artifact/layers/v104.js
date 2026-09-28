@@ -139,6 +139,101 @@ function buildTruncatedHx(priceHistoryCsvText,d){
   return {hx:res.hx};
 }
 
+/* ================= 2b. FAST truncation (v105 speed-up, additive) =================
+   buildTruncatedHx() above re-parses the ENTIRE raw price-history CSV text from scratch on every
+   single replay date (truncateHistoryText() re-scans every line of the raw text, then
+   window.__hxApi.parse() -- hxParseCsv() from v81 -- re-tokenizes and re-validates the truncated
+   subset) -- for a daily-rebalance backtest over ~260 dates against a 300k+ row price-history
+   file, that is ~260 full linear passes over the whole file. buildHxFrame() below does the
+   equivalent per-row work (the same bkIso() date cutoff truncateHistoryText() uses, and the same
+   header lookup, symbol-regex/value-finiteness row validity and HX_KEEP=300 trailing-window trim
+   hxParseCsv() -- section 1a of v81.js -- uses) exactly ONCE, into a structure kept sorted by
+   date; sliceHxFrame()/buildTruncatedHxFast() then advance a pointer through that structure as
+   the (always-ascending) replay date advances, which is the same total work but done once instead
+   of once-per-date. This is proven equivalent, date for date, to buildTruncatedHx() above -- see
+   backtest_fast_unit.js, which runs both across every eligible date of several real fixtures at
+   different rebalance frequencies and asserts the resulting hx objects are deeply equal -- before
+   computeUps() below is switched to call the fast path by default. buildTruncatedHx() itself is
+   left completely unchanged (still exported below) as both the reference this equivalence is
+   checked against and a fallback. */
+var HX_KEEP_FAST=300;
+function hxSymOkFast(s){ return /^[A-Z0-9][A-Z0-9.\-]{0,11}$/.test(s); }
+function hxCellFast(s){ return String(s===undefined||s===null?"":s).trim().replace(/^"|"$/g,""); }
+/* One pass over the raw CSV text: for every data line, the SAME date (bkIso -- the exact cutoff
+   truncateHistoryText() itself uses), symbol and HClose/Open columns hxParseCsv() would read, plus
+   whether hxParseCsv() would count the row as valid (symbol regex + finite value > 0). Lines with
+   no parseable date are dropped entirely, exactly as truncateHistoryText() drops them from the
+   truncated text before it ever reaches hxParseCsv(). Throws on a missing Date column, exactly as
+   truncateHistoryText() itself throws (a v104 backtest was never resilient to that; nothing
+   upstream catches it either, so this matches the existing behavior precisely). */
+function buildHxFrame(priceHistoryCsvText){
+  var lines=csvLines(priceHistoryCsvText);
+  var frame={rows:[],ptr:0,n:0,bad:0,ds:[],dsSet:{},by:{},byO:{},hasOpens:false,error:null};
+  if(!lines.length) return frame;
+  var head=lines[0].split(",").map(function(c){ return c.trim(); });
+  var iD=head.indexOf("Date");
+  if(iD<0) throw new Error("The price-history CSV has no Date column.");
+  var iS=head.indexOf("Symbol"), iC=head.indexOf("HClose");
+  if(iC<0) iC=head.indexOf("Close"); if(iC<0) iC=head.indexOf("Price");
+  var iO=head.indexOf("HOpen"); if(iO<0) iO=head.indexOf("Open");
+  frame.hasOpens=iO>=0;
+  if(iS<0||iC<0){
+    var g=[]; if(iS<0) g.push("no Symbol column"); if(iC<0) g.push("no HClose column");
+    frame.error="This does not look like the part E history file: "+g.join(", ")+". The header was: "+lines[0].slice(0,160);
+    return frame;
+  }
+  for(var i=1;i<lines.length;i++){
+    if(!lines[i]) continue;
+    var cells=lines[i].split(",");
+    var iso=bkIso(cells[iD]); if(!iso) continue;
+    var sym=hxCellFast(cells[iS]).toUpperCase();
+    var v=parseFloat(hxCellFast(cells[iC]));
+    var ok=hxSymOkFast(sym)&&isFinite(v)&&v>0;
+    var open=null;
+    if(iO>=0){ var o=parseFloat(hxCellFast(cells[iO])); if(isFinite(o)&&o>0) open=o; }
+    frame.rows.push({iso:iso,sym:sym,v:v,open:open,ok:ok});
+  }
+  frame.rows.sort(function(a,b){ return a.iso<b.iso?-1:(a.iso>b.iso?1:0); }); // stable: ties keep file order
+  return frame;
+}
+/* Advances frame's pointer to include every row with iso<=d (rows are sorted ascending, and d only
+   ever grows across a single backtest's date loop, so this never re-scans a row twice), then
+   reproduces hxParseCsv()'s own gates/output construction from what has accumulated so far. */
+function sliceHxFrame(frame,d){
+  if(frame.error) return {error:frame.error};
+  if(!frame.rows.length&&frame.ptr===0&&frame.n===0){ /* nothing to advance into either way */ }
+  var rows=frame.rows;
+  while(frame.ptr<rows.length&&rows[frame.ptr].iso<=d){
+    var r=rows[frame.ptr]; frame.ptr++; frame.n++;
+    if(!r.ok){ frame.bad++; continue; }
+    (frame.by[r.sym]=frame.by[r.sym]||{})[r.iso]=r.v;
+    if(!frame.dsSet[r.iso]){ frame.dsSet[r.iso]=1; frame.ds.push(r.iso); }
+    if(frame.hasOpens&&r.open!==null) (frame.byO[r.sym]=frame.byO[r.sym]||{})[r.iso]=r.open;
+  }
+  if(frame.n===0) return {error:"The file is empty."};
+  var gates=[];
+  var all=frame.ds, dates=all.length>HX_KEEP_FAST?all.slice(all.length-HX_KEEP_FAST):all.slice();
+  var syms=Object.keys(frame.by).sort(), last=dates[dates.length-1];
+  if(syms.length<50) gates.push("only "+syms.length+" symbols (at least 50 expected)");
+  if(dates.length<60) gates.push("only "+dates.length+" bars (at least 60 expected; part E asks for 280)");
+  if(frame.n&&frame.bad/frame.n>0.05) gates.push(frame.bad+" of "+frame.n+" rows could not be read");
+  var onLast=syms.filter(function(s){ return frame.by[s][last]!==undefined; }).length;
+  if(syms.length&&onLast/syms.length<0.8) gates.push("only "+onLast+" of "+syms.length+" symbols have the newest bar "+last);
+  if(gates.length) return {error:gates.join(" | ")};
+  var out={};
+  syms.forEach(function(s){ var m=frame.by[s]; out[s]=dates.map(function(dd){ var v=m[dd]; return v===undefined?null:Math.round(v*1e4)/1e4; }); });
+  var opens=null;
+  if(frame.hasOpens){ opens={}; syms.forEach(function(s){ var m=frame.byO[s]||{}; opens[s]=dates.map(function(dd){ var v=m[dd]; return v===undefined?null:Math.round(v*1e4)/1e4; }); }); }
+  var hx={v:1,dates:dates,syms:out,lastDate:last,nSyms:syms.length,bars:dates.length,rows:frame.n,badRows:frame.bad};
+  if(opens) hx.opens=opens;
+  return {hx:hx};
+}
+function buildTruncatedHxFast(frame,d){
+  var r=sliceHxFrame(frame,d);
+  if(r.error) return {error:"history truncated to "+d+": "+r.error};
+  return {hx:r.hx};
+}
+
 /* ================= 3. rebalance-eligible dates (reuse filterRebal/pkeyOf verbatim, do not reimplement) ========= */
 function eligibleDates(allDatesAsc,mode){
   var trk=window.__trk;
@@ -180,14 +275,21 @@ function checkReproducibility(port,scanGroup,allHistDatesAsc,eligible){
 }
 
 /* ================= 5. the replay loop ================= */
-/* backtestPortfolio(port, mergedHistoricalCsvText, priceHistoryCsvText) -> {
-     ok:bool, notReproducible:string|null, error:string|null, dates:[...], ups:[...], result:(engine() output) }
-   Never mutates port. Never leaves S/U/SEC/SYM/HX/HXM/HXC/QM_CTX changed after it returns (every substitution goes
-   through replayDate(), which restores in a finally). */
-function backtestPortfolio(port,mergedHistoricalCsvText,priceHistoryCsvText,preGroupedScan){
-  var out={ok:false,notReproducible:null,error:null,dates:[],ups:null,result:null,advisory:null,group:null};
+/* computeUps(port, mergedHistoricalCsvText, priceHistoryCsvText, preGroupedScan) -> {
+     ok:bool, notReproducible:string|null, error:string|null, dates:[...], ups:[...]|null, group:..., advisory:... }
+   The per-date "what does this spec pick, point in time" loop, split out of backtestPortfolio() below so BOTH the
+   full backtest (which then runs engine() over the result) and the new weights-only fast export (which does not)
+   share the exact same picks -- the no-look-ahead replay logic is never duplicated. Field-by-field identical to
+   what backtestPortfolio() computed inline before this split (same var names, same order, same early returns) --
+   only the buildTruncatedHx() call was swapped for the equivalent-but-faster buildHxFrame()/buildTruncatedHxFast()
+   pair (Optimization A; see the "2b. FAST truncation" comment above for the equivalence argument and
+   backtest_fast_unit.js for the check this was verified against before being made the default). Never mutates
+   port. Never leaves S/U/SEC/SYM/HX/HXM/HXC/QM_CTX changed after it returns (every substitution goes through
+   replayDate(), which restores in a finally). */
+function computeUps(port,mergedHistoricalCsvText,priceHistoryCsvText,preGroupedScan){
+  var out={ok:false,notReproducible:null,error:null,dates:[],ups:null,group:null,advisory:null};
   var trk=window.__trk;
-  if(!trk||typeof trk.picksOf!=="function"||typeof trk.filterRebal!=="function"||typeof trk.engine!=="function"){
+  if(!trk||typeof trk.picksOf!=="function"||typeof trk.filterRebal!=="function"){
     out.error="The portfolio tracker engine is not available."; return out;
   }
   /* v104 SPEED note: preGroupedScan (if supplied by the caller) is the already-computed groupScanByDate() result for
@@ -207,12 +309,16 @@ function backtestPortfolio(port,mergedHistoricalCsvText,priceHistoryCsvText,preG
   if(rep.blocking){ out.notReproducible=rep.blocking; out.dates=eligible; return out; }
   if(rep.advisory) out.advisory=rep.advisory;
 
+  /* v105 SPEED (Optimization A): one frame built ONCE for the whole replay, instead of a full truncate+reparse of
+     the raw CSV text on every eligible date. See buildHxFrame()'s own comment above. */
+  var frame=buildHxFrame(priceHistoryCsvText);
+
   var ups=[];
   for(var i=0;i<eligible.length;i++){
     var d=eligible[i];
     var rows=g.byDate[d];
     var scanText=csvSerialize(g.header,rows);
-    var hxRes=buildTruncatedHx(priceHistoryCsvText,d);
+    var hxRes=buildTruncatedHxFast(frame,d);
     if(hxRes.error){ ups.push({d:d,picks:[],exits:{},skipped:true,reason:hxRes.error}); continue; }
     var stepErr=null, rec=null;
     replayDate(d,scanText,hxRes.hx,function(ctx){
@@ -229,13 +335,26 @@ function backtestPortfolio(port,mergedHistoricalCsvText,priceHistoryCsvText,preG
     if(stepErr){ out.error=stepErr; return out; }
     ups.push(rec);
   }
-  out.dates=eligible; out.ups=ups;
+  out.dates=eligible; out.ups=ups; out.ok=true;
+  return out;
+}
+
+/* backtestPortfolio(port, mergedHistoricalCsvText, priceHistoryCsvText) -> {
+     ok:bool, notReproducible:string|null, error:string|null, dates:[...], ups:[...], result:(engine() output) }
+   Unchanged in behavior from before the v105 split above: computeUps() for the picks, then the one, unchanged
+   trk.engine() call over the whole picks timeline for the trade/cost/P&L/stats simulation. */
+function backtestPortfolio(port,mergedHistoricalCsvText,priceHistoryCsvText,preGroupedScan){
+  var pre=computeUps(port,mergedHistoricalCsvText,priceHistoryCsvText,preGroupedScan);
+  var out={ok:false,notReproducible:pre.notReproducible,error:pre.error,dates:pre.dates,ups:pre.ups,result:null,advisory:pre.advisory,group:pre.group};
+  if(!pre.ok) return out;
+  var trk=window.__trk;
+  if(!trk||typeof trk.engine!=="function"){ out.error="The portfolio tracker engine is not available."; return out; }
 
   var fullRes;
   try{ fullRes=window.__hxApi.parse(priceHistoryCsvText); }catch(e){ out.error="Could not parse the full price-history file: "+e.message; return out; }
   if(fullRes.gates&&fullRes.gates.length){ out.error="Could not parse the full price-history file: "+fullRes.gates.join(" | "); return out; }
 
-  var pseudoPort={settings:port.settings||{},ups:ups.filter(function(u){ return !u.skipped; })};
+  var pseudoPort={settings:port.settings||{},ups:pre.ups.filter(function(u){ return !u.skipped; })};
   if(!pseudoPort.ups.length){ out.error="Every replay date was skipped (see reasons on each ups[] entry) -- nothing to compute."; return out; }
   var result;
   try{ result=trk.engine(pseudoPort,fullRes.hx,"RSP"); }catch(e){ out.error="engine() threw: "+e.message; return out; }
@@ -243,8 +362,52 @@ function backtestPortfolio(port,mergedHistoricalCsvText,priceHistoryCsvText,preG
   return out;
 }
 
-window.__bt={replayDate:replayDate,backtestPortfolio:backtestPortfolio,groupScanByDate:groupScanByDate,
-  buildTruncatedHx:buildTruncatedHx,eligibleDates:eligibleDates,checkReproducibility:checkReproducibility,bkIso:bkIso,
+/* ================= 5b. weights-only fast export (Optimization B) =================
+   backtestWeightsOnly(port, mergedHistoricalCsvText, priceHistoryCsvText, preGroupedScan) -> {
+     ok:bool, notReproducible, error, dates, ups, weights:[{d,s,side,weight}]|null, advisory, group }
+   Runs the SAME no-look-ahead pick-selection loop as backtestPortfolio() (via the shared computeUps()) to get
+   ups[], then, instead of calling trk.engine() for the full trade/cost/P&L/stats simulation, computes ONLY the
+   per-date target weights using the exact same shared helpers engine() itself now calls (window.__trk.
+   idxAfterOf/idxOnOrAfterOf/makeVolOf/weightRowsFor, extracted verbatim from v103.js's engine() -- see that
+   file's "v105 hooks" comment) -- so the weighting formula is reused, never re-derived, and cannot drift from
+   what engine() would compute. The resulting weights[] is built in exactly the same order/shape as engine()'s own
+   out.weights (same {d,s,side,weight} records, same iteration order: ascending fill index, picks in rank order
+   within each date), so weightsCsvOf() (below) produces a byte-identical CSV either way -- see
+   backtest_weights_only_unit.js for the direct comparison this was checked against. */
+function backtestWeightsOnly(port,mergedHistoricalCsvText,priceHistoryCsvText,preGroupedScan){
+  var pre=computeUps(port,mergedHistoricalCsvText,priceHistoryCsvText,preGroupedScan);
+  var out={ok:false,notReproducible:pre.notReproducible,error:pre.error,dates:pre.dates,ups:pre.ups,weights:null,advisory:pre.advisory,group:pre.group};
+  if(!pre.ok) return out;
+  var trk=window.__trk;
+  if(!trk||typeof trk.idxAfterOf!=="function"||typeof trk.idxOnOrAfterOf!=="function"||typeof trk.makeVolOf!=="function"||typeof trk.weightRowsFor!=="function"){
+    out.error="The portfolio tracker weighting helpers are not available."; return out;
+  }
+  var fullRes;
+  try{ fullRes=window.__hxApi.parse(priceHistoryCsvText); }catch(e){ out.error="Could not parse the full price-history file: "+e.message; return out; }
+  if(fullRes.gates&&fullRes.gates.length){ out.error="Could not parse the full price-history file: "+fullRes.gates.join(" | "); return out; }
+  var hx=fullRes.hx;
+  var upsAll=pre.ups.filter(function(u){ return !u.skipped; });
+  if(!upsAll.length){ out.error="Every replay date was skipped (see reasons on each ups[] entry) -- nothing to compute."; return out; }
+  var S=port.settings||{}, entry=S.entry||"open", rebal=S.rebalance||"daily", wm=S.weight||"eq";
+  if(!hx||!hx.dates||!hx.dates.length){ out.weights=[]; out.ok=true; return out; }
+  var ups=trk.filterRebal(upsAll,rebal);
+  var D=hx.dates, C=hx.syms||{};
+  var volOf=trk.makeVolOf(C);
+  var sched=ups.map(function(u){ return {u:u,i:entry==="open"?trk.idxAfterOf(D,u.d):trk.idxOnOrAfterOf(D,u.d)}; });
+  var run=sched.filter(function(x){ return x.i>=0; }).sort(function(a,b){ return a.i-b.i; });
+  var weights=[];
+  run.forEach(function(x){
+    var n=x.u.picks.length; if(!n) return;
+    trk.weightRowsFor(x.u.picks,wm,x.i,volOf).forEach(function(w){ weights.push({d:D[x.i],s:w.s,side:w.side,weight:w.weight}); });
+  });
+  out.weights=weights; out.ok=true;
+  return out;
+}
+
+window.__bt={replayDate:replayDate,backtestPortfolio:backtestPortfolio,backtestWeightsOnly:backtestWeightsOnly,
+  computeUps:computeUps,groupScanByDate:groupScanByDate,
+  buildTruncatedHx:buildTruncatedHx,buildHxFrame:buildHxFrame,buildTruncatedHxFast:buildTruncatedHxFast,
+  eligibleDates:eligibleDates,checkReproducibility:checkReproducibility,bkIso:bkIso,
   /* test-support only (used by backtest_unit.js): S/U/SEC/SYM/HX/HXM/HXC/QM_CTX are not on window (they live in the
      shared closure this whole spliced page runs in), so a Playwright page.evaluate() from outside that closure
      cannot reach them directly. These three read-only/pass-through helpers let the test harness (a) read the exact
@@ -262,7 +425,11 @@ window.__bt={replayDate:replayDate,backtestPortfolio:backtestPortfolio,groupScan
    still happens unchanged, then appends one more section at the end of the same pane. Uses its own portfolio
    picker (not the tracker's private SEL, which is not exported) so this never depends on which portfolio the live
    tracker view happens to be showing. */
-var BT={portId:null,f1:null,f2:null,running:false,out:null,err:null};
+var BT={portId:null,f1:null,f2:null,running:false,out:null,err:null,
+  /* Optimization B state: a SEPARATE run/result from the full "Run backtest" above -- clicking either button never
+     touches the other's state, so both can be inspected independently and neither's rendering changes when the
+     other runs. */
+  wRunning:false,wOut:null,wErr:null};
 /* v104 SPEED: in-memory cache of the parsed file inputs, keyed by (name+size+lastModified) so re-clicking "Run
    backtest" with the SAME two File objects (BT.f1/BT.f2 persist across clicks) skips the FileReader read and, for
    the merged scan CSV, the groupScanByDate() re-parse -- reusing the exact same parsed structure instead. Picking a
@@ -308,6 +475,19 @@ function btSection(){
     '<button type="button" class="btn ghost" id="bt104Weights"'+(BT.out&&BT.out.ok?"":" disabled")+'>Download Terminal_Weights.csv</button>'+
     (BT.f1&&BT.f2?' <span class="mini">'+hE(BT.f1.name)+" + "+hE(BT.f2.name)+"</span>":' <span class="mini">Choose both files first.</span>')+'</p>');
   if(BT.err) h.push('<p class="mini" style="color:var(--neg)">Could not run: '+hE(BT.err)+'</p>');
+  h.push('<p style="margin:10px 0 6px;padding-top:8px;border-top:1px dashed var(--line)">'+
+    '<button type="button" class="btn ghost" id="bt105WeightsOnly" style="border-style:dashed"'+(BT.wRunning||!BT.f1||!BT.f2?" disabled":"")+'>'+
+    (BT.wRunning?"Computing weights…":"⚡ Export weights only (fast)")+'</button> '+
+    '<span class="mini">Same picks, same weight formula, but skips the trade/cost/P&amp;L simulation — just the picks and their target weights, faster for a large price-history file. Produces the same Terminal_Weights.csv.</span></p>');
+  if(BT.wErr) h.push('<p class="mini" style="color:var(--neg)">Could not compute weights: '+hE(BT.wErr)+'</p>');
+  var wr=BT.wOut;
+  if(wr&&wr.notReproducible){
+    h.push('<div class="mini" style="margin:8px 0;padding:8px 10px;border-left:3px solid var(--neg)"><b>Not reproducible point-in-time:</b> '+hE(wr.notReproducible)+'</div>');
+  } else if(wr&&wr.error){
+    h.push('<p class="mini" style="color:var(--neg)">Weights-only export error: '+hE(wr.error)+'</p>');
+  } else if(wr&&wr.ok){
+    h.push('<p class="mini">Weights ready: '+wr.dates.length+' rebalance-eligible date(s) from '+hE(wr.dates[0])+' to '+hE(wr.dates[wr.dates.length-1])+', '+wr.weights.length+' (date, symbol) row(s). <button type="button" class="btn ghost" id="bt105WeightsOnlyDl">Download Terminal_Weights.csv</button></p>');
+  }
   var r=BT.out;
   if(r&&r.notReproducible){
     h.push('<div class="mini" style="margin:8px 0;padding:8px 10px;border-left:3px solid var(--neg)"><b>Not reproducible point-in-time:</b> '+hE(r.notReproducible)+'</div>');
@@ -359,14 +539,26 @@ function btAppendUI(){
    bought. r.result.weights (added additively to engine()'s output, v103.js) already carries exactly this: it is
    populated for every current pick on every rebalance date the replay actually processed, using the SAME eq/rank/iv
    formula the engine uses to size real buys -- reused here verbatim, never recomputed differently. */
-function weightsCsvOf(r){
-  var rows=(r&&r.result&&r.result.weights)||[];
-  var sorted=rows.slice().sort(function(a,b){ return a.d<b.d?-1:(a.d>b.d?1:(a.s<b.s?-1:(a.s>b.s?1:0))); });
+/* Shared by BOTH export paths: the full "Run backtest" -> Download button (rows = r.result.weights, from
+   trk.engine()'s out.weights) and the weights-only fast export (rows = backtestWeightsOnly()'s out.weights) --
+   same rows shape ({d,s,side,weight}), same sort, same formatting either way, so the two paths' CSVs can only
+   ever differ if the weight ROWS themselves differ (which the correctness gate below checks for). */
+function weightsCsvRows(rows){
+  var sorted=(rows||[]).slice().sort(function(a,b){ return a.d<b.d?-1:(a.d>b.d?1:(a.s<b.s?-1:(a.s>b.s?1:0))); });
   var L=["Date,Symbol,Weight"];
   sorted.forEach(function(w){ L.push([w.d,csvQuote(w.s),num(w.weight)?w.weight.toFixed(6):"0"].join(",")); });
   return L.join("\r\n");
 }
+function weightsCsvOf(r){ return weightsCsvRows((r&&r.result&&r.result.weights)||[]); }
+/* v105 fix: a raw anchor-click Blob download is silently blocked in this Artifact's sandboxed iframe (no thrown
+   exception, so the bare try/catch below hid the failure completely -- "nothing happens" when the button is
+   clicked). window.__trk.download (v103.js) is the ALREADY-PROVEN path this page's own "Download CSV" button
+   (Portfolio Tracker) uses: it tries the claude.ai `downloads` runtime capability first (window.claude.use(
+   "downloads") -> dl.save({filename,data})), which works from inside the sandbox, and only falls back to the same
+   anchor-click approach if that capability is unavailable. Reused here verbatim instead of a second, broken
+   reimplementation; the local fallback below only fires if the v103 hook itself is ever missing. */
 function bkDownload(name,text){
+  if(window.__trk&&typeof window.__trk.download==="function"){ window.__trk.download(name,text); return; }
   try{
     var a=document.createElement("a");
     a.href=URL.createObjectURL(new Blob([text],{type:"text/csv"}));
@@ -385,9 +577,9 @@ function readFile(f){
 }
 
 document.addEventListener("change",function(e){
-  if(e.target&&e.target.id==="bt104Sel"){ BT.portId=e.target.value; BT.out=null; BT.err=null; btAppendUI(); return; }
-  if(e.target&&e.target.id==="bt104File1"){ BT.f1=(e.target.files&&e.target.files[0])||null; btAppendUI(); return; }
-  if(e.target&&e.target.id==="bt104File2"){ BT.f2=(e.target.files&&e.target.files[0])||null; btAppendUI(); return; }
+  if(e.target&&e.target.id==="bt104Sel"){ BT.portId=e.target.value; BT.out=null; BT.err=null; BT.wOut=null; BT.wErr=null; btAppendUI(); return; }
+  if(e.target&&e.target.id==="bt104File1"){ BT.f1=(e.target.files&&e.target.files[0])||null; BT.wOut=null; BT.wErr=null; btAppendUI(); return; }
+  if(e.target&&e.target.id==="bt104File2"){ BT.f2=(e.target.files&&e.target.files[0])||null; BT.wOut=null; BT.wErr=null; btAppendUI(); return; }
 });
 document.addEventListener("click",function(e){
   var t=e.target&&e.target.closest?e.target.closest("#bt104Run"):null; if(!t) return;
@@ -415,6 +607,33 @@ document.addEventListener("click",function(e){
   var ST=window.__trk.state(), port=(ST&&ST.ports||[]).filter(function(p){ return p.id===BT.portId; })[0];
   var slug=((port&&port.name)||BT.portId||"portfolio").replace(/[^a-z0-9]+/gi,"_").replace(/^_+|_+$/g,"").slice(0,40)||"portfolio";
   bkDownload("Terminal_Weights_"+slug+".csv",weightsCsvOf(BT.out));
+});
+document.addEventListener("click",function(e){
+  var t=e.target&&e.target.closest?e.target.closest("#bt105WeightsOnly"):null; if(!t) return;
+  if(!BT.f1||!BT.f2||BT.wRunning) return;
+  var ST=window.__trk.state(), port=(ST&&ST.ports||[]).filter(function(p){ return p.id===BT.portId; })[0];
+  if(!port){ BT.wErr="Pick a portfolio first."; btAppendUI(); return; }
+  BT.wRunning=true; BT.wErr=null; BT.wOut=null; btAppendUI();
+  var k1=fkeyOf(BT.f1), k2=fkeyOf(BT.f2);
+  var c1=(FCACHE.f1&&FCACHE.f1.key===k1)?FCACHE.f1:null;
+  var c2=(FCACHE.f2&&FCACHE.f2.key===k2)?FCACHE.f2:null;
+  var p1=c1?Promise.resolve(c1.text):readFile(BT.f1);
+  var p2=c2?Promise.resolve(c2.text):readFile(BT.f2);
+  Promise.all([p1,p2]).then(function(texts){
+    if(!c1){ c1={key:k1,text:texts[0],group:null}; FCACHE.f1=c1; }
+    if(!c2){ c2={key:k2,text:texts[1]}; FCACHE.f2=c2; }
+    var res;
+    try{ res=backtestWeightsOnly(port,texts[0],texts[1],c1.group); }catch(err){ BT.wErr=err&&err.message?err.message:String(err); BT.wRunning=false; btAppendUI(); return; }
+    if(res&&res.group) c1.group=res.group;
+    BT.wOut=res; BT.wRunning=false; btAppendUI();
+  },function(err){ BT.wErr=err&&err.message?err.message:String(err); BT.wRunning=false; btAppendUI(); });
+});
+document.addEventListener("click",function(e){
+  var t=e.target&&e.target.closest?e.target.closest("#bt105WeightsOnlyDl"):null; if(!t) return;
+  if(!BT.wOut||!BT.wOut.ok) return;
+  var ST=window.__trk.state(), port=(ST&&ST.ports||[]).filter(function(p){ return p.id===BT.portId; })[0];
+  var slug=((port&&port.name)||BT.portId||"portfolio").replace(/[^a-z0-9]+/gi,"_").replace(/^_+|_+$/g,"").slice(0,40)||"portfolio";
+  bkDownload("Terminal_Weights_"+slug+".csv",weightsCsvRows(BT.wOut.weights));
 });
 
 /* v103's own click handlers call its LOCAL render() function directly (a closure variable), not
