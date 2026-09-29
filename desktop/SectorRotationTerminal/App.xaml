@@ -1,0 +1,19 @@
+<Application x:Class="SectorRotationTerminal.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             StartupUri="MainWindow.xaml">
+  <Application.Resources>
+    <SolidColorBrush x:Key="WindowBackground" Color="#111419" />
+    <SolidColorBrush x:Key="ChromeBackground" Color="#1B1E23" />
+    <SolidColorBrush x:Key="ChromeBorder" Color="#343941" />
+    <SolidColorBrush x:Key="ChromeText" Color="#E9EAED" />
+    <Style TargetType="Button">
+      <Setter Property="Background" Value="#252A31" />
+      <Setter Property="Foreground" Value="{StaticResource ChromeText}" />
+      <Setter Property="BorderBrush" Value="{StaticResource ChromeBorder}" />
+      <Setter Property="Padding" Value="12,6" />
+      <Setter Property="Margin" Value="4,0" />
+      <Setter Property="Cursor" Value="Hand" />
+    </Style>
+  </Application.Resources>
+</Application>

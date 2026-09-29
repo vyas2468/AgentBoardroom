@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>SectorRotationTerminal</AssemblyName>
+    <RootNamespace>SectorRotationTerminal</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3537.50" />
+  </ItemGroup>
+
+  <!-- Keep the published Artifact source read-only. The desktop bundle is assembled in the
+       user's local application-data directory when the app starts. -->
+  <ItemGroup>
+    <Content Include="..\..\artifact\base\orig.html" Link="AppContent\artifact\base\orig.html" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\artifact\layers\v*.js" Link="AppContent\artifact\layers\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\artifact\tools\fixtures\live_scan.json" Link="AppContent\artifact\fixtures\live_scan.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\realtest\AutomationWorkflow\AlexAligned_Unified_v7_E_History_26.09.2026.rts" Link="AppContent\realtest\AlexAligned_Unified_v7_E_History_26.09.2026.rts" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\realtest\AutomationWorkflow\run_v7_history.ps1" Link="AppContent\realtest\run_v7_history.ps1" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\realtest\AutomationWorkflow\Run_AlexAligned_v7_History.bat" Link="AppContent\realtest\Run_AlexAligned_v7_History.bat" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>
