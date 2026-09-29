@@ -210,7 +210,7 @@ Settings:
 	EndDate:	Latest
 	AccountSize:	100000
 	UseAvailableBars:	False
-	SaveScanAs:	?scriptpath?\AlexAligned_Unified_v7E_history.csv
+	SaveScanAs:	?scriptpath?\Outputs\AlexAligned_Unified_v7E_history.csv
 
 	// StartDate lives in TestSettings only, exactly as in parts A B C: a StartDate in
 	// Settings corrupts the ScanSettings EndDate Latest plus NumBars anchoring.

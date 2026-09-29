@@ -38,7 +38,9 @@ Notes:
 
 	BEFORE RUNNING:
 	1. Same as the Validate script: Terminal_Weights.csv must be sitting next to this script in
-	   C:\RealTest21_newerv2\Scripts\SectorTerminalScripts.
+	   C:\RealTest21_newerv2\Scripts\SectorTerminalScripts\AutomationWorkflow. The order list this
+	   script writes goes into an Outputs subfolder right there (see OrdersFile: below) -- the
+	   launcher creates that subfolder automatically if it does not exist yet.
 	2. Confirm the TestSettings StartDate below covers the CSV's date range (EndDate is
 	   deliberately Latest here, not a fixed date, so order generation always uses the most
 	   recent data/CSV row available -- unlike the Validate script's fixed EndDate window).
@@ -82,7 +84,7 @@ OrderSettings:
 	// portfolio rebalance tool, if/when a real brokerage integration is wanted -- Text is the
 	// safest first step since it needs no extra template file.
 	OrdersMode:	Text
-	OrdersFile:	?scriptpath?\AlexAligned_Unified_v7_Orders_TerminalWeights_Orders.csv
+	OrdersFile:	?scriptpath?\Outputs\AlexAligned_Unified_v7_Orders_TerminalWeights_Orders.csv
 
 Data:
 	// Identical to the Validate script -- see its Notes: for the full explanation.

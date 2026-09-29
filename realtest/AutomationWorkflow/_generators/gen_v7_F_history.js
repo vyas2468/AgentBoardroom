@@ -60,7 +60,15 @@ if (iSaveScanAs < 0) { console.error("could not find a SaveScanAs: line in " + s
 const oldSave = lines[iSaveScanAs];
 const m = oldSave.match(/^\tSaveScanAs:\t(.*)\.csv\s*$/);
 if (!m) { console.error("unexpected SaveScanAs: line format: " + oldSave); process.exit(1); }
-const newSave = "\tSaveScanAs:\t" + m[1] + "_F_History_" + NumBars + "bars.csv";
+// Route the generated CSV into an Outputs subfolder next to wherever THIS new .rts ends up
+// living (?scriptpath? resolves at RealTest run time to the .rts's own folder, not the
+// source's) -- only when the source used the standard ?scriptpath?\ prefix every script in
+// this project uses; otherwise leave the derived path exactly as the source had it (safe
+// fallback, same behaviour as before this change).
+const scriptpathPrefix = /^\?scriptpath\?\\/;
+const base = scriptpathPrefix.test(m[1]) ? m[1].replace(scriptpathPrefix, "?scriptpath?\\Outputs\\") : m[1];
+if (!scriptpathPrefix.test(m[1])) console.log("note: source SaveScanAs does not start with ?scriptpath?\\ -- output NOT redirected into Outputs\\, using the derived path as-is");
+const newSave = "\tSaveScanAs:\t" + base + "_F_History_" + NumBars + "bars.csv";
 if (newSave === oldSave) { console.error("generated the same SaveScanAs path as the original -- refusing to risk overwriting the live scan"); process.exit(1); }
 
 // 4. Apply both edits. Everything else in the file -- Import:, Data:, Scan:, TestSettings:,
@@ -94,4 +102,4 @@ const body = origNotesStart === 0
   : banner + "\r\n" + outLines.join("\r\n");
 
 fs.writeFileSync(out, body, "latin1");
-console.log("wrote " + out + " (part " + partLetter + ", NumBars " + NumBars + "; output CSV: " + m[1] + "_F_History_" + NumBars + "bars.csv)");
+console.log("wrote " + out + " (part " + partLetter + ", NumBars " + NumBars + "; output CSV: " + base + "_F_History_" + NumBars + "bars.csv)");

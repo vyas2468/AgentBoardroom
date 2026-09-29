@@ -1,30 +1,35 @@
-# AlexAligned Unified v7 Validate-TerminalWeights-ZeroCost launcher: same cross-check as
-# run_v7_Validate_TerminalWeights.ps1, but against the ZeroCost .rts (Commission/Slippage both 0),
-# to isolate whether cost drag from RealTest's per-lot trade accounting explains a return/drawdown
-# gap against the web terminal's own backtest numbers.
-# ASCII only, Windows PowerShell 5.1.
+# AlexAligned Unified v7 Validate-TerminalWeights launcher: RealTest cross-check of the web
+# terminal's Backtest section, driven by an externally supplied Terminal_Weights.csv.
+# ASCII only, Windows PowerShell 5.1. OPTIONAL and separate from run_v7_workflow.ps1 and parts E/F.
 #
-#   Runs AlexAligned_Unified_v7_Validate_TerminalWeights_ZeroCost.rts in Test mode (-test). Never
-#   -import. Writes AlexAligned_Unified_v7_Validate_TerminalWeights_ZeroCost_*.csv next to the
-#   script -- separate files from the cost-inclusive run, so both sit side by side.
+#   Runs AlexAligned_Unified_v7_Validate_TerminalWeights.rts in Test mode (-test). Never
+#   -import, so it never touches the shared alexaligned_unified_v7.rtd data file -- it only
+#   reads it (via DataFile:, like part E). Writes a trade list, a results row, and an equity
+#   curve CSV into an Outputs subfolder next to the script.
 #
-# BEFORE the first run: Terminal_Weights.csv must already be in this Scripts folder (same file the
-# cost-inclusive run used, for a fair comparison).
+# BEFORE the first run: export Terminal_Weights.csv from the web terminal's Backtest section
+# for the portfolio you want to check, and copy it into this same folder, next to the .rts file
+# (NOT into Outputs -- see README_v7_Validate_TerminalWeights.md). The script will not run
+# without it.
+#
+# Run this any time after part C (or the main workflow) has imported data at least once, never
+# while another RealTest job is running.
 #   -Ask      ask before starting
-#   -NoPause  do not wait for Enter at the end (the .bat pauses instead)
+#   -NoPause  do not wait for Enter at the end (the .bat pauses instead, so the window never closes early)
 param([switch]$Ask, [switch]$NoPause)
 $ErrorActionPreference = 'Stop'
 $Root = 'C:\RealTest21_newerv2'
-$Scr  = Join-Path $Root 'Scripts\SectorTerminalScripts'
+$Scr  = Join-Path $Root 'Scripts\SectorTerminalScripts\AutomationWorkflow'
+$Out  = Join-Path $Scr 'Outputs'
 $Exe  = Join-Path $Root 'RealTest.exe'
 $Rtd  = Join-Path $Root 'Data\alexaligned_unified_v7.rtd'
 $Batch = Join-Path $Root 'batchlog.txt'
 $Errl  = Join-Path $Root 'errorlog.txt'
-$File = 'AlexAligned_Unified_v7_Validate_TerminalWeights_ZeroCost.rts'
+$File = 'AlexAligned_Unified_v7_Validate_TerminalWeights.rts'
 $WeightsCsv = Join-Path $Scr 'Terminal_Weights.csv'
-$TradesCsv  = Join-Path $Scr 'AlexAligned_Unified_v7_Validate_TerminalWeights_ZeroCost_Trades.csv'
-$ResultsCsv = Join-Path $Scr 'AlexAligned_Unified_v7_Validate_TerminalWeights_ZeroCost_Results.csv'
-$EquityCsv  = Join-Path $Scr 'AlexAligned_Unified_v7_Validate_TerminalWeights_ZeroCost_Equity.csv'
+$TradesCsv  = Join-Path $Out 'AlexAligned_Unified_v7_Validate_TerminalWeights_Trades.csv'
+$ResultsCsv = Join-Path $Out 'AlexAligned_Unified_v7_Validate_TerminalWeights_Results.csv'
+$EquityCsv  = Join-Path $Out 'AlexAligned_Unified_v7_Validate_TerminalWeights_Equity.csv'
 $Flags = @('-test')
 
 function Stop-Run([string]$why) {
@@ -34,7 +39,7 @@ function Stop-Run([string]$why) {
 }
 function Line-Count([string]$p) { if (Test-Path $p) { @(Get-Content $p).Count } else { 0 } }
 
-Write-Host '=== AlexAligned Unified v7: validate against Terminal_Weights.csv (ZERO COST) ===' -ForegroundColor Cyan
+Write-Host '=== AlexAligned Unified v7: validate against Terminal_Weights.csv ===' -ForegroundColor Cyan
 $rtp = @(Get-Process -Name 'RealTest*' -ErrorAction SilentlyContinue)
 if ($rtp.Count) {
   Write-Host ''
@@ -50,8 +55,9 @@ if (-not (Test-Path $Exe)) { Stop-Run ('RealTest.exe not found at ' + $Exe) }
 if (-not (Test-Path (Join-Path $Scr $File))) { Stop-Run ('script missing: ' + (Join-Path $Scr $File)) }
 if (-not (Test-Path $Rtd)) { Stop-Run ('the shared data file does not exist yet: ' + $Rtd + '. Run part C (or the main workflow) first.') }
 if (-not (Test-Path $WeightsCsv)) { Stop-Run ('Terminal_Weights.csv not found in ' + $Scr + '. Export it from the web terminal''s Backtest section and copy it there first -- see README_v7_Validate_TerminalWeights.md.') }
+if (-not (Test-Path $Out)) { New-Item -ItemType Directory -Path $Out -Force | Out-Null }
 if ($Ask) {
-  $a = Read-Host 'Start the ZERO-COST validation run now? It runs RealTest once in Test mode. Type Y to start'
+  $a = Read-Host 'Start the validation run now? It runs RealTest once in Test mode. Type Y to start'
   if ($a -notmatch '^[Yy]') { Write-Host 'Cancelled.'; exit 0 }
 }
 
@@ -73,10 +79,10 @@ if (-not $resultsOk) { Stop-Run ('the run did not write a fresh ' + $ResultsCsv)
 if (-not $tradesOk) { Write-Host ('   note: no trade list found at ' + $TradesCsv + ' -- fine if the CSV held no positions, otherwise check the run for errors.') -ForegroundColor Yellow }
 
 Write-Host ''
-Write-Host ('ZERO-COST VALIDATION RUN PASSED (no parse/runtime errors). ' + $mins + ' min.') -ForegroundColor Green
+Write-Host ('VALIDATION RUN PASSED (no parse/runtime errors). ' + $mins + ' min.') -ForegroundColor Green
 Write-Host ('Results (one row, ending value / return / drawdown): ' + $ResultsCsv)
 Write-Host ('Trade list: ' + $TradesCsv)
 Write-Host ('Equity curve: ' + $EquityCsv)
-Write-Host 'Next: compare this ZERO-COST result against the cost-inclusive run''s Results CSV. If they are close, cost drag from per-lot trade accounting explains the earlier gap. If a big gap remains even here, something more structural is worth investigating.'
+Write-Host 'Next: open the Results CSV and compare its ending equity / return / max drawdown against the SAME portfolio''s numbers in the web terminal''s Backtest section for the same date range.'
 if ($Ask -and -not $NoPause) { Read-Host 'Press Enter to close' | Out-Null }
 exit 0

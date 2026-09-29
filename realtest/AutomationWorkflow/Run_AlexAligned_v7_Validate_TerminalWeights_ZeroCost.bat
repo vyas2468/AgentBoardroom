@@ -4,7 +4,7 @@ rem same window, Commission and Slippage both forced to 0. Run this to check whe
 rem RealTest's per-lot trade accounting explains a gap against the cost-inclusive run's numbers.
 rem The window always stays open at the end, so any message can be read.
 setlocal
-set "SCR=C:\RealTest21_newerv2\Scripts\SectorTerminalScripts"
+set "SCR=C:\RealTest21_newerv2\Scripts\SectorTerminalScripts\AutomationWorkflow"
 set "PS1=%SCR%\run_v7_Validate_TerminalWeights_ZeroCost.ps1"
 set "RTS=%SCR%\AlexAligned_Unified_v7_Validate_TerminalWeights_ZeroCost.rts"
 set "CSV=%SCR%\Terminal_Weights.csv"

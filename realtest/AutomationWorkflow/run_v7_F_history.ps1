@@ -1,14 +1,14 @@
 # AlexAligned Unified v7 part F launcher: historical scan export for RealTest backtesting.
 # ASCII only, Windows PowerShell 5.1. OPTIONAL and separate from run_v7_workflow.ps1 and part E.
 #
-#   Runs each generated part-F script (F_A, F_B, F_C, F_D -- whichever exist in Scripts) with
-#   apply + scan (reads the shared data file, no import, never touches it), then merges all
-#   their output CSVs into one combined historical scan CSV with merge_v7_F_history.py.
+#   Runs each generated part-F script (F_A, F_B, F_C, F_D -- whichever exist next to this
+#   script) with apply + scan (reads the shared data file, no import, never touches it), then
+#   merges all their output CSVs (from the Outputs subfolder) into one combined historical scan
+#   CSV with merge_v7_F_history.py.
 #
-# BEFORE the first run: generate the part-F scripts once with the Node generator (see
-# README_v7_F_history.md), e.g.:
-#   node _generators\gen_v7_F_history.js AlexAligned_Unified_v7_A_....rts Scripts\AlexAligned_Unified_v7F_A_History.rts 260
-#   (repeat for B, C, D with the SAME NumBars each time, or a smaller one for a slow part)
+# BEFORE the first run: generate the part-F scripts once with generate_v7_F_history.ps1 / its
+# .bat (see README_v7_F_history.md) -- they read the part A/B/C/D sources from the PARENT
+# folder (SectorTerminalScripts) but write the generated F scripts here, next to this launcher.
 #
 # Run this AFTER run_v7_workflow.ps1 (or any time after part C) has imported data at least
 # once, never while another RealTest job is running. It never touches the merged daily scan,
@@ -20,14 +20,15 @@
 param([switch]$Ask, [switch]$NoPause, [int]$NumBars = 260)
 $ErrorActionPreference = 'Stop'
 $Root  = 'C:\RealTest21_newerv2'
-$Scr   = Join-Path $Root 'Scripts'
+$Scr   = Join-Path $Root 'Scripts\SectorTerminalScripts\AutomationWorkflow'
+$Out   = Join-Path $Scr 'Outputs'
 $Exe   = Join-Path $Root 'RealTest.exe'
 $Rtd   = Join-Path $Root 'Data\alexaligned_unified_v7.rtd'
 $Batch = Join-Path $Root 'batchlog.txt'
 $Errl  = Join-Path $Root 'errorlog.txt'
 $Python = 'python'
 $MergeScript = Join-Path $Scr 'merge_v7_F_history.py'
-$MergedCsv = Join-Path $Scr ('AlexAligned_Unified_v7F_History_' + $NumBars + 'bars_Merged.csv')
+$MergedCsv = Join-Path $Out ('AlexAligned_Unified_v7F_History_' + $NumBars + 'bars_Merged.csv')
 # Only the parts that were actually generated are run -- it is fine to run just one or two
 # while trying this out, e.g. only part C first.
 $PartFiles = @('AlexAligned_Unified_v7F_A_History.rts', 'AlexAligned_Unified_v7F_B_History.rts',
@@ -58,9 +59,10 @@ if (-not (Test-Path $MergeScript)) { Stop-Run ('merge_v7_F_history.py not found 
 
 $present = @($PartFiles | Where-Object { Test-Path (Join-Path $Scr $_) })
 if ($present.Count -eq 0) {
-  Stop-Run ('no part-F scripts found in ' + $Scr + '. Generate at least one first with gen_v7_F_history.js -- see README_v7_F_history.md.')
+  Stop-Run ('no part-F scripts found in ' + $Scr + '. Generate at least one first with generate_v7_F_history.ps1 -- see README_v7_F_history.md.')
 }
 Write-Host ('Found ' + $present.Count + ' of 4 possible part-F scripts: ' + ($present -join ', '))
+if (-not (Test-Path $Out)) { New-Item -ItemType Directory -Path $Out -Force | Out-Null }
 if ($Ask) {
   $a = Read-Host ('Start part F now? It runs RealTest once per part (' + $present.Count + ' total), each producing ' + $NumBars + ' bars per symbol. This can take much longer than the daily 1-bar scan. Type Y to start')
   if ($a -notmatch '^[Yy]') { Write-Host 'Cancelled.'; exit 0 }
@@ -78,14 +80,14 @@ foreach ($file in $present) {
   $missing = @(); foreach ($k in $Flags) { if (-not ($bl | Where-Object { $_ -like ('OK: ' + $k + '*' + $file) })) { $missing += $k } }
   $errNow = Line-Count $Errl
   # the CSV this part writes is named in its own SaveScanAs -- discover it as the newest CSV
-  # in Scr matching this part's letter and today's run, rather than hard-coding the exact name.
+  # in Out matching this part's letter and today's run, rather than hard-coding the exact name.
   $letter = ($file -replace '.*_v7F_([A-D])_History\.rts$', '$1')
-  $csv = Get-ChildItem -Path $Scr -Filter ('*' + $letter + '*F_History_*bars.csv') -ErrorAction SilentlyContinue |
+  $csv = Get-ChildItem -Path $Out -Filter ('*' + $letter + '*F_History_*bars.csv') -ErrorAction SilentlyContinue |
     Where-Object { $_.LastWriteTime -gt $t0.AddSeconds(-2) } | Sort-Object LastWriteTime -Descending | Select-Object -First 1
   Write-Host ('   done in ' + $mins + ' min, exit ' + $proc.ExitCode + ', new error lines ' + ($errNow - $errBefore) + $(if ($csv) { ', csv: ' + $csv.Name + ' (' + ((Get-Content $csv.FullName).Count - 1) + ' rows)' } else { ', NO NEW CSV FOUND' }))
   if ($missing.Count) { Stop-Run ($file + ' batchlog is missing OK for ' + ($missing -join ', ') + '. See ' + $Batch) }
   if ($errNow -gt $errBefore) { Stop-Run ($file + ' wrote new lines to ' + $Errl) }
-  if (-not $csv) { Stop-Run ($file + ' did not produce a fresh *F_History_*bars.csv in ' + $Scr) }
+  if (-not $csv) { Stop-Run ($file + ' did not produce a fresh *F_History_*bars.csv in ' + $Out + ' -- if this part''s own source script does not use the standard ?scriptpath? convention, its output may have landed next to the .rts (in ' + $Scr + ') instead of in Outputs; check there too.') }
   $producedCsvs += $csv.FullName
 }
 

@@ -11,10 +11,12 @@ Notes:
 	BEFORE RUNNING:
 	1. In the web terminal, open the Backtest section for the portfolio you want to check and use
 	   its "Download Terminal_Weights.csv" export.
-	2. Copy that file, unchanged, next to this script: C:\RealTest21_newerv2\Scripts\SectorTerminalScripts\Terminal_Weights.csv
+	2. Copy that file, unchanged, next to this script: C:\RealTest21_newerv2\Scripts\SectorTerminalScripts\AutomationWorkflow\Terminal_Weights.csv
 	   (same folder this .rts file lives in -- the DataValueFile: line below finds it with
 	   ?scriptpath?, so it does not matter which drive/folder that is, as long as the CSV sits
-	   right next to the script).
+	   right next to the script). The three result files this script writes go into an Outputs
+	   subfolder right there (see the Save...As: lines below) -- the launcher creates that
+	   subfolder automatically if it does not exist yet.
 	3. Confirm the StartDate/EndDate in TestSettings below actually cover the CSV's date range
 	   (see the comment there) -- if the terminal's Backtest window has moved on since this file
 	   was written, edit those two dates to match before running.
@@ -72,9 +74,9 @@ Settings:
 	EndDate:	Latest
 	AccountSize:	100000
 	UseAvailableBars:	False
-	SaveTradesAs:	?scriptpath?\AlexAligned_Unified_v7_Validate_TerminalWeights_Trades.csv
-	SaveTestListAs:	?scriptpath?\AlexAligned_Unified_v7_Validate_TerminalWeights_Results.csv
-	SaveStatsAs:	?scriptpath?\AlexAligned_Unified_v7_Validate_TerminalWeights_Equity.csv
+	SaveTradesAs:	?scriptpath?\Outputs\AlexAligned_Unified_v7_Validate_TerminalWeights_Trades.csv
+	SaveTestListAs:	?scriptpath?\Outputs\AlexAligned_Unified_v7_Validate_TerminalWeights_Results.csv
+	SaveStatsAs:	?scriptpath?\Outputs\AlexAligned_Unified_v7_Validate_TerminalWeights_Equity.csv
 
 	// StartDate lives in TestSettings only, matching the convention in parts C/E of this repo
 	// (a StartDate directly in Settings has caused problems for those scripts' ScanSettings

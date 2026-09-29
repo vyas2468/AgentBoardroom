@@ -18,8 +18,10 @@ Notes:
 	structural (e.g. fill timing, or an actual disagreement in picks/weights) worth digging into.
 
 	BEFORE RUNNING: same steps as the cost-inclusive script -- Terminal_Weights.csv must already be
-	sitting next to this file in C:\RealTest21_newerv2\Scripts\SectorTerminalScripts, and the
-	StartDate/EndDate below must match the window that CSV actually covers.
+	sitting next to this file in C:\RealTest21_newerv2\Scripts\SectorTerminalScripts\
+	AutomationWorkflow, and the StartDate/EndDate below must match the window that CSV actually
+	covers. This run's three result files go into an Outputs subfolder right there, created
+	automatically by the launcher if it does not exist yet.
 
 	Run Run_AlexAligned_v7_Validate_TerminalWeights_ZeroCost.bat (or the matching .ps1 directly).
 
@@ -29,9 +31,9 @@ Settings:
 	EndDate:	Latest
 	AccountSize:	100000
 	UseAvailableBars:	False
-	SaveTradesAs:	?scriptpath?\AlexAligned_Unified_v7_Validate_TerminalWeights_ZeroCost_Trades.csv
-	SaveTestListAs:	?scriptpath?\AlexAligned_Unified_v7_Validate_TerminalWeights_ZeroCost_Results.csv
-	SaveStatsAs:	?scriptpath?\AlexAligned_Unified_v7_Validate_TerminalWeights_ZeroCost_Equity.csv
+	SaveTradesAs:	?scriptpath?\Outputs\AlexAligned_Unified_v7_Validate_TerminalWeights_ZeroCost_Trades.csv
+	SaveTestListAs:	?scriptpath?\Outputs\AlexAligned_Unified_v7_Validate_TerminalWeights_ZeroCost_Results.csv
+	SaveStatsAs:	?scriptpath?\Outputs\AlexAligned_Unified_v7_Validate_TerminalWeights_ZeroCost_Equity.csv
 
 TestSettings:
 	// CONFIRM these against the Terminal_Weights.csv you actually downloaded before running --

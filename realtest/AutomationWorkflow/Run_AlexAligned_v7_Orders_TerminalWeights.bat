@@ -5,7 +5,7 @@ rem "next session" is only genuinely tomorrow if the CSV was exported from a bac
 rem window runs through today. The window always stays open at the end, so any message can
 rem be read.
 setlocal
-set "SCR=C:\RealTest21_newerv2\Scripts\SectorTerminalScripts"
+set "SCR=C:\RealTest21_newerv2\Scripts\SectorTerminalScripts\AutomationWorkflow"
 set "PS1=%SCR%\run_v7_Orders_TerminalWeights.ps1"
 set "RTS=%SCR%\AlexAligned_Unified_v7_Orders_TerminalWeights.rts"
 set "CSV=%SCR%\Terminal_Weights.csv"

@@ -3,7 +3,7 @@ rem Double-click AFTER you have generated at least one part-F .rts (see README_v
 rem Runs the historical scan export (parts A/B/C/D, whichever exist) and merges them.
 rem The window always stays open at the end, so any message can be read.
 setlocal
-set "SCR=C:\RealTest21_newerv2\Scripts"
+set "SCR=C:\RealTest21_newerv2\Scripts\SectorTerminalScripts\AutomationWorkflow"
 set "PS1=%SCR%\run_v7_F_history.ps1"
 set "MERGE=%SCR%\merge_v7_F_history.py"
 echo === AlexAligned v7 part F: historical scan for backtesting ===
@@ -21,7 +21,7 @@ echo.
 echo Needed directly in that folder, not in a subfolder:
 echo    run_v7_F_history.ps1
 echo    merge_v7_F_history.py
-echo    at least one AlexAligned_Unified_v7F_[A-D]_History.rts (generate with gen_v7_F_history.js)
+echo    at least one AlexAligned_Unified_v7F_[A-D]_History.rts (generate with Generate_AlexAligned_v7_F_History.bat)
 echo.
 if exist "%PS1%" (echo    found: run_v7_F_history.ps1) else (echo    missing: run_v7_F_history.ps1)
 if exist "%MERGE%" (echo    found: merge_v7_F_history.py) else (echo    missing: merge_v7_F_history.py)

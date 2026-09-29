@@ -5,26 +5,27 @@
 # ASCII only, Windows PowerShell 5.1.
 #
 #   Runs AlexAligned_Unified_v7_Orders_TerminalWeights.rts in Orders mode (-orders). Never
-#   -import, never -test. Writes AlexAligned_Unified_v7_Orders_TerminalWeights_Orders.csv next
-#   to the script (the OrdersFile: path in the .rts).
+#   -import, never -test. Writes AlexAligned_Unified_v7_Orders_TerminalWeights_Orders.csv into
+#   an Outputs subfolder next to the script (the OrdersFile: path in the .rts).
 #
-# BEFORE the first run: Terminal_Weights.csv must already be in this Scripts folder. See the
-# .rts file's Notes: for an important caveat -- this only gives genuinely actionable next-session
-# orders if that CSV's last row is close to today's actual date (i.e. exported from a backtest
-# whose window runs through today).
+# BEFORE the first run: Terminal_Weights.csv must already be in this same folder (next to this
+# script, NOT in Outputs). See the .rts file's Notes: for an important caveat -- this only gives
+# genuinely actionable next-session orders if that CSV's last row is close to today's actual date
+# (i.e. exported from a backtest whose window runs through today).
 #   -Ask      ask before starting
 #   -NoPause  do not wait for Enter at the end (the .bat pauses instead)
 param([switch]$Ask, [switch]$NoPause)
 $ErrorActionPreference = 'Stop'
 $Root = 'C:\RealTest21_newerv2'
-$Scr  = Join-Path $Root 'Scripts\SectorTerminalScripts'
+$Scr  = Join-Path $Root 'Scripts\SectorTerminalScripts\AutomationWorkflow'
+$Out  = Join-Path $Scr 'Outputs'
 $Exe  = Join-Path $Root 'RealTest.exe'
 $Rtd  = Join-Path $Root 'Data\alexaligned_unified_v7.rtd'
 $Batch = Join-Path $Root 'batchlog.txt'
 $Errl  = Join-Path $Root 'errorlog.txt'
 $File = 'AlexAligned_Unified_v7_Orders_TerminalWeights.rts'
 $WeightsCsv = Join-Path $Scr 'Terminal_Weights.csv'
-$OrdersCsv  = Join-Path $Scr 'AlexAligned_Unified_v7_Orders_TerminalWeights_Orders.csv'
+$OrdersCsv  = Join-Path $Out 'AlexAligned_Unified_v7_Orders_TerminalWeights_Orders.csv'
 $Flags = @('-orders')
 
 function Stop-Run([string]$why) {
@@ -54,6 +55,7 @@ $csvAge = (Get-Date) - (Get-Item $WeightsCsv).LastWriteTime
 if ($csvAge.TotalHours -gt 24) {
   Write-Host ('WARNING: Terminal_Weights.csv is ' + [math]::Round($csvAge.TotalHours,1) + ' hours old -- the orders below may not be for tomorrow, they are for the day after that file''s own LAST dated row. Re-export from the terminal first if you want genuinely current orders.') -ForegroundColor Yellow
 }
+if (-not (Test-Path $Out)) { New-Item -ItemType Directory -Path $Out -Force | Out-Null }
 if ($Ask) {
   $a = Read-Host 'Start the ORDERS run now? It runs RealTest once in Orders mode. Type Y to start'
   if ($a -notmatch '^[Yy]') { Write-Host 'Cancelled.'; exit 0 }

@@ -34,7 +34,7 @@ what already exists today.
 ## How to run it
 
 1. Export `Terminal_Weights.csv` from the terminal's Backtest section (window ending today) and
-   place it in `C:\RealTest21_newerv2\Scripts\SectorTerminalScripts`, same folder as the `.rts`.
+   place it in `C:\RealTest21_newerv2\Scripts\SectorTerminalScripts\AutomationWorkflow`, same folder as the `.rts`.
 2. Run `Run_AlexAligned_v7_Orders_TerminalWeights.bat`.
 3. Read `AlexAligned_Unified_v7_Orders_TerminalWeights_Orders.csv` for the order list.
 4. Compare it against the terminal's own "Latest update" section for the same portfolio.

@@ -44,7 +44,7 @@ script's `Data:`/`Scan:` section to try to speed it up.
 
 Put all of these files (the `.py`, `.ps1`, `.bat` and the generated `.rts` scripts) in the same
 Scripts folder as your other launchers -- or in a subfolder of your own, e.g.
-`Scripts\SectorTerminalScripts`, which is fine: RealTest resolves `DataFile:` and `?scriptpath?`
+`Scripts\SectorTerminalScripts\AutomationWorkflow`, which is fine: RealTest resolves `DataFile:` and `?scriptpath?`
 paths correctly either way. If you use a subfolder, edit the `$Scr`/`SCR` line near the top of
 `run_v7_F_history.ps1` and `Run_AlexAligned_v7_F_History.bat` to point at it (leave `$Root` as
 `C:\RealTest21_newerv2` -- that is RealTest.exe's own folder, not affected by moving Scripts).

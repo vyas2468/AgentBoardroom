@@ -23,7 +23,7 @@ curve.
    for whatever date range you care about, and use its **"Download Terminal_Weights.csv"**
    export. Note the ending value, return, and max drawdown it reports -- you'll compare against
    these at the end.
-2. Copy `Terminal_Weights.csv`, unchanged, into `C:\RealTest21_newerv2\Scripts\SectorTerminalScripts`,
+2. Copy `Terminal_Weights.csv`, unchanged, into `C:\RealTest21_newerv2\Scripts\SectorTerminalScripts\AutomationWorkflow`,
    the same folder as `AlexAligned_Unified_v7_Validate_TerminalWeights.rts`.
 3. Open `AlexAligned_Unified_v7_Validate_TerminalWeights.rts` in a text editor and check the
    `StartDate`/`EndDate` lines under `TestSettings:` match the date range you actually backtested
