@@ -117,7 +117,14 @@ try{
   var PG_Q=[
     "Top 5 and bottom 5 symbols per subsector by relative strength in Industrials.",
     "Top 3 symbols per subsector by combined anomaly score in Financials.",
-    "Bottom 5 symbols per subsector by relative strength in Technology."
+    "Bottom 5 symbols per subsector by relative strength in Technology.",
+    "Top 5 symbols per subsector by volatility in Healthcare.",
+    "Top 5 and bottom 5 symbols per subsector by severity in Energy.",
+    "Top 5 symbols per subsector by composite in Consumer Discretionary.",
+    "Top 5 symbols per subsector by trailing 12M return in Industrials.",
+    "Bottom 5 symbols per subsector by trailing 30d returns in IT Sector.",
+    "Top 5 and bottom 5 symbols per subsector by risk in Real Estate.",
+    "Top 10 symbols per subsector by relative strength in Materials."
   ];
   function hE109(s){ return String(s===null||s===undefined?"":s).replace(/[&<>"]/g,function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
   function pgInit(){
